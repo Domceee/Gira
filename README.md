@@ -2,7 +2,7 @@
 
 # How to run Frontend
 
-Download and install https://nodejs.org/en/download
+Download and install https://nodejs.org/en/download //
 <img width="873" height="132" alt="image" src="https://github.com/user-attachments/assets/0c1933d8-6fec-475d-a9e4-b1bf93538dc6" />
 Open Gira in VS Code
 Open terminal
