@@ -1,4 +1,5 @@
-# Gira
+## Gira
 
 ## Setup Instructions
 
+**Prerequisites**
