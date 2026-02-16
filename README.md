@@ -16,6 +16,16 @@
 
 **Download the project from Github**
 
-**Start database**
-`docker compose up -d`
-`docker ps`
+**Start database** <br>
+`docker compose up -d` <br>
+`docker ps` <br>
+
+**Backend setup** <br>
+`cd backend` <br>
+`python -m venv gira` <br>
+`gira\Scripts\activate` <br>
+
+**Install dependencies** <br>
+`pip install -r requirements.txt` <br>
+
+
