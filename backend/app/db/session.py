@@ -9,7 +9,6 @@ if DATABASE_URL.startswith("postgresql://"):
 elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
-print("USING DATABASE_URL:", DATABASE_URL)
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 
