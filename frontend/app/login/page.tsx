@@ -1,19 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
+import { useState } from "react";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    country: "",
-    city: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,7 +20,7 @@ export default function RegisterPage() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -36,15 +30,13 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.detail ?? "Registration failed");
+        setError(data.detail ?? "Login failed");
         return;
       }
 
       setOk(true);
-      setForm({ name: "", email: "", password: "", country: "", city: "" });
-      router.push("/login");
-    } catch {
-      setError("Could not reach the server. Is the backend running?");
+      setForm({ email: "", password: "" });
+      router.push("/");
     } finally {
       setLoading(false);
     }
@@ -82,21 +74,14 @@ export default function RegisterPage() {
               color: "#2b1a10",
             }}
           >
-            Create account
+            Welcome back
           </h1>
           <p style={{ margin: "8px 0 0", color: "#6b4a3a", fontSize: 14 }}>
-            Join Gira — it takes less than a minute.
+            Log in to continue using Gira.
           </p>
         </header>
 
         <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-          <Field
-            label="Name"
-            placeholder="Your name"
-            value={form.name}
-            onChange={(v) => setForm({ ...form, name: v })}
-          />
-
           <Field
             label="Email"
             placeholder="you@example.com"
@@ -108,27 +93,12 @@ export default function RegisterPage() {
 
           <Field
             label="Password"
-            placeholder="At least 8 characters"
+            placeholder="Your password"
             type="password"
             required
             value={form.password}
             onChange={(v) => setForm({ ...form, password: v })}
           />
-
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-            <Field
-              label="Country"
-              placeholder="Lithuania"
-              value={form.country}
-              onChange={(v) => setForm({ ...form, country: v })}
-            />
-            <Field
-              label="City"
-              placeholder="Vilnius"
-              value={form.city}
-              onChange={(v) => setForm({ ...form, city: v })}
-            />
-          </div>
 
           <button
             type="submit"
@@ -146,10 +116,14 @@ export default function RegisterPage() {
               boxShadow: "0 10px 24px rgba(90,53,31,0.25)",
               transition: "transform 120ms ease, box-shadow 120ms ease",
             }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(1px)")}
-            onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0px)")}
+            onMouseDown={(e) =>
+              (e.currentTarget.style.transform = "translateY(1px)")
+            }
+            onMouseUp={(e) =>
+              (e.currentTarget.style.transform = "translateY(0px)")
+            }
           >
-            {loading ? "Creating..." : "Create account"}
+            {loading ? "Logging in..." : "Log in"}
           </button>
 
           {error && (
@@ -180,15 +154,15 @@ export default function RegisterPage() {
                 fontSize: 14,
               }}
             >
-              Registration successful! Redirecting...
+                Login successful! Redirecting...
             </div>
           )}
         </form>
 
         <footer style={{ marginTop: 16, fontSize: 14, color: "#6b4a3a" }}>
-          Already have an account?{" "}
-          <Link href="/login" style={{ color: "#5a351f", fontWeight: 700 }}>
-            Log in
+          Don&apos;t have an account?{" "}
+          <Link href="/register" style={{ color: "#5a351f", fontWeight: 700 }}>
+            Create one
           </Link>
         </footer>
       </section>

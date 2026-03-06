@@ -6,8 +6,8 @@ import sys
 
 from app.db.session import get_db
 from app.models.user import User
-from app.core.security import hash_password
-from app.schemas.user import UserCreate, UserRead
+from app.core.security import hash_password, verify_password
+from app.schemas.user import UserCreate, UserRead, UserLogin
 from app.core.email import send_registration_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,4 +33,17 @@ async def register(payload: UserCreate, background_tasks: BackgroundTasks, db: A
     await db.refresh(user)
 
     background_tasks.add_task(send_registration_email, user.email, user.name)
+    return user
+
+@router.post("/login", response_model=UserRead)
+async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not verify_password(payload.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
     return user

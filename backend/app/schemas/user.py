@@ -15,3 +15,7 @@ class UserRead(BaseModel):
     email: EmailStr
     country: str | None = None
     city: str | None = None
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
