@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
@@ -36,136 +36,74 @@ export default function LoginPage() {
 
       setOk(true);
       setForm({ email: "", password: "" });
-      router.push("/");
+      router.push("/main");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: 24,
-        background:
-          "radial-gradient(1200px 800px at 30% 20%, #7a4b2a 0%, #5a351f 40%, #3f2415 100%)",
-      }}
-    >
-      <section
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          background: "white",
-          borderRadius: 18,
-          padding: 28,
-          boxShadow:
-            "0 20px 60px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.12)",
-          border: "1px solid rgba(90,53,31,0.12)",
-        }}
-      >
-        <header style={{ marginBottom: 18 }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              letterSpacing: -0.4,
-              color: "#2b1a10",
-            }}
-          >
-            Welcome back
-          </h1>
-          <p style={{ margin: "8px 0 0", color: "#6b4a3a", fontSize: 14 }}>
-            Log in to continue using Gira.
-          </p>
-        </header>
+    <main className="min-h-screen bg-[#f5ede3] px-6 py-10 text-[#3e2a1f]">
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-7xl items-center justify-center">
+        <section className="w-full max-w-md rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
+          <header className="mb-6">
+            <h1 className="text-3xl font-bold text-[#5c3b28]">Welcome back</h1>
+            <p className="mt-2 text-sm text-[#6f4e37]">
+              Log in to continue using Gira.
+            </p>
+          </header>
 
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-          <Field
-            label="Email"
-            placeholder="you@example.com"
-            type="email"
-            required
-            value={form.email}
-            onChange={(v) => setForm({ ...form, email: v })}
-          />
+          <form onSubmit={onSubmit} className="space-y-4">
+            <Field
+              label="Email"
+              placeholder="you@example.com"
+              type="email"
+              required
+              value={form.email}
+              onChange={(v) => setForm({ ...form, email: v })}
+            />
 
-          <Field
-            label="Password"
-            placeholder="Your password"
-            type="password"
-            required
-            value={form.password}
-            onChange={(v) => setForm({ ...form, password: v })}
-          />
+            <Field
+              label="Password"
+              placeholder="Your password"
+              type="password"
+              required
+              value={form.password}
+              onChange={(v) => setForm({ ...form, password: v })}
+            />
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 6,
-              border: "none",
-              borderRadius: 12,
-              padding: "12px 14px",
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: loading ? "not-allowed" : "pointer",
-              background: loading ? "#a58c7c" : "#5a351f",
-              color: "white",
-              boxShadow: "0 10px 24px rgba(90,53,31,0.25)",
-              transition: "transform 120ms ease, box-shadow 120ms ease",
-            }}
-            onMouseDown={(e) =>
-              (e.currentTarget.style.transform = "translateY(1px)")
-            }
-            onMouseUp={(e) =>
-              (e.currentTarget.style.transform = "translateY(0px)")
-            }
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
-
-          {error && (
-            <div
-              style={{
-                marginTop: 6,
-                padding: 12,
-                borderRadius: 12,
-                background: "rgba(185, 28, 28, 0.08)",
-                border: "1px solid rgba(185, 28, 28, 0.18)",
-                color: "#8a1f1f",
-                fontSize: 14,
-              }}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl border-2 border-[#8b5e3c] bg-[#a47148] px-4 py-3 text-sm font-bold text-white transition hover:scale-[1.01] hover:bg-[#8b5e3c] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {error}
-            </div>
-          )}
+              {loading ? "Logging in..." : "Log in"}
+            </button>
 
-          {ok && (
-            <div
-              style={{
-                marginTop: 6,
-                padding: 12,
-                borderRadius: 12,
-                background: "rgba(22, 163, 74, 0.08)",
-                border: "1px solid rgba(22, 163, 74, 0.18)",
-                color: "#14532d",
-                fontSize: 14,
-              }}
-            >
+            {error && (
+              <div className="rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-4 text-sm text-[#7b4b2a]">
+                {error}
+              </div>
+            )}
+
+            {ok && (
+              <div className="rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-4 text-sm text-[#5a4335]">
                 Login successful! Redirecting...
-            </div>
-          )}
-        </form>
+              </div>
+            )}
+          </form>
 
-        <footer style={{ marginTop: 16, fontSize: 14, color: "#6b4a3a" }}>
-          Don&apos;t have an account?{" "}
-          <Link href="/register" style={{ color: "#5a351f", fontWeight: 700 }}>
-            Create one
-          </Link>
-        </footer>
-      </section>
+          <footer className="mt-6 text-sm text-[#6f4e37]">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/register"
+              className="font-bold text-[#8b5e3c] transition hover:text-[#5c3b28]"
+            >
+              Create one
+            </Link>
+          </footer>
+        </section>
+      </div>
     </main>
   );
 }
@@ -179,38 +117,19 @@ function Field(props: {
   required?: boolean;
 }) {
   return (
-    <label style={{ display: "grid", gap: 6 }}>
-      <span style={{ fontSize: 13, color: "#4a2c1a", fontWeight: 600 }}>
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-[#4b2e1f]">
         {props.label}
         {props.required ? " *" : ""}
       </span>
+
       <input
         type={props.type ?? "text"}
         required={props.required}
         placeholder={props.placeholder}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "11px 12px",
-          borderRadius: 12,
-          border: "1px solid rgba(90,53,31,0.18)",
-          outline: "none",
-          fontSize: 14,
-          color: "#2b1a10",
-          background: "#fff",
-          boxShadow: "inset 0 1px 0 rgba(0,0,0,0.03)",
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "rgba(90,53,31,0.55)";
-          e.currentTarget.style.boxShadow =
-            "0 0 0 4px rgba(90,53,31,0.12), inset 0 1px 0 rgba(0,0,0,0.03)";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = "rgba(90,53,31,0.18)";
-          e.currentTarget.style.boxShadow =
-            "inset 0 1px 0 rgba(0,0,0,0.03)";
-        }}
+        className="w-full rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-sm text-[#3e2a1f] outline-none transition placeholder:text-[#8b6b4a] focus:border-[#8b5e3c] focus:ring-4 focus:ring-[#b08968]/20"
       />
     </label>
   );
