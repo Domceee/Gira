@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.projects import router as projects_router
+from app.api.routes.task import router as task_router   
 app = FastAPI(title="Gira API")
 
 app.add_middleware(
@@ -16,3 +17,4 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(auth_router)
 app.include_router(projects_router, prefix="/api")
+app.include_router(task_router, prefix="/api")          
