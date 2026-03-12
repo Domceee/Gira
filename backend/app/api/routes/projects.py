@@ -43,3 +43,17 @@ async def create_project(payload: ProjectCreate, db: AsyncSession = Depends(get_
         name=project.name,
         description=project.description,
     )
+
+@router.get("/{id}", response_model=ProjectRead)
+async def get_project(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Project).where(Project.id_project == id))
+    project = result.scalar_one_or_none()
+
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return ProjectRead(
+        id=project.id_project,
+        name=project.name,
+        description=project.description,
+    )
