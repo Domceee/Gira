@@ -17,7 +17,7 @@
 **Download the project from Github**
 
 **Start database** <br>
-`docker compose up -d` <br>
+`docker-compose.yml up -d` <br>
 `docker ps` <br>
 
 **Backend setup** <br>
