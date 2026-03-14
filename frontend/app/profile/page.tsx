@@ -1,0 +1,164 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import Navbar from "@/app/components/navbar";
+import { updateProfile } from "./actions";
+
+interface User {
+  id_user: number;
+  name: string;
+  email: string;
+  country: string;
+  city: string;
+}
+
+export default function ProfilePage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch current logged-in user
+async function fetchUser() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`http://localhost:8000/api/user/1`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch user");
+
+    const data = await res.json();
+    setUser(data);
+
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  // Handle form submit manually
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+
+    const formData = new FormData(e.currentTarget);
+    await updateProfile(formData);
+
+    // Refresh user data after saving
+    await fetchUser();
+
+    setSaving(false);
+  }
+
+  if (loading) return <p className="p-6">Loading...</p>;
+  if (error) return <p className="p-6 text-red-600">{error}</p>;
+  if (!user) return <p className="p-6 text-red-600">User not found</p>;
+
+  return (
+    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
+      <Navbar />
+
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <section className="grid grid-cols-[260px_1fr] gap-8">
+
+          {/* LEFT SIDEBAR */}
+          <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
+            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
+
+            <div className="space-y-4">
+              <Link
+                href="/main"
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+              >
+                ← Back
+              </Link>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT */}
+          <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
+            <h2 className="text-2xl font-bold text-[#5c3b28] mb-6">Profile Settings</h2>
+
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-6 bg-[#fdf7f2] p-6 rounded-xl border border-[#c8a27a]"
+            >
+              <input type="hidden" name="id_user" value={user.id_user} />
+
+              {/* NAME */}
+              <div>
+                <label className="block mb-1 font-medium">Name</label>
+                <input
+                  name="name"
+                  defaultValue={user.name}
+                  required
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
+              {/* EMAIL */}
+              <div>
+                <label className="block mb-1 font-medium">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  defaultValue={user.email}
+                  required
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
+              {/* COUNTRY */}
+              <div>
+                <label className="block mb-1 font-medium">Country</label>
+                <input
+                  name="country"
+                  defaultValue={user.country}
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
+              {/* CITY */}
+              <div>
+                <label className="block mb-1 font-medium">City</label>
+                <input
+                  name="city"
+                  defaultValue={user.city}
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
+              {/* PASSWORD */}
+              <div>
+                <label className="block mb-1 font-medium">New Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Leave empty to keep current password"
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-[#b08968] px-6 py-3 text-white font-semibold hover:bg-[#8c6a4f] disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
