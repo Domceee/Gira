@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiFetch } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,14 +20,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `http://localhost:8000/auth/login`,
-        {
+      const res = await apiFetch(`/auth/login`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
-        }
-      );
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -37,6 +34,8 @@ export default function LoginPage() {
       setOk(true);
       setForm({ email: "", password: "" });
       router.push("/main");
+    } catch {
+      setError("Could not reach the server. Check if backend is running.");
     } finally {
       setLoading(false);
     }
