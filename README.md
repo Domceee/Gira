@@ -55,7 +55,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 **Frontend setup** <br>
 
 **Create a `.env.local` file in the frontend folder and insert this there** <br>
-```
+```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
