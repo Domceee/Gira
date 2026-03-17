@@ -53,6 +53,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` <br>
 
 **Frontend setup** <br>
+
+**Create a `.env.local` file in the frontend folder and insert this there** <br>
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
 From root folder do `cd frontend` <br>
 `npm install` <br>
 `npm run dev` <br>
