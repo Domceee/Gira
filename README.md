@@ -29,20 +29,22 @@
 `pip install -r requirements.txt` <br>
 
 **Create a .env file in backend folderand insert this there** <br>
+```env
 # Database URL
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/giradb
 
 # SMTP settings
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=gira.app.pvp@gmail.com
-SMTP_PASS=mgspvimysztyyktz
-SMTP_FROM=gira.app.pvp@gmail.com
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+SMTP_FROM=your_email@gmail.com
 
 # AUTH settings
-SECRET_KEY=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+SECRET_KEY=your_very_secret_key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
 
 **Run migrations in backend folder** <br>
 `alembic upgrade head` <br>
