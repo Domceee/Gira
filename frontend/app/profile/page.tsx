@@ -19,44 +19,48 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Fetch current logged-in user
-async function fetchUser() {
-  try {
-    const token = localStorage.getItem("token");
+  async function fetchUser() {
+    try {
+      setError(null);
 
-    const res = await fetch(`http://localhost:8000/api/user/1`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        credentials: "include",
+        cache: "no-store",
+      });
 
-    if (!res.ok) throw new Error("Failed to fetch user");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail ?? "Failed to fetch user");
+      }
 
-    const data = await res.json();
-    setUser(data);
-
-  } catch (err: any) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
+      const data = await res.json();
+      setUser(data);
+    } catch (err: any) {
+      setError(err.message ?? "Failed to fetch user");
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // Handle form submit manually
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    await updateProfile(formData);
+    try {
+      const formData = new FormData(e.currentTarget);
+      await updateProfile(formData);
 
-    // Refresh user data after saving
-    await fetchUser();
-
-    setSaving(false);
+      await fetchUser();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) return <p className="p-6">Loading...</p>;
@@ -69,7 +73,6 @@ async function fetchUser() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="grid grid-cols-[260px_1fr] gap-8">
-
           {/* LEFT SIDEBAR */}
           <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
             <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
@@ -77,7 +80,7 @@ async function fetchUser() {
             <div className="space-y-4">
               <Link
                 href="/main"
-                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
               >
                 ← Back
               </Link>
@@ -86,17 +89,17 @@ async function fetchUser() {
 
           {/* MAIN CONTENT */}
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-            <h2 className="text-2xl font-bold text-[#5c3b28] mb-6">Profile Settings</h2>
+            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">
+              Profile Settings
+            </h2>
 
             <form
               onSubmit={handleSubmit}
-              className="space-y-6 bg-[#fdf7f2] p-6 rounded-xl border border-[#c8a27a]"
+              className="space-y-6 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
             >
-              <input type="hidden" name="id_user" value={user.id_user} />
-
               {/* NAME */}
               <div>
-                <label className="block mb-1 font-medium">Name</label>
+                <label className="mb-1 block font-medium">Name</label>
                 <input
                   name="name"
                   defaultValue={user.name}
@@ -107,7 +110,7 @@ async function fetchUser() {
 
               {/* EMAIL */}
               <div>
-                <label className="block mb-1 font-medium">Email</label>
+                <label className="mb-1 block font-medium">Email</label>
                 <input
                   type="email"
                   name="email"
@@ -119,7 +122,7 @@ async function fetchUser() {
 
               {/* COUNTRY */}
               <div>
-                <label className="block mb-1 font-medium">Country</label>
+                <label className="mb-1 block font-medium">Country</label>
                 <input
                   name="country"
                   defaultValue={user.country}
@@ -129,7 +132,7 @@ async function fetchUser() {
 
               {/* CITY */}
               <div>
-                <label className="block mb-1 font-medium">City</label>
+                <label className="mb-1 block font-medium">City</label>
                 <input
                   name="city"
                   defaultValue={user.city}
@@ -139,7 +142,7 @@ async function fetchUser() {
 
               {/* PASSWORD */}
               <div>
-                <label className="block mb-1 font-medium">New Password</label>
+                <label className="mb-1 block font-medium">New Password</label>
                 <input
                   type="password"
                   name="password"
@@ -151,7 +154,7 @@ async function fetchUser() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-[#b08968] px-6 py-3 text-white font-semibold hover:bg-[#8c6a4f] disabled:opacity-50"
+                className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f] disabled:opacity-50"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>

@@ -1,14 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from datetime import timedelta
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from sqlalchemy import select
 import sys
 
 from app.db.session import get_db
 from app.models.user import User
-from app.core.security import hash_password, verify_password
+from app.core.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
+)
 from app.schemas.user import UserCreate, UserRead, UserLogin
 from app.core.email import send_registration_email
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -36,7 +42,7 @@ async def register(payload: UserCreate, background_tasks: BackgroundTasks, db: A
     return user
 
 @router.post("/login", response_model=UserRead)
-async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(payload: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
 
@@ -46,4 +52,28 @@ async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     if not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid password")
     
+    access_token = create_access_token(
+        data={"sub": str(user.id_user)},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
     return user
+
+@router.get("/me", response_model=UserRead)
+async def read_current_user(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="access_token", path="/")
+    return {"message": "Logged out"}

@@ -1,18 +1,23 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 export async function updateProfile(formData: FormData) {
-  const id_user = formData.get("id_user");
   const name = formData.get("name");
   const email = formData.get("email");
   const country = formData.get("country");
   const city = formData.get("city");
   const password = formData.get("password");
 
-  await fetch(`http://localhost:8000/api/user/${id_user}`, {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
     body: JSON.stringify({
       name,
       email,
@@ -20,6 +25,13 @@ export async function updateProfile(formData: FormData) {
       city,
       password: password || undefined,
     }),
+    cache: "no-store",
   });
 
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Failed to update profile");
+  }
+
+  return res.json();
 }
