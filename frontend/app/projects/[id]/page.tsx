@@ -3,7 +3,7 @@ import Link from "next/link";
 
 
 async function getProject(id: string) {
-  const res = await fetch(`http://localhost:8000/api/projects/${id}`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${id}`, {
     cache: "no-store",
   });
 
@@ -37,6 +37,16 @@ export default async function ProjectView({ params }: any) {
                 className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
                 >
                 Backlog
+                </Link>
+
+                
+            </div>
+            <div className="space-y-4">
+                <Link
+                href={`/projects/${id}/selectTeam`}
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+                >
+                Select Team
                 </Link>
 
                 
