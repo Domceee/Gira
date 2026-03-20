@@ -2,7 +2,7 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 
 async function getProjects() {
-  const res = await fetch("http://localhost:8000/api/projects", {
+  const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/projects", {
     cache: "no-store",
   });
 
