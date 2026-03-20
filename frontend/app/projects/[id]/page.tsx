@@ -1,10 +1,18 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 async function getProject(id: string) {
-  const res = await fetch(`http://localhost:8000/api/projects/${id}`, {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(`${API_URL}/api/projects/${id}`, {
     cache: "no-store",
+    headers: {
+      "Cookie": cookieHeader
+    },
   });
 
   if (!res.ok) {
