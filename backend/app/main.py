@@ -7,9 +7,14 @@ from app.api.routes.task import router as task_router
 from app.api.routes import user
 app = FastAPI(title="Gira API")
 
+origins = [
+    "http://localhost:3000",
+    "https://gira.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,13 +1,13 @@
 from logging.config import fileConfig
+import os
+from dotenv import load_dotenv
 
-from sqlalchemy import engine_from_config, create_engine
-from sqlalchemy import pool
-
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 from app.db.base import Base
-import os
-from app.core.config import settings
+
+load_dotenv()  # Load environment variables from .env file
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -28,6 +28,9 @@ target_metadata = Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+production_database_url = os.getenv("PRODUCTION_DATABASE_URL")
+if production_database_url:
+    config.set_main_option("sqlalchemy.url", production_database_url)
 
 
 def run_migrations_offline() -> None:
