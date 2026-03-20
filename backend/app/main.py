@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.task import router as task_router   
 from app.api.routes import user
+from app.api.routes import team, sprint
 app = FastAPI(title="Gira API")
 
 app.add_middleware(
@@ -20,3 +21,5 @@ app.include_router(auth_router)
 app.include_router(projects_router, prefix="/api")
 app.include_router(task_router, prefix="/api")          
 app.include_router(user.router, prefix="/api")
+app.include_router(team.router, prefix="/api")
+app.include_router(sprint.router, prefix="/api")
