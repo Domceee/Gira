@@ -1,11 +1,18 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function apiFetch(path: string, options: RequestInit ={}) {
+type ApiFetchOptions = RequestInit & {
+    cookie?: string;
+}
+
+export async function apiFetch(path: string, options: ApiFetchOptions ={}) {
+    const { cookie, ...fetchOptions } = options;
+
     return fetch(`${API_URL}${path}`, {
-        ...options,
+        ...fetchOptions,
         credentials: "include",
         headers: {
             "Content-Type": "application/json",
+            ...(cookie ? { "Cookie": cookie } : {}),
             ...(options.headers || {}),
         },
     });
