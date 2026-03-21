@@ -79,6 +79,16 @@ export default function LoginPage() {
               {loading ? "Logging in..." : "Log in"}
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`;
+              }}
+              className="w-full rounded-xl border-2 border-[#4285F4] bg-[#4285F4] px-4 py-3 text-sm font-bold text-white transition hover:scale-[1.01] hover:bg-[#357ae8]"
+            >
+              Continue with Google
+            </button>
+
             {error && (
               <div className="rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-4 text-sm text-[#7b4b2a]">
                 {error}

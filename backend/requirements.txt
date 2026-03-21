@@ -32,3 +32,4 @@ pydantic[email]
 aiosmtplib
 python-jose[cryptography]
 python-dotenv
+httpx
