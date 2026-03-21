@@ -1,10 +1,21 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
+import { cookies } from "next/headers";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 async function getTeam(projectId: string, teamId: string) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
   const res = await fetch(
-    `http://localhost:8000/api/projects/${projectId}/teams`,
-    { cache: "no-store" }
+    `${API_URL}/api/projects/${projectId}/teams`,
+    {
+      cache: "no-store",
+      headers: {
+        cookie: cookieHeader,
+      },
+    }
   );
 
   if (!res.ok) throw new Error("Failed to fetch teams");
