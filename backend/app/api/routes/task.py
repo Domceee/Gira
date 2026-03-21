@@ -6,9 +6,14 @@ from app.db.session import get_db
 from app.models.task import Task
 from app.schemas.task import TaskRead, TaskCreate
 
+from pydantic import BaseModel
+from typing import Optional
+
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
+class AssignSprint(BaseModel):
+    sprint_id: Optional[int]  # null = remove
 # ---------------------------------------------------------
 # GET — return ONLY unassigned tasks for a project
 # ---------------------------------------------------------
@@ -67,10 +72,32 @@ async def assign_team(task_id: int, team_id: str | None = None, db: AsyncSession
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Update team assignment
     task.fk_teamid_team = team_id
+
+    #If team is removed, also remove sprint assignment
+    if team_id is None:
+        task.fk_sprintid_sprint = None
 
     db.add(task)
     await db.commit()
     await db.refresh(task)
 
     return {"status": "ok", "task_id": task_id, "team_id": team_id}
+
+
+@router.patch("/{task_id}/assign_sprint")
+async def assign_sprint(task_id: int, payload: AssignSprint, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(404, "Task not found")
+
+    task.fk_sprintid_sprint = payload.sprint_id
+
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    return {"status": "ok", "task_id": task_id, "sprint_id": payload.sprint_id}

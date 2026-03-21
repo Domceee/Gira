@@ -32,11 +32,11 @@ class Task(Base):
         nullable=True
     )
 
-    #fk_sprintid_sprint = Column(
-    #    Integer,
-    #    ForeignKey("sprint.id_sprint"),
-    #    nullable=True
-    #)
+    fk_sprintid_sprint = Column(
+        Integer,
+        ForeignKey("sprint.id_sprint"),
+        nullable=True
+    )
 
     #fk_team_memberid_team_member = Column(
     #    Integer,
