@@ -8,6 +8,23 @@ function isSprintEnded(sprint: any) {
 function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
+import { cookies } from "next/headers";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
+async function getTeam(projectId: string, teamId: string) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(
+    `${API_URL}/api/projects/${projectId}/teams`,
+    {
+      cache: "no-store",
+      headers: {
+        cookie: cookieHeader,
+      },
+    }
+  );
 
 
 async function getTeam(projectId: string, teamId: string) {

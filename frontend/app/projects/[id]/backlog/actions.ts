@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export async function createTask(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
   const payload = {
     name: formData.get("name"),
     description: formData.get("description"),
@@ -13,18 +19,28 @@ export async function createTask(formData: FormData) {
     fk_role_enumid_role_enum: 1, // REQUIRED by your DB
   };
 
-  await fetch("http://localhost:8000/api/tasks", {
+  const res = await fetch(`${API_URL}/api/tasks`, {
     method: "POST",
-    body: JSON.stringify(payload),
     headers: {
       "Content-Type": "application/json",
+      "Cookie": cookieHeader
     },
+    body: JSON.stringify(payload),
+    cache: "no-store",
   });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create task");
+  }
 
   revalidatePath(`/projects/${payload.fk_projectid_project}/backlog`);
 }
 
 export async function assignTaskToTeam(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
   const taskId = formData.get("task_id");
   const projectId = formData.get("project_id");
 
@@ -35,10 +51,21 @@ export async function assignTaskToTeam(formData: FormData) {
     teamId = "";
   }
 
-  await fetch(
-    `http://localhost:8000/api/tasks/${taskId}/assign_team?team_id=${teamId}`,
-    { method: "PATCH" }
+  const res =await fetch(
+    `${API_URL}/api/tasks/${taskId}/assign_team?team_id=${teamId}`,
+    { 
+      method: "PATCH",
+      headers: {
+        "Cookie": cookieHeader
+      },
+      cache: "no-store",
+    }
   );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to assign task to team");
+  }
 
   revalidatePath(`/projects/${projectId}/backlog`);
 }

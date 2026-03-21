@@ -61,8 +61,8 @@ async def login(payload: UserLogin, response: Response, db: AsyncSession = Depen
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )

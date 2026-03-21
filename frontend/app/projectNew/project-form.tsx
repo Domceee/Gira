@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "../lib/api";
 
 export default function NewProjectForm() {
   const router = useRouter();
@@ -23,11 +24,8 @@ export default function NewProjectForm() {
     try {
       setSubmitting(true);
 
-      const response = await fetch("http://localhost:8000/api/projects", {
+      const response = await apiFetch("/api/projects", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
@@ -35,8 +33,9 @@ export default function NewProjectForm() {
       });
 
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Failed to create project");
+        const data = await response.json().catch(() => null);
+        const message = data?.detail || data?.message || "Failed to create project";
+        throw new Error(message);
       }
 
       router.push("/main");
