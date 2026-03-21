@@ -1,6 +1,7 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { createSprint, assignTaskToSprint } from "./actions";
+import { cookies } from "next/headers";
 
 function isSprintEnded(sprint: any) {
   return new Date(sprint.end_date) < new Date();
@@ -8,43 +9,34 @@ function isSprintEnded(sprint: any) {
 function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
-import { cookies } from "next/headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
-async function getTeam(projectId: string, teamId: string) {
+async function fetchWithAuth(url: string) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
 
-  const res = await fetch(
-    `${API_URL}/api/projects/${projectId}/teams`,
-    {
-      cache: "no-store",
-      headers: {
-        cookie: cookieHeader,
-      },
-    }
-  );
+  const res = await fetch(`${API_URL}${url}`, {
+    cache: "no-store",
+    headers: {
+      Cookie: cookieHeader,
+    },
+  });
 
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}`);
+  }
+
+  return res.json();
+}
 
 async function getTeam(projectId: string, teamId: string) {
-  const res = await fetch(`http://localhost:8000/api/projects/${projectId}/teams/${teamId}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to fetch team");
-  return res.json();
+  return fetchWithAuth(`/api/projects/${projectId}/teams/${teamId}`);
 }
 
 async function getSprints(teamId: string) {
-  const res = await fetch(`http://localhost:8000/api/sprints?team_id=${teamId}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to fetch sprints");
-  return res.json();
+  return fetchWithAuth(`/api/sprints?team_id=${teamId}`);
 }
-
-
-
 
 export default async function TeamView({ params }: any) {
   
