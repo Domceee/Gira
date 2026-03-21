@@ -37,8 +37,10 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     token = request.cookies.get("access_token")
+    print("TOKEN FROM COOKIE:", token)
 
     if not token:
+        print("NO TOKEN FOUND")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -50,14 +52,18 @@ async def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+        print("DECODED PAYLOAD:", payload)
         user_id = payload.get("sub")
+        print("USER ID FROM PAYLOAD:", user_id)
 
         if user_id is None:
+            print("SUB IS NONE")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
             )
-    except JWTError:
+    except JWTError as e:
+        print("JWT ERROR OCCURRED: ", str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -65,8 +71,10 @@ async def get_current_user(
 
     result = await db.execute(select(User).where(User.id_user == int(user_id)))
     user = result.scalar_one_or_none()
+    print("USER FROM DB:", user)
 
     if user is None:
+        print("USER NOT FOUND IN DB")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",

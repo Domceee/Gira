@@ -1,32 +1,36 @@
 import { createTask, assignTaskToTeam } from "./actions";
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
-async function getTeamsWithTasks(projectId: string) {
-  const res = await fetch(`http://localhost:8000/api/projects/${projectId}/teams`, {
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
+async function fetchWithAuth(url: string) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(`${API_URL}${url}`, {
     cache: "no-store",
+    headers: {
+      "Cookie": cookieHeader
+    },
   });
 
-  if (!res.ok) throw new Error("Failed to fetch teams");
+  if (!res.ok) throw new Error(`Failed to fetch ${url}`);
+
   return res.json();
+}
+
+async function getTeamsWithTasks(projectId: string) {
+  return fetchWithAuth(`/api/projects/${projectId}/teams`);
 }
 
 async function getProject(id: string) {
-  const res = await fetch(`http://localhost:8000/api/projects/${id}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) throw new Error("Failed to fetch project");
-  return res.json();
+  return fetchWithAuth(`/api/projects/${id}`);
 }
 
 async function getTasks(projectId: string) {
-  const res = await fetch(`http://localhost:8000/api/tasks?project_id=${projectId}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) throw new Error("Failed to fetch tasks");
-  return res.json();
+  return fetchWithAuth(`/api/tasks?project_id=${projectId}`);
 }
 
 export default async function BacklogView({ params }: any) {
