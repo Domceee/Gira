@@ -10,7 +10,7 @@ function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function fetchWithAuth(url: string) {
   const cookieStore = await cookies();

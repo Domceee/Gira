@@ -2,7 +2,7 @@ import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function getProject(id: string) {
   const cookieStore = await cookies();
@@ -64,9 +64,29 @@ export default async function ProjectView({ params }: any) {
 
           {/* MAIN CONTENT */}
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-            <h1 className="mb-6 text-4xl font-bold text-[#5c3b28]">
+            <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-4xl font-bold text-[#5c3b28]">
               {project.name}
             </h1>
+
+            {project.is_owner && (
+              <div className="flex gap-3">
+              <Link
+                href={`/projects/${id}/manage`}
+                className="rounded-xl bg-[#8b5e3c] px-5 py-2 font-semibold text-white transition hover:bg-[#734c30]"
+              >
+                Manage Project
+              </Link>
+
+              <Link
+              href={`/projects/${id}/manageTeam`}
+              className="rounded-xl bg-[#8b5e3c] px-5 py-2 font-semibold text-white transition hover:bg-[#734c30]"
+              >
+                Manage Teams
+              </Link>
+              </div>
+            )}
+          </div>
 
             <p className="text-lg text-[#6f4e37]">
               {project.description ?? "No description available."}
