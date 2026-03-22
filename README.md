@@ -44,6 +44,12 @@ SMTP_FROM=your_email@gmail.com
 SECRET_KEY=your_very_secret_key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+# GOOGLE OAUTH
+GOOGLE_CLIENT_ID=189533509123-1akie8bun31b7rvi3m40ciqiot4t63up.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=google_client_secret_key
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+FRONTEND_URL=http://localhost:3000
 ```
 
 **Run migrations in backend folder** <br>
