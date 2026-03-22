@@ -31,7 +31,7 @@
 **Create a `.env` file in backend folderand insert this there** <br>
 ```env
 # Database URL
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/giradb
+APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/giradb
 
 # SMTP settings
 SMTP_HOST=smtp.gmail.com
