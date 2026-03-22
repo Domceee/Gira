@@ -1,8 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    DATABASE_URL: str
+    DATABASE_URL: str = Field(validation_alias="APP_DATABASE_URL")
 
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
@@ -20,3 +21,5 @@ class Settings(BaseSettings):
     FRONTEND_URL: str
 
 settings = Settings()
+
+print("CONFIG DATAABASE_URL:", settings.DATABASE_URL)
