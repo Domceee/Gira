@@ -16,9 +16,9 @@ export default function NewProjectForm() {
     event.preventDefault();
     setError("");
 
-    if (!name.trim()) {
-      setError("Project name is required.");
-      return;
+    if (!name.trim() || [".", "..", "..."].includes(name.trim())) {
+    setError("Please enter a valid project name.");
+    return;
     }
 
     try {

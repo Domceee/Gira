@@ -11,3 +11,8 @@ class ProjectRead(BaseModel):
     id: int
     name: str | None = None
     description: str | None = None
+    is_owner: bool = False
+
+class ProjectUpdate(BaseModel):
+    name: str
+    description: str | None = None

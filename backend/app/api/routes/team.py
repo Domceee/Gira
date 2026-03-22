@@ -9,6 +9,21 @@ from app.schemas.task import TaskRead
 
 router = APIRouter(prefix="/projects", tags=["teams"])
 
+@router.get("/{project_id}/teams")
+async def get_project_teams(project_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Team).where(Team.fk_projectid_project == project_id)
+    )
+    teams = result.scalars().all()
+
+    return [
+        {
+            "id_team": team.id_team,
+            "name": team.name,
+        }
+        for team in teams
+    ]
+
 @router.get("/{project_id}/teams/{team_id}")
 async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Depends(get_db)):
     # Validate team exists

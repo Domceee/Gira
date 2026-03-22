@@ -2,7 +2,7 @@ import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function getTeams(projectId: string) {
   const cookieStore = await cookies();
