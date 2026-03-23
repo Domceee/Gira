@@ -159,17 +159,10 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
-    response = RedirectResponse(url=f"{settings.FRONTEND_URL}/main", status_code=302)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        path="/",
+    return RedirectResponse(
+        url=f"{settings.FRONTEND_URL}/auth/google/callback?token={access_token}",
+        status_code=302,
     )
-    return response
 
 @router.get("/me", response_model=UserRead)
 async def read_current_user(current_user: User = Depends(get_current_user)):

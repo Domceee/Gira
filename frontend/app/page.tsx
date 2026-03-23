@@ -41,7 +41,7 @@ export default function Home() {
           </Link>
 
           <Link
-            href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`}
+            href="/api/auth/google/login"
             className="block w-full rounded-lg border border-[#dadce0] bg-white px-6 py-3 font-medium text-[#3c4043] transition hover:bg-[#f8f9fa] hover:shadow"
           >
             <span className="flex items-center justify-center gap-3">

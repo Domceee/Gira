@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiFetch } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,8 +19,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await apiFetch(`/auth/login`, {
+      const res = await fetch(`/api/auth/login`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(form),
       });
 
@@ -82,7 +84,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => {
-                window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`;
+                window.location.href = "/api/auth/google/login";
               }}
               className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-6 py-3 font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
             >

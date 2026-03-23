@@ -7,12 +7,27 @@ type ApiFetchOptions = RequestInit & {
 export async function apiFetch(path: string, options: ApiFetchOptions ={}) {
     const { cookie, ...fetchOptions } = options;
 
-    return fetch(`${API_URL}${path}`, {
+    if (typeof window === "undefined") {
+        const { cookies } = await import("next/headers");
+        const cookieStore = await cookies();
+        const forwardedCookie = cookie ?? cookieStore.toString();
+
+        return fetch(`${API_URL}${path}`, {
+            ...fetchOptions,
+            headers: {
+                "Content-Type": "application/json",
+                ...(forwardedCookie ? { "Cookie": forwardedCookie } : {}),
+                ...(options.headers || {}),
+            },
+            cache: fetchOptions.cache ?? "no-store",
+        });
+    }
+
+    return fetch(`/api/proxy${path}`, {
         ...fetchOptions,
         credentials: "include",
         headers: {
             "Content-Type": "application/json",
-            ...(cookie ? { "Cookie": cookie } : {}),
             ...(options.headers || {}),
         },
     });

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.projects import router as projects_router
@@ -10,12 +11,13 @@ app = FastAPI(title="Gira API")
 
 origins = [
     "http://localhost:3000",
-    "https://gira.vercel.app"
+    settings.FRONTEND_URL,
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

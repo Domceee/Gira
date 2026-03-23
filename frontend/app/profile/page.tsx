@@ -23,7 +23,7 @@ export default function ProfilePage() {
     try {
       setError(null);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+      const res = await fetch(`/api/proxy/auth/me`, {
         credentials: "include",
         cache: "no-store",
       });
@@ -35,8 +35,8 @@ export default function ProfilePage() {
 
       const data = await res.json();
       setUser(data);
-    } catch (err: any) {
-      setError(err.message ?? "Failed to fetch user");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch user");
     } finally {
       setLoading(false);
     }
@@ -56,8 +56,8 @@ export default function ProfilePage() {
       await updateProfile(formData);
 
       await fetchUser();
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update profile");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
       setSaving(false);
     }
