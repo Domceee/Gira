@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "../components/navbar";
 import { cookies } from "next/headers";

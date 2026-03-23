@@ -72,7 +72,7 @@ export default async function ProjectView({ params }: any) {
             {project.is_owner && (
               <div className="flex gap-3">
               <Link
-                href={`/projects/${id}/manage`}
+                href={`/projects/${id}/manageProject`}
                 className="rounded-xl bg-[#8b5e3c] px-5 py-2 font-semibold text-white transition hover:bg-[#734c30]"
               >
                 Manage Project
