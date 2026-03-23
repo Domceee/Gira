@@ -11,6 +11,7 @@ from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.schemas.ProjectMember import ProjectMembersAddRequest
 from app.models.team import Team
 from app.models.team_member import TeamMember
+from app.models.task import Task
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
 from app.api.routes.auth import get_current_user  
 
@@ -239,6 +240,30 @@ async def get_project_teams(
         )
         for team in teams
     ]
+
+
+@router.get("/{project_id}/teams/{team_id}")
+async def get_team_backlog(
+    project_id: int,
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await get_project_membership_or_404(project_id, current_user.id_user, db)
+    team = await get_team_or_404(project_id, team_id, db)
+
+    result = await db.execute(
+        select(Task)
+        .where(Task.fk_teamid_team == team_id)
+        .order_by(Task.id_task.asc())
+    )
+    tasks = result.scalars().all()
+
+    return {
+        "team_id": team.id_team,
+        "team_name": team.name,
+        "tasks": tasks,
+    }
 
 
 @router.post("/{project_id}/teams", response_model=TeamRead, status_code=201)

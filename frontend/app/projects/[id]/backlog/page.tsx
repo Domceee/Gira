@@ -1,9 +1,32 @@
-import { createTask, assignTaskToTeam } from "./actions";
-import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import Navbar from "@/app/components/navbar";
+
+import { assignTaskToTeam, createTask } from "./actions";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+type Task = {
+  id_task: number;
+  name: string;
+  description: string | null;
+  story_points: number | null;
+  risk: number | null;
+  priority: number | null;
+  fk_teamid_team: number | null;
+};
+
+type TeamSummary = {
+  id_team: number;
+  name: string | null;
+};
+
+type TeamBacklog = {
+  team_id: number;
+  team_name: string | null;
+  tasks: Task[];
+};
 
 async function fetchWithAuth(url: string) {
   const cookieStore = await cookies();
@@ -12,33 +35,39 @@ async function fetchWithAuth(url: string) {
   const res = await fetch(`${API_URL}${url}`, {
     cache: "no-store",
     headers: {
-      "Cookie": cookieHeader
+      Cookie: cookieHeader,
     },
   });
 
-  if (!res.ok) throw new Error(`Failed to fetch ${url}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}`);
+  }
 
   return res.json();
 }
 
-async function getTeamsWithTasks(projectId: string) {
-  return fetchWithAuth(`/api/projects/${projectId}/teams`);
+async function getTeamsWithTasks(projectId: string): Promise<TeamBacklog[]> {
+  const teams = (await fetchWithAuth(`/api/projects/${projectId}/teams`)) as TeamSummary[];
+
+  return Promise.all(
+    teams.map((team) => fetchWithAuth(`/api/projects/${projectId}/teams/${team.id_team}`))
+  );
 }
 
 async function getProject(id: string) {
   return fetchWithAuth(`/api/projects/${id}`);
 }
 
-async function getTasks(projectId: string) {
+async function getTasks(projectId: string): Promise<Task[]> {
   return fetchWithAuth(`/api/tasks?project_id=${projectId}`);
 }
 
-export default async function BacklogView({ params }: any) {
+export default async function BacklogView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const project = await getProject(id);
-  const tasks = await getTasks(id); // unassigned tasks
-  const teams = await getTeamsWithTasks(id); // teams + tasks
+  await getProject(id);
+  const tasks = await getTasks(id);
+  const teams = await getTeamsWithTasks(id);
 
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
@@ -46,28 +75,23 @@ export default async function BacklogView({ params }: any) {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="grid grid-cols-[260px_1fr] gap-8">
-
-          {/* LEFT SIDEBAR */}
           <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
             <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
 
             <div className="space-y-4">
               <Link
                 href={`/projects/${id}`}
-                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
               >
-                ← Back
+                Back
               </Link>
             </div>
           </aside>
 
-          {/* MAIN CONTENT */}
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
+            <h2 className="mb-4 text-2xl font-bold text-[#5c3b28]">Unassigned Tasks</h2>
 
-            {/* UNASSIGNED TASKS */}
-            <h2 className="text-2xl font-bold text-[#5c3b28] mb-4">Unassigned Tasks</h2>
-
-            <table className="w-full border-collapse rounded-lg overflow-hidden">
+            <table className="w-full overflow-hidden rounded-lg border-collapse">
               <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
                 <tr>
                   <th className="p-3 text-left">Name</th>
@@ -88,31 +112,28 @@ export default async function BacklogView({ params }: any) {
                   </tr>
                 )}
 
-                {tasks.map((task: any) => (
-                  <tr
-                    key={task.id_task}
-                    className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]"
-                  >
+                {tasks.map((task) => (
+                  <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
                     <td className="p-3">{task.name}</td>
                     <td className="p-3">{task.description}</td>
                     <td className="p-3">{task.story_points}</td>
                     <td className="p-3">{task.risk}</td>
                     <td className="p-3">{task.priority}</td>
 
-                    {/* ASSIGN TEAM DROPDOWN */}
                     <td className="p-3">
-                      <form action={assignTaskToTeam} className="flex gap-2 items-center">
+                      <form action={assignTaskToTeam} className="flex items-center gap-2">
                         <input type="hidden" name="task_id" value={task.id_task} />
                         <input type="hidden" name="project_id" value={id} />
 
                         <select
                           name="team_id"
-                          className="rounded-lg border border-[#c8a27a] p-2 bg-white"
+                          defaultValue={String(task.fk_teamid_team ?? "null")}
+                          className="rounded-lg border border-[#c8a27a] bg-white p-2"
                         >
                           <option value="null">Remove team</option>
-                          {teams.map((team: any) => (
+                          {teams.map((team) => (
                             <option key={team.team_id} value={team.team_id}>
-                              {team.team_name}
+                              {team.team_name ?? "Unnamed team"}
                             </option>
                           ))}
                         </select>
@@ -130,16 +151,15 @@ export default async function BacklogView({ params }: any) {
               </tbody>
             </table>
 
-            {/* TEAMS + THEIR TASKS */}
-            <h2 className="text-2xl font-bold text-[#5c3b28] mt-10 mb-4">Teams</h2>
+            <h2 className="mb-4 mt-10 text-2xl font-bold text-[#5c3b28]">Teams</h2>
 
-            {teams.map((team: any) => (
+            {teams.map((team) => (
               <div key={team.team_id} className="mb-10">
-                <h3 className="text-xl font-semibold text-[#4b2e1f] mb-2">
-                  Team {team.team_name}
+                <h3 className="mb-2 text-xl font-semibold text-[#4b2e1f]">
+                  Team {team.team_name ?? "Unnamed team"}
                 </h3>
 
-                <table className="w-full border-collapse rounded-lg overflow-hidden">
+                <table className="w-full overflow-hidden rounded-lg border-collapse">
                   <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
                     <tr>
                       <th className="p-3 text-left">Name</th>
@@ -160,31 +180,28 @@ export default async function BacklogView({ params }: any) {
                       </tr>
                     )}
 
-                    {team.tasks.map((task: any) => (
-                      <tr
-                        key={task.id_task}
-                        className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]"
-                      >
+                    {team.tasks.map((task) => (
+                      <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
                         <td className="p-3">{task.name}</td>
                         <td className="p-3">{task.description}</td>
                         <td className="p-3">{task.story_points}</td>
                         <td className="p-3">{task.risk}</td>
                         <td className="p-3">{task.priority}</td>
 
-                        {/* ASSIGN TEAM DROPDOWN */}
                         <td className="p-3">
-                          <form action={assignTaskToTeam} className="flex gap-2 items-center">
+                          <form action={assignTaskToTeam} className="flex items-center gap-2">
                             <input type="hidden" name="task_id" value={task.id_task} />
                             <input type="hidden" name="project_id" value={id} />
 
                             <select
                               name="team_id"
-                              className="rounded-lg border border-[#c8a27a] p-2 bg-white"
+                              defaultValue={String(task.fk_teamid_team ?? "null")}
+                              className="rounded-lg border border-[#c8a27a] bg-white p-2"
                             >
                               <option value="null">Remove team</option>
-                              {teams.map((t: any) => (
-                                <option key={t.team_id} value={t.team_id}>
-                                  {t.team_name}
+                              {teams.map((optionTeam) => (
+                                <option key={optionTeam.team_id} value={optionTeam.team_id}>
+                                  {optionTeam.team_name ?? "Unnamed team"}
                                 </option>
                               ))}
                             </select>
@@ -204,19 +221,16 @@ export default async function BacklogView({ params }: any) {
               </div>
             ))}
 
-            {/* CREATE NEW TASK */}
-            <h3 className="text-xl font-bold text-[#5c3b28] mt-10 mb-4">
-              Create New Task
-            </h3>
+            <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Task</h3>
 
             <form
               action={createTask}
-              className="space-y-4 bg-[#fdf7f2] p-6 rounded-xl border border-[#c8a27a]"
+              className="space-y-4 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
             >
               <input type="hidden" name="fk_projectid_project" value={id} />
 
               <div>
-                <label className="block mb-1 font-medium">Name</label>
+                <label className="mb-1 block font-medium">Name</label>
                 <input
                   name="name"
                   required
@@ -225,7 +239,7 @@ export default async function BacklogView({ params }: any) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Description</label>
+                <label className="mb-1 block font-medium">Description</label>
                 <textarea
                   name="description"
                   className="w-full rounded-lg border border-[#c8a27a] p-3"
@@ -233,7 +247,7 @@ export default async function BacklogView({ params }: any) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Story Points</label>
+                <label className="mb-1 block font-medium">Story Points</label>
                 <input
                   type="number"
                   step="0.1"
@@ -243,7 +257,7 @@ export default async function BacklogView({ params }: any) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Risk</label>
+                <label className="mb-1 block font-medium">Risk</label>
                 <input
                   type="number"
                   name="risk"
@@ -252,7 +266,7 @@ export default async function BacklogView({ params }: any) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Priority</label>
+                <label className="mb-1 block font-medium">Priority</label>
                 <input
                   type="number"
                   name="priority"
@@ -262,7 +276,7 @@ export default async function BacklogView({ params }: any) {
 
               <button
                 type="submit"
-                className="rounded-lg bg-[#b08968] px-6 py-3 text-white font-semibold hover:bg-[#8c6a4f]"
+                className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f]"
               >
                 Create Task
               </button>

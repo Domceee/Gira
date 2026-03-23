@@ -3,9 +3,33 @@ import Link from "next/link";
 import { createSprint, assignTaskToSprint } from "./actions";
 import { cookies } from "next/headers";
 
-function isSprintEnded(sprint: any) {
+type Task = {
+  id_task: number;
+  name: string;
+  description: string | null;
+  story_points: number | null;
+  risk: number | null;
+  priority: number | null;
+  fk_sprintid_sprint: number | null;
+};
+
+type Sprint = {
+  id_sprint: number;
+  start_date: string;
+  end_date: string;
+  tasks: Task[];
+};
+
+type TeamBacklog = {
+  team_id: number;
+  team_name: string | null;
+  tasks: Task[];
+};
+
+function isSprintEnded(sprint: Sprint) {
   return new Date(sprint.end_date) < new Date();
 }
+
 function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
@@ -31,24 +55,26 @@ async function fetchWithAuth(url: string) {
 }
 
 async function getTeam(projectId: string, teamId: string) {
-  return fetchWithAuth(`/api/projects/${projectId}/teams/${teamId}`);
+  return fetchWithAuth(`/api/projects/${projectId}/teams/${teamId}`) as Promise<TeamBacklog>;
 }
 
 async function getSprints(teamId: string) {
-  return fetchWithAuth(`/api/sprints?team_id=${teamId}`);
+  return fetchWithAuth(`/api/sprints?team_id=${teamId}`) as Promise<Sprint[]>;
 }
 
-export default async function TeamView({ params }: any) {
-  
+export default async function TeamView({
+  params,
+}: {
+  params: Promise<{ id: string; teamId: string }>;
+}) {
   const { id, teamId } = await params;
-  //console.log("PARAMS:", params);
   const team = await getTeam(id, teamId);
   const sortedSprints = (await getSprints(teamId)).sort(
-  (a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
   );
 
-  const activeSprints = sortedSprints.filter((s: any) => !isSprintEnded(s));
-  const endedSprints = sortedSprints.filter((s: any) => isSprintEnded(s));
+  const activeSprints = sortedSprints.filter((s) => !isSprintEnded(s));
+  const endedSprints = sortedSprints.filter((s) => isSprintEnded(s));
 
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
@@ -56,8 +82,6 @@ export default async function TeamView({ params }: any) {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="grid grid-cols-[260px_1fr] gap-8">
-
-          {/* LEFT SIDEBAR */}
           <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
             <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
 
@@ -66,23 +90,17 @@ export default async function TeamView({ params }: any) {
                 href={`/projects/${id}`}
                 className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
               >
-                ← Back to Project
+                Back to Project
               </Link>
             </div>
           </aside>
 
-          {/* MAIN CONTENT */}
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
+            <h1 className="mb-6 text-3xl font-bold text-[#5c3b28]">Team {team.team_name}</h1>
 
-            {/* TEAM HEADER */}
-            <h1 className="text-3xl font-bold text-[#5c3b28] mb-6">
-              Team {team.team_name}
-            </h1>
+            <h2 className="mb-4 text-2xl font-bold text-[#5c3b28]">Team Backlog</h2>
 
-            {/* BACKLOG */}
-            <h2 className="text-2xl font-bold text-[#5c3b28] mb-4">Team Backlog</h2>
-
-            <table className="w-full border-collapse rounded-lg overflow-hidden">
+            <table className="w-full overflow-hidden rounded-lg border-collapse">
               <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
                 <tr>
                   <th className="p-3 text-left">Name</th>
@@ -95,7 +113,7 @@ export default async function TeamView({ params }: any) {
               </thead>
 
               <tbody>
-                {team.tasks.filter((t: any) => t.fk_sprintid_sprint === null).length === 0 ? (
+                {team.tasks.filter((t) => t.fk_sprintid_sprint === null).length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-4 text-center text-[#6f4e37]">
                       No tasks in backlog.
@@ -103,8 +121,8 @@ export default async function TeamView({ params }: any) {
                   </tr>
                 ) : (
                   team.tasks
-                    .filter((task: any) => task.fk_sprintid_sprint === null)
-                    .map((task: any) => (
+                    .filter((task) => task.fk_sprintid_sprint === null)
+                    .map((task) => (
                       <tr
                         key={task.id_task}
                         className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]"
@@ -123,10 +141,10 @@ export default async function TeamView({ params }: any) {
 
                             <select
                               name="sprint_id"
-                              className="rounded-lg border border-[#c8a27a] p-2 bg-white"
+                              className="rounded-lg border border-[#c8a27a] bg-white p-2"
                             >
                               <option value="null">Remove from sprint</option>
-                              {sortedSprints.map((s: any) => (
+                              {sortedSprints.map((s) => (
                                 <option key={s.id_sprint} value={s.id_sprint}>
                                   Sprint {s.id_sprint}
                                 </option>
@@ -145,19 +163,17 @@ export default async function TeamView({ params }: any) {
                     ))
                 )}
               </tbody>
-
             </table>
 
-            <h2 className="text-2xl font-bold text-[#5c3b28] mt-10 mb-4">Sprints</h2>
+            <h2 className="mb-4 mt-10 text-2xl font-bold text-[#5c3b28]">Sprints</h2>
 
-            {/* ACTIVE SPRINTS */}
-            {activeSprints.map((sprint: any) => (
+            {activeSprints.map((sprint) => (
               <div key={sprint.id_sprint} className="mb-10">
-                <h3 className="text-xl font-semibold text-[#4b2e1f] mb-2">
-                  Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
+                <h3 className="mb-2 text-xl font-semibold text-[#4b2e1f]">
+                  Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
                 </h3>
 
-                <table className="w-full border-collapse rounded-lg overflow-hidden">
+                <table className="w-full overflow-hidden rounded-lg border-collapse">
                   <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
                     <tr>
                       <th className="p-3 text-left">Name</th>
@@ -177,7 +193,7 @@ export default async function TeamView({ params }: any) {
                         </td>
                       </tr>
                     ) : (
-                      sprint.tasks.map((task: any) => (
+                      sprint.tasks.map((task) => (
                         <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
                           <td className="p-3">{task.name}</td>
                           <td className="p-3">{task.description}</td>
@@ -186,15 +202,14 @@ export default async function TeamView({ params }: any) {
                           <td className="p-3">{task.priority}</td>
 
                           <td className="p-3">
-                            {/* ACTIVE sprint → allow moving/removing */}
                             <form action={assignTaskToSprint} className="flex gap-2 items-center">
                               <input type="hidden" name="task_id" value={task.id_task} />
                               <input type="hidden" name="team_id" value={teamId} />
                               <input type="hidden" name="project_id" value={id} />
 
-                              <select name="sprint_id" className="rounded-lg border border-[#c8a27a] p-2 bg-white">
+                              <select name="sprint_id" className="rounded-lg border border-[#c8a27a] bg-white p-2">
                                 <option value="null">Move to Backlog</option>
-                                {sortedSprints.map((s: any) => (
+                                {sortedSprints.map((s) => (
                                   <option key={s.id_sprint} value={s.id_sprint}>
                                     Sprint {s.id_sprint}
                                   </option>
@@ -214,20 +229,17 @@ export default async function TeamView({ params }: any) {
               </div>
             ))}
 
-            {/* CREATE NEW SPRINT */}
-            <h3 className="text-xl font-bold text-[#5c3b28] mt-10 mb-4">
-              Create New Sprint
-            </h3>
+            <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Sprint</h3>
 
             <form
               action={createSprint}
-              className="space-y-4 bg-[#fdf7f2] p-6 rounded-xl border border-[#c8a27a]"
+              className="space-y-4 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
             >
               <input type="hidden" name="team_id" value={teamId} />
               <input type="hidden" name="project_id" value={id} />
 
               <div>
-                <label className="block mb-1 font-medium">Start Date</label>
+                <label className="mb-1 block font-medium">Start Date</label>
                 <input
                   type="date"
                   name="start_date"
@@ -237,7 +249,7 @@ export default async function TeamView({ params }: any) {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">End Date</label>
+                <label className="mb-1 block font-medium">End Date</label>
                 <input
                   type="date"
                   name="end_date"
@@ -248,54 +260,53 @@ export default async function TeamView({ params }: any) {
 
               <button
                 type="submit"
-                className="rounded-lg bg-[#b08968] px-6 py-3 text-white font-semibold hover:bg-[#8c6a4f]"
+                className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f]"
               >
                 Create Sprint
               </button>
             </form>
 
+            <h2 className="mb-4 mt-10 text-2xl font-bold text-gray-500">Ended Sprints</h2>
 
-            <h2 className="text-2xl font-bold text-gray-500 mt-10 mb-4">Ended Sprints</h2>
+            {endedSprints.map((sprint) => (
+              <div key={sprint.id_sprint} className="mb-10 opacity-60">
+                <h3 className="mb-2 text-xl font-semibold text-gray-500">
+                  Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
+                </h3>
 
-              {endedSprints.map((sprint: any) => (
-                <div key={sprint.id_sprint} className="mb-10 opacity-60">
-                  <h3 className="text-xl font-semibold text-gray-500 mb-2">
-                    Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
-                  </h3>
+                <table className="w-full overflow-hidden rounded-lg border-collapse">
+                  <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
+                    <tr>
+                      <th className="p-3 text-left">Name</th>
+                      <th className="p-3 text-left">Description</th>
+                      <th className="p-3 text-left">Story Points</th>
+                      <th className="p-3 text-left">Risk</th>
+                      <th className="p-3 text-left">Priority</th>
+                    </tr>
+                  </thead>
 
-                  <table className="w-full border-collapse rounded-lg overflow-hidden">
-                    <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
+                  <tbody>
+                    {sprint.tasks.length === 0 ? (
                       <tr>
-                        <th className="p-3 text-left">Name</th>
-                        <th className="p-3 text-left">Description</th>
-                        <th className="p-3 text-left">Story Points</th>
-                        <th className="p-3 text-left">Risk</th>
-                        <th className="p-3 text-left">Priority</th>
+                        <td colSpan={5} className="p-4 text-center text-[#6f4e37]">
+                          No tasks in this sprint.
+                        </td>
                       </tr>
-                    </thead>
-
-                    <tbody>
-                      {sprint.tasks.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-4 text-center text-[#6f4e37]">
-                            No tasks in this sprint.
-                          </td>
+                    ) : (
+                      sprint.tasks.map((task) => (
+                        <tr key={task.id_task} className="border-b border-[#d8c2a8]">
+                          <td className="p-3">{task.name}</td>
+                          <td className="p-3">{task.description}</td>
+                          <td className="p-3">{task.story_points}</td>
+                          <td className="p-3">{task.risk}</td>
+                          <td className="p-3">{task.priority}</td>
                         </tr>
-                      ) : (
-                        sprint.tasks.map((task: any) => (
-                          <tr key={task.id_task} className="border-b border-[#d8c2a8]">
-                            <td className="p-3">{task.name}</td>
-                            <td className="p-3">{task.description}</td>
-                            <td className="p-3">{task.story_points}</td>
-                            <td className="p-3">{task.risk}</td>
-                            <td className="p-3">{task.priority}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </section>
       </main>

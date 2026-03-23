@@ -5,6 +5,15 @@ import { cookies } from "next/headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
+function toOptionalNumber(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? null : Number(trimmed);
+}
+
 export async function createTask(formData: FormData) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
@@ -12,18 +21,17 @@ export async function createTask(formData: FormData) {
   const payload = {
     name: formData.get("name"),
     description: formData.get("description"),
-    story_points: Number(formData.get("story_points")),
-    risk: Number(formData.get("risk")),
-    priority: Number(formData.get("priority")),
+    story_points: toOptionalNumber(formData.get("story_points")),
+    risk: toOptionalNumber(formData.get("risk")),
+    priority: toOptionalNumber(formData.get("priority")),
     fk_projectid_project: Number(formData.get("fk_projectid_project")),
-    fk_role_enumid_role_enum: 1, // REQUIRED by your DB
   };
 
   const res = await fetch(`${API_URL}/api/tasks`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Cookie": cookieHeader
+      Cookie: cookieHeader,
     },
     body: JSON.stringify(payload),
     cache: "no-store",
@@ -44,23 +52,18 @@ export async function assignTaskToTeam(formData: FormData) {
   const taskId = formData.get("task_id");
   const projectId = formData.get("project_id");
 
-  let teamId: any = formData.get("team_id");
-
-  // Convert "null" string → empty string (so backend gets None)
+  let teamId = formData.get("team_id");
   if (teamId === "null") {
     teamId = "";
   }
 
-  const res =await fetch(
-    `${API_URL}/api/tasks/${taskId}/assign_team?team_id=${teamId}`,
-    { 
-      method: "PATCH",
-      headers: {
-        "Cookie": cookieHeader
-      },
-      cache: "no-store",
-    }
-  );
+  const res = await fetch(`${API_URL}/api/tasks/${taskId}/assign_team?team_id=${teamId}`, {
+    method: "PATCH",
+    headers: {
+      Cookie: cookieHeader,
+    },
+    cache: "no-store",
+  });
 
   if (!res.ok) {
     const text = await res.text();

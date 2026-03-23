@@ -15,6 +15,8 @@ class TaskRead(BaseModel):
     story_points: float | None
     risk: int | None
     priority: int | None
+    fk_teamid_team: int | None
+    fk_sprintid_sprint: int | None
 
     class Config:
         orm_mode = True
