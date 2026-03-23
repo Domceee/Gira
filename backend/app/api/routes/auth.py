@@ -91,7 +91,7 @@ async def google_login():
     return RedirectResponse(url)
 
 @router.get("/google/callback")
-async def google_callback(code: str, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
     async with httpx.AsyncClient() as client:
         token_resp = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -169,8 +169,6 @@ async def google_callback(code: str, background_tasks: BackgroundTasks, db: Asyn
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
-
-    background_tasks.add_task(send_registration_email, user.email, user.name)
     return response
 
 @router.get("/me", response_model=UserRead)
