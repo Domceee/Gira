@@ -37,7 +37,7 @@ export default function Navbar() {
   useEffect(() => {
     async function fetchCurrentUser() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        const res = await fetch(`/api/proxy/auth/me`, {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -76,7 +76,7 @@ export default function Navbar() {
     try {
       setLoggingOut(true);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+      const res = await fetch(`/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

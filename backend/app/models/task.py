@@ -12,11 +12,11 @@ class Task(Base):
     risk = Column(Integer, nullable=True)
     priority = Column(Integer, nullable=True)
 
-    # REQUIRED foreign keys
+    # Legacy role enum link; latest migration allows this to be null.
     fk_role_enumid_role_enum = Column(
         Integer,
         ForeignKey("role_enum.id_role_enum"),
-        nullable=False
+        nullable=True
     )
 
     fk_projectid_project = Column(
