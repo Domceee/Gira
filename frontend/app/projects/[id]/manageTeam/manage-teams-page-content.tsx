@@ -7,6 +7,8 @@ import { apiFetch } from "@/app/lib/api";
 type Team = {
   id_team: number;
   name: string | null;
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type UserInfo = {
@@ -29,7 +31,7 @@ type TeamMember = {
 
 type Props = {
   projectId: string;
-  projectName: string;
+  projectName: string | null;
 };
 
 export default function ManageTeamsPageContent({ projectId, projectName }: Props) {
@@ -237,6 +239,8 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
   async function handleDeleteTeam() {
     try {
       if (selectedTeamId === null) return;
+      const selectedTeam = teams.find((team) => team.id_team === selectedTeamId);
+      if (!selectedTeam?.can_delete) return;
 
       const first = window.confirm("Are you sure you want to delete this team?");
       if (!first) return;
@@ -340,14 +344,22 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-2xl font-semibold text-[#5c3b28]">Current Team Members</h2>
 
-                <button
-                  type="button"
-                  onClick={handleDeleteTeam}
-                  disabled={deletingTeam}
-                  className="rounded-xl bg-red-700 px-5 py-2 font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+                <span
+                  title={
+                    !teams.find((team) => team.id_team === selectedTeamId)?.can_delete
+                      ? teams.find((team) => team.id_team === selectedTeamId)?.delete_block_reason ?? "Cannot delete"
+                      : ""
+                  }
                 >
-                  {deletingTeam ? "Deleting..." : "Dismantle Team"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteTeam}
+                    disabled={deletingTeam || !teams.find((team) => team.id_team === selectedTeamId)?.can_delete}
+                    className="rounded-xl bg-red-700 px-5 py-2 font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:text-gray-100 disabled:opacity-100"
+                  >
+                    {deletingTeam ? "Deleting..." : "Dismantle Team"}
+                  </button>
+                </span>
               </div>
 
               {selectedTeamMembers.length === 0 ? (

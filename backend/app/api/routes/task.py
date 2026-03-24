@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -132,6 +133,17 @@ async def assign_sprint(
 
         if sprint is None:
             raise HTTPException(status_code=404, detail="Sprint not found")
+
+        if sprint.end_date.tzinfo is not None:
+            today = datetime.now(sprint.end_date.tzinfo).date()
+        else:
+            today = datetime.utcnow().date()
+
+        if sprint.end_date.date() < today:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot assign tasks to a sprint that has already ended",
+            )
 
         if task.fk_teamid_team is None or sprint.fk_teamid_team != task.fk_teamid_team:
             raise HTTPException(

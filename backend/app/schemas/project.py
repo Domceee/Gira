@@ -12,6 +12,26 @@ class ProjectRead(BaseModel):
     name: str | None = None
     description: str | None = None
     is_owner: bool = False
+    can_delete: bool = True
+    delete_block_reason: str | None = None
+
+
+class StoryPointsByTeamRead(BaseModel):
+    label: str
+    team_id: int | None = None
+    story_points: float
+
+
+class ProjectStatsRead(BaseModel):
+    total_tasks: int
+    unassigned_tasks: int
+    team_backlog_tasks: int
+    in_sprint_tasks: int
+    total_story_points: float
+    unassigned_story_points: float
+    team_backlog_story_points: float
+    in_sprint_story_points: float
+    story_points_by_team: list[StoryPointsByTeamRead]
 
 class ProjectUpdate(BaseModel):
     name: str

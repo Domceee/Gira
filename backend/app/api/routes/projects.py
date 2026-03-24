@@ -7,15 +7,68 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectRead,
+    ProjectStatsRead,
+    ProjectUpdate,
+    StoryPointsByTeamRead,
+)
 from app.schemas.ProjectMember import ProjectMembersAddRequest
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.task import Task
+from app.models.sprint import Sprint
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
 from app.api.routes.auth import get_current_user  
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+async def get_project_delete_state(project_id: int, db: AsyncSession) -> tuple[bool, str | None]:
+    team_result = await db.execute(
+        select(Team).where(Team.fk_projectid_project == project_id)
+    )
+    teams = team_result.scalars().all()
+
+    task_result = await db.execute(
+        select(Task).where(Task.fk_projectid_project == project_id)
+    )
+    tasks = task_result.scalars().all()
+
+    reasons: list[str] = []
+    if teams:
+        reasons.append(f"{len(teams)} team(s) still exist")
+    if tasks:
+        reasons.append(f"{len(tasks)} task(s) still exist")
+
+    if reasons:
+        return False, "Cannot delete because " + " and ".join(reasons) + "."
+
+    return True, None
+
+
+async def get_team_delete_state(team_id: int, db: AsyncSession) -> tuple[bool, str | None]:
+    task_result = await db.execute(
+        select(Task).where(Task.fk_teamid_team == team_id)
+    )
+    tasks = task_result.scalars().all()
+
+    sprint_result = await db.execute(
+        select(Sprint).where(Sprint.fk_teamid_team == team_id)
+    )
+    sprints = sprint_result.scalars().all()
+
+    reasons: list[str] = []
+    if tasks:
+        reasons.append(f"{len(tasks)} task(s) are still assigned")
+    if sprints:
+        reasons.append(f"{len(sprints)} sprint(s) still exist")
+
+    if reasons:
+        return False, "Cannot delete because " + " and ".join(reasons) + "."
+
+    return True, None
 
 
 @router.get("", response_model=list[ProjectRead])
@@ -32,14 +85,20 @@ async def get_projects(
 
     projects = result.scalars().all()
 
-    return [
-        ProjectRead(
-            id=project.id_project,
-            name=project.name,
-            description=project.description,
+    output: list[ProjectRead] = []
+    for project in projects:
+        can_delete, delete_block_reason = await get_project_delete_state(project.id_project, db)
+        output.append(
+            ProjectRead(
+                id=project.id_project,
+                name=project.name,
+                description=project.description,
+                can_delete=can_delete,
+                delete_block_reason=delete_block_reason,
+            )
         )
-        for project in projects
-    ]
+
+    return output
 
 @router.get("/{project_id}", response_model=ProjectRead)
 async def get_project(
@@ -62,12 +121,77 @@ async def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     project, is_owner = row
+    can_delete, delete_block_reason = await get_project_delete_state(project_id, db)
 
     return ProjectRead(
         id=project.id_project,
         name=project.name,
         description=project.description,
         is_owner=is_owner,
+        can_delete=can_delete,
+        delete_block_reason=delete_block_reason,
+    )
+
+
+@router.get("/{project_id}/stats", response_model=ProjectStatsRead)
+async def get_project_stats(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await get_project_membership_or_404(project_id, current_user.id_user, db)
+
+    result = await db.execute(
+        select(Task).where(Task.fk_projectid_project == project_id)
+    )
+    tasks = result.scalars().all()
+    team_result = await db.execute(
+        select(Team)
+        .where(Team.fk_projectid_project == project_id)
+        .order_by(Team.id_team.asc())
+    )
+    teams = team_result.scalars().all()
+
+    def story_points_for(items: list[Task]) -> float:
+        return float(sum(task.story_points or 0 for task in items))
+
+    unassigned_tasks = [task for task in tasks if task.fk_teamid_team is None]
+    team_backlog_tasks = [
+        task for task in tasks
+        if task.fk_teamid_team is not None and task.fk_sprintid_sprint is None
+    ]
+    in_sprint_tasks = [task for task in tasks if task.fk_sprintid_sprint is not None]
+    story_points_by_team: list[StoryPointsByTeamRead] = []
+
+    for team in teams:
+        team_story_points = float(
+            sum((task.story_points or 0) for task in tasks if task.fk_teamid_team == team.id_team)
+        )
+        story_points_by_team.append(
+            StoryPointsByTeamRead(
+                label=team.name or f"Team {team.id_team}",
+                team_id=team.id_team,
+                story_points=team_story_points,
+            )
+        )
+
+    story_points_by_team.append(
+        StoryPointsByTeamRead(
+            label="Unassigned",
+            story_points=story_points_for(unassigned_tasks),
+        )
+    )
+
+    return ProjectStatsRead(
+        total_tasks=len(tasks),
+        unassigned_tasks=len(unassigned_tasks),
+        team_backlog_tasks=len(team_backlog_tasks),
+        in_sprint_tasks=len(in_sprint_tasks),
+        total_story_points=story_points_for(tasks),
+        unassigned_story_points=story_points_for(unassigned_tasks),
+        team_backlog_story_points=story_points_for(team_backlog_tasks),
+        in_sprint_story_points=story_points_for(in_sprint_tasks),
+        story_points_by_team=story_points_by_team,
     )
 
 
@@ -113,6 +237,7 @@ async def create_project(
         id=project.id_project,
         name=project.name,
         description=project.description,
+        can_delete=True,
     )
 
 @router.patch("/{project_id}", response_model=ProjectRead)
@@ -141,12 +266,15 @@ async def update_project(
 
     await db.commit()
     await db.refresh(project)
+    can_delete, delete_block_reason = await get_project_delete_state(project_id, db)
 
     return ProjectRead(
         id=project.id_project,
         name=project.name,
         description=project.description,
         is_owner=True,
+        can_delete=can_delete,
+        delete_block_reason=delete_block_reason,
     )
 
 @router.delete("/{project_id}")
@@ -233,13 +361,19 @@ async def get_project_teams(
     )
     teams = result.scalars().all()
 
-    return [
-        TeamRead(
-            id_team=team.id_team,
-            name=team.name,
+    output: list[TeamRead] = []
+    for team in teams:
+        can_delete, delete_block_reason = await get_team_delete_state(team.id_team, db)
+        output.append(
+            TeamRead(
+                id_team=team.id_team,
+                name=team.name,
+                can_delete=can_delete,
+                delete_block_reason=delete_block_reason,
+            )
         )
-        for team in teams
-    ]
+
+    return output
 
 
 @router.get("/{project_id}/teams/{team_id}")
@@ -290,6 +424,7 @@ async def create_team(
     return TeamRead(
         id_team=team.id_team,
         name=team.name,
+        can_delete=True,
     )
 
 

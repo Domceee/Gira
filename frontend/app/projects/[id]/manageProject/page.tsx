@@ -3,6 +3,19 @@ import { cookies } from "next/headers";
 import { apiFetch } from "@/app/lib/api";
 import ManageProjectForm from "./manage-project-form";
 
+type Project = {
+  id: number;
+  name: string | null;
+  description: string | null;
+  is_owner: boolean;
+  can_delete: boolean;
+  delete_block_reason: string | null;
+};
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
 async function getProject(id: string) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
@@ -17,10 +30,10 @@ async function getProject(id: string) {
     throw new Error("Failed to fetch project");
   }
 
-  return res.json();
+  return res.json() as Promise<Project>;
 }
 
-export default async function ManageProjectPage({ params }: any) {
+export default async function ManageProjectPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProject(id);
 
