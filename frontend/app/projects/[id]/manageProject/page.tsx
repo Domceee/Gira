@@ -8,6 +8,8 @@ type Project = {
   name: string | null;
   description: string | null;
   is_owner: boolean;
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type PageProps = {
