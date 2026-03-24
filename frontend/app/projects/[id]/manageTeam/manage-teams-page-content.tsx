@@ -31,7 +31,7 @@ type TeamMember = {
 
 type Props = {
   projectId: string;
-  projectName: string;
+  projectName: string | null;
 };
 
 export default function ManageTeamsPageContent({ projectId, projectName }: Props) {
