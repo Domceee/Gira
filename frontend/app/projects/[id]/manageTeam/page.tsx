@@ -55,7 +55,7 @@ export default async function ManageTeamPage({ params }: PageProps) {
 
           <ManageTeamsPageContent
             projectId={id}
-            projectName={project.name}
+            projectName={project.name ?? "Unnamed Project"}
           />
         </div>
       </main>
