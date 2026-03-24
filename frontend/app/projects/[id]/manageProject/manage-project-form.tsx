@@ -6,7 +6,7 @@ import { apiFetch } from "@/app/lib/api";
 
 type Project = {
   id: number;
-  name: string;
+  name: string | null;
   description: string | null;
   is_owner: boolean;
   can_delete: boolean;
