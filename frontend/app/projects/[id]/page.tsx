@@ -1,8 +1,6 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
-import { cookies } from "next/headers";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiFetch } from "@/app/lib/api";
 
 type Project = {
   id: number;
@@ -91,14 +89,9 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 }
 
 async function getProject(id: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}/api/projects/${id}`, {
+  const res = await apiFetch(`/api/projects/${id}`, {
+    method: "GET",
     cache: "no-store",
-    headers: {
-      "Cookie": cookieHeader
-    },
   });
 
   if (!res.ok) {
@@ -109,14 +102,9 @@ async function getProject(id: string) {
 }
 
 async function getProjectStats(id: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}/api/projects/${id}/stats`, {
+  const res = await apiFetch(`/api/projects/${id}/stats`, {
+    method: "GET",
     cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
   });
 
   if (!res.ok) {
@@ -134,11 +122,13 @@ export default async function ProjectView({
   const { id } = await params;
   const project = await getProject(id);
   let stats: ProjectStats | null = null;
+  let statsError: string | null = null;
 
   try {
     stats = await getProjectStats(id);
   } catch {
     stats = null;
+    statsError = "Project statistics could not be loaded right now.";
   }
 
   const statCards: StatCard[] = stats
@@ -327,6 +317,20 @@ export default async function ProjectView({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {!stats && statsError && (
+              <div className="rounded-2xl border border-[#d4b08a] bg-[#fff7ef] p-6 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#8b5e3c]">
+                  Project Statistics
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-[#5c3b28]">Statistics unavailable</h2>
+                <p className="mt-3 max-w-3xl text-[#6f4e37]">
+                  {statsError} The project page still works, but the{" "}
+                  <code className="rounded bg-[#f3e4d6] px-1.5 py-0.5 text-[#5c3b28]">/api/projects/:id/stats</code>{" "}
+                  request is failing and this screen used to hide that completely.
+                </p>
               </div>
             )}
 

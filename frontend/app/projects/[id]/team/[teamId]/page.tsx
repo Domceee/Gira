@@ -185,6 +185,16 @@ export default async function TeamView({
             </table>
 
             <h2 className="mb-4 mt-10 text-2xl font-bold text-[#5c3b28]">Sprints</h2>
+            <p className="mb-6 max-w-3xl text-[#6f4e37]">
+              Each sprint has its own statistics page. Use the <span className="font-semibold">&quot;View Sprint Stats&quot;</span>{" "}
+              button on a sprint row to open the burndown and totals view.
+            </p>
+
+            {activeSprints.length === 0 && (
+              <div className="mb-8 rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] p-5 text-[#6f4e37]">
+                No active sprints yet. Create one below and its stats page will become available automatically.
+              </div>
+            )}
 
             {activeSprints.map((sprint) => (
               <div key={sprint.id_sprint} className="mb-10">
@@ -199,7 +209,7 @@ export default async function TeamView({
                     title={`View sprint ${sprint.id_sprint} statistics`}
                   >
                     <ChartIcon className="h-4 w-4" />
-                    Stats
+                    View Sprint Stats
                   </Link>
                 </div>
 
@@ -265,6 +275,12 @@ export default async function TeamView({
 
             <h2 className="mb-4 mt-10 text-2xl font-bold text-gray-500">Ended Sprints</h2>
 
+            {endedSprints.length === 0 && (
+              <div className="mb-8 rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] p-5 text-[#6f4e37]">
+                No completed sprints yet.
+              </div>
+            )}
+
             {endedSprints.map((sprint) => (
               <div key={sprint.id_sprint} className="mb-10">
                 <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -278,7 +294,7 @@ export default async function TeamView({
                     title={`View sprint ${sprint.id_sprint} statistics`}
                   >
                     <ChartIcon className="h-4 w-4" />
-                    Stats
+                    View Sprint Stats
                   </Link>
                 </div>
 

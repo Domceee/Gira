@@ -1,6 +1,6 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { apiFetch } from "@/app/lib/api";
 
 type BurndownPoint = {
   label: string;
@@ -22,8 +22,6 @@ type SprintStats = {
   burndown_points: BurndownPoint[];
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
@@ -33,14 +31,9 @@ function formatPoints(value: number) {
 }
 
 async function getSprintStats(teamId: string, sprintId: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}/api/sprints/${sprintId}/stats?team_id=${teamId}`, {
+  const res = await apiFetch(`/api/sprints/${sprintId}/stats?team_id=${teamId}`, {
+    method: "GET",
     cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
   });
 
   if (!res.ok) {
