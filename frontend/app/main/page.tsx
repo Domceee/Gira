@@ -3,6 +3,12 @@ import Navbar from "../components/navbar";
 import { cookies } from "next/headers";
 import { apiFetch } from "../lib/api";
 
+type ProjectListItem = {
+  id: number;
+  name: string | null;
+  description: string | null;
+};
+
 async function getProjects() {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
@@ -17,7 +23,7 @@ async function getProjects() {
     throw new Error("Failed to fetch projects");
   }
 
-  return res.json();
+  return res.json() as Promise<ProjectListItem[]>;
 }
 
 const news = [
@@ -71,7 +77,7 @@ export default async function HomePage() {
                 <p className="text-[#6f4e37]">No projects yet.</p>
               )}
 
-              {projects.map((project: any) => (
+              {projects.map((project) => (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}

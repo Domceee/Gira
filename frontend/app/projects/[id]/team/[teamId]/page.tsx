@@ -2,6 +2,7 @@ import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { createSprint, assignTaskToSprint } from "./actions";
 import { cookies } from "next/headers";
+import CreateSprintForm from "./create-sprint-form";
 
 type Task = {
   id_task: number;
@@ -25,6 +26,24 @@ type TeamBacklog = {
   team_name: string | null;
   tasks: Task[];
 };
+
+function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 3v18h18" />
+      <path d="M7 14l4-4 3 3 5-7" />
+    </svg>
+  );
+}
 
 function isSprintEnded(sprint: Sprint) {
   return new Date(sprint.end_date) < new Date();
@@ -144,7 +163,7 @@ export default async function TeamView({
                               className="rounded-lg border border-[#c8a27a] bg-white p-2"
                             >
                               <option value="null">Remove from sprint</option>
-                              {sortedSprints.map((s) => (
+                              {activeSprints.map((s) => (
                                 <option key={s.id_sprint} value={s.id_sprint}>
                                   Sprint {s.id_sprint}
                                 </option>
@@ -169,9 +188,20 @@ export default async function TeamView({
 
             {activeSprints.map((sprint) => (
               <div key={sprint.id_sprint} className="mb-10">
-                <h3 className="mb-2 text-xl font-semibold text-[#4b2e1f]">
-                  Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
-                </h3>
+                <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-xl font-semibold text-[#4b2e1f]">
+                    Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
+                  </h3>
+
+                  <Link
+                    href={`/projects/${id}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                    className="inline-flex items-center gap-2 self-start rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-2 text-sm font-semibold text-[#4b2e1f] transition hover:-translate-y-0.5 hover:shadow"
+                    title={`View sprint ${sprint.id_sprint} statistics`}
+                  >
+                    <ChartIcon className="h-4 w-4" />
+                    Stats
+                  </Link>
+                </div>
 
                 <table className="w-full overflow-hidden rounded-lg border-collapse">
                   <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
@@ -209,7 +239,7 @@ export default async function TeamView({
 
                               <select name="sprint_id" className="rounded-lg border border-[#c8a27a] bg-white p-2">
                                 <option value="null">Move to Backlog</option>
-                                {sortedSprints.map((s) => (
+                                {activeSprints.map((s) => (
                                   <option key={s.id_sprint} value={s.id_sprint}>
                                     Sprint {s.id_sprint}
                                   </option>
@@ -231,48 +261,26 @@ export default async function TeamView({
 
             <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Sprint</h3>
 
-            <form
-              action={createSprint}
-              className="space-y-4 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
-            >
-              <input type="hidden" name="team_id" value={teamId} />
-              <input type="hidden" name="project_id" value={id} />
-
-              <div>
-                <label className="mb-1 block font-medium">Start Date</label>
-                <input
-                  type="date"
-                  name="start_date"
-                  required
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block font-medium">End Date</label>
-                <input
-                  type="date"
-                  name="end_date"
-                  required
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f]"
-              >
-                Create Sprint
-              </button>
-            </form>
+            <CreateSprintForm action={createSprint} teamId={teamId} projectId={id} />
 
             <h2 className="mb-4 mt-10 text-2xl font-bold text-gray-500">Ended Sprints</h2>
 
             {endedSprints.map((sprint) => (
-              <div key={sprint.id_sprint} className="mb-10 opacity-60">
-                <h3 className="mb-2 text-xl font-semibold text-gray-500">
-                  Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
-                </h3>
+              <div key={sprint.id_sprint} className="mb-10">
+                <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-xl font-semibold text-gray-500">
+                    Sprint {sprint.id_sprint} ({formatDate(sprint.start_date)} to {formatDate(sprint.end_date)})
+                  </h3>
+
+                  <Link
+                    href={`/projects/${id}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                    className="inline-flex items-center gap-2 self-start rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-2 text-sm font-semibold text-[#4b2e1f] transition hover:-translate-y-0.5 hover:shadow"
+                    title={`View sprint ${sprint.id_sprint} statistics`}
+                  >
+                    <ChartIcon className="h-4 w-4" />
+                    Stats
+                  </Link>
+                </div>
 
                 <table className="w-full overflow-hidden rounded-lg border-collapse">
                   <thead className="bg-[#e8d6c3] text-[#4b2e1f]">

@@ -9,6 +9,8 @@ type Project = {
   name: string;
   description: string | null;
   is_owner: boolean;
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type UserSearchResult = {
@@ -107,6 +109,8 @@ export default function ManageProjectForm({ project }: { project: Project }) {
   }
 
   async function handleDelete() {
+    if (!project.can_delete) return;
+
     const first = window.confirm("Are you sure you want to delete this project?");
     if (!first) return;
 
@@ -246,14 +250,16 @@ export default function ManageProjectForm({ project }: { project: Project }) {
           {saving ? "Saving..." : "Save Changes"}
         </button>
 
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          className="rounded-xl bg-red-700 px-6 py-3 font-semibold text-white hover:bg-red-800 disabled:opacity-60"
-        >
-          {deleting ? "Deleting..." : "Delete Project"}
-        </button>
+        <span title={!project.can_delete ? project.delete_block_reason ?? "Cannot delete" : ""}>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || !project.can_delete}
+            className="rounded-xl bg-red-700 px-6 py-3 font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:text-gray-100 disabled:opacity-100"
+          >
+            {deleting ? "Deleting..." : "Delete Project"}
+          </button>
+        </span>
       </div>
     </div>
   );
