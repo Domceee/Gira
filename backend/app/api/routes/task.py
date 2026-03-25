@@ -160,6 +160,11 @@ async def assign_sprint(
     return {"status": "ok", "task_id": task_id, "sprint_id": payload.sprint_id}
 
 
+
+
+
+
+
 async def get_project_membership_or_404(project_id: int, user_id: int, db: AsyncSession):
     result = await db.execute(
         select(ProjectMember).where(
@@ -173,3 +178,24 @@ async def get_project_membership_or_404(project_id: int, user_id: int, db: Async
         raise HTTPException(status_code=404, detail="Project not found")
 
     return membership
+
+@router.delete("/api/projects/{project_id}/task/{task_id}")
+async def delete_task(project_id: int, task_id: int, db: Session = Depends(get_db)):
+    # Fetch the task
+    task = db.query(Task).filter(Task.id_task == task_id).first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Ensure the task belongs to the given project
+    if task.fk_projectid_project != project_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Task does not belong to this project"
+        )
+
+    # Delete the task
+    db.delete(task)
+    db.commit()
+
+    return {"message": "Task deleted successfully"}

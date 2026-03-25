@@ -72,3 +72,18 @@ export async function assignTaskToTeam(formData: FormData) {
 
   revalidatePath(`/projects/${projectId}/backlog`);
 }
+
+export async function deleteTask(formData: FormData) {
+  const taskId = formData.get("task_id");
+  const projectId = formData.get("project_id");
+
+  await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/task/${taskId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Cookie: cookies().toString(),
+      },
+    }
+  );
+}
