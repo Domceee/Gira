@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+
 import Navbar from "@/app/components/navbar";
+import DescriptionButton from "@/app/components/DescriptionButton";
 
 import { assignTaskToTeam, createTask, deleteTask } from "./actions";
 
@@ -139,11 +141,13 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
 
                 {tasks.map((task) => (
                   <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                    <td className="p-3">{task.name}</td>
                     <td className="p-3 align-top">
                       <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
-                        {task.description ?? "—"}
+                        {task.name ?? "—"}
                       </div>
+                    </td>
+                    <td className="p-3">
+                      <DescriptionButton text={task.description} />
                     </td>
                     <td className="p-3">{task.story_points}</td>
                     <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
@@ -224,8 +228,14 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
 
                     {team.tasks.map((task) => (
                       <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                        <td className="p-3">{task.name}</td>
-                        <td className="p-3">{task.description}</td>
+                        <td className="p-3 align-top">
+                          <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                            {task.name ?? "—"}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <DescriptionButton text={task.description} />
+                        </td>
                         <td className="p-3">{task.story_points}</td>
                         <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
                         <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
