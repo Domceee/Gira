@@ -180,7 +180,7 @@ async def get_project_membership_or_404(project_id: int, user_id: int, db: Async
     return membership
 
 @router.delete("/api/projects/{project_id}/task/{task_id}")
-async def delete_task(project_id: int, task_id: int, db: Session = Depends(get_db)):
+async def delete_task(project_id: int, task_id: int, db: AsyncSession = Depends(get_db)):
     # Fetch the task
     task = db.query(Task).filter(Task.id_task == task_id).first()
 
