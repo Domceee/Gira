@@ -5,6 +5,8 @@ import Navbar from "@/app/components/navbar";
 
 import { assignTaskToTeam, createTask, deleteTask } from "./actions";
 
+import { Trash2 } from 'lucide-react';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const RiskAndPriority = [
@@ -77,6 +79,10 @@ async function getTasks(projectId: string): Promise<Task[]> {
   return fetchWithAuth(`/api/tasks?project_id=${projectId}`);
 }
 
+
+
+
+
 export default async function BacklogView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -84,6 +90,10 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
   const tasks = await getTasks(id);
   const teams = await getTeamsWithTasks(id);
 
+
+
+  
+  
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
       <Navbar />
@@ -130,7 +140,11 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
                 {tasks.map((task) => (
                   <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
                     <td className="p-3">{task.name}</td>
-                    <td className="p-3">{task.description}</td>
+                    <td className="p-3 align-top">
+                      <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                        {task.description ?? "—"}
+                      </div>
+                    </td>
                     <td className="p-3">{task.story_points}</td>
                     <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
                     <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
@@ -170,9 +184,9 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
                           type="submit"
                           className="rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700"
                         >
-                          Delete
+                          <Trash2 size={18} />
                         </button>
-                    </form>
+                      </form>
                     </td>
                   </tr>
                 ))}
