@@ -1,8 +1,12 @@
 import Navbar from "@/app/components/navbar";
+import DescriptionButton from "@/app/components/DescriptionButton";
+
 import Link from "next/link";
 import { createSprint, assignTaskToSprint } from "./actions";
 import { cookies } from "next/headers";
 import CreateSprintForm from "./create-sprint-form";
+
+import { RiskAndPriority, getRiskOrPriorityName } from "@/app/lib/riskPriority";
 
 type Task = {
   id_task: number;
@@ -146,11 +150,17 @@ export default async function TeamView({
                         key={task.id_task}
                         className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]"
                       >
-                        <td className="p-3">{task.name}</td>
-                        <td className="p-3">{task.description}</td>
+                        <td className="p-3 align-top">
+                          <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                            {task.name ?? "—"}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <DescriptionButton text={task.description} />
+                        </td>
                         <td className="p-3">{task.story_points}</td>
-                        <td className="p-3">{task.risk}</td>
-                        <td className="p-3">{task.priority}</td>
+                        <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
+                        <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
 
                         <td className="p-3">
                           <form action={assignTaskToSprint} className="flex gap-2 items-center">
@@ -235,11 +245,17 @@ export default async function TeamView({
                     ) : (
                       sprint.tasks.map((task) => (
                         <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                          <td className="p-3">{task.name}</td>
-                          <td className="p-3">{task.description}</td>
+                          <td className="p-3 align-top">
+                            <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                              {task.name ?? "—"}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <DescriptionButton text={task.description} />
+                          </td>
                           <td className="p-3">{task.story_points}</td>
-                          <td className="p-3">{task.risk}</td>
-                          <td className="p-3">{task.priority}</td>
+                          <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
+                          <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
 
                           <td className="p-3">
                             <form action={assignTaskToSprint} className="flex gap-2 items-center">
@@ -319,11 +335,17 @@ export default async function TeamView({
                     ) : (
                       sprint.tasks.map((task) => (
                         <tr key={task.id_task} className="border-b border-[#d8c2a8]">
-                          <td className="p-3">{task.name}</td>
-                          <td className="p-3">{task.description}</td>
+                          <td className="p-3 align-top">
+                            <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                              {task.name ?? "—"}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <DescriptionButton text={task.description} />
+                          </td>
                           <td className="p-3">{task.story_points}</td>
-                          <td className="p-3">{task.risk}</td>
-                          <td className="p-3">{task.priority}</td>
+                          <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
+                          <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
                         </tr>
                       ))
                     )}

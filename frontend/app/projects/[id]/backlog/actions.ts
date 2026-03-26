@@ -72,3 +72,29 @@ export async function assignTaskToTeam(formData: FormData) {
 
   revalidatePath(`/projects/${projectId}/backlog`);
 }
+
+export async function deleteTask(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const taskId = formData.get("task_id");
+  const projectId = formData.get("project_id");
+
+  const res = await fetch(
+    `${API_URL}/api/tasks/${taskId}`,
+    {
+      method: "DELETE",
+      cache: "no-store",
+      headers: {
+        Cookie: cookieHeader,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to delete task");
+  }
+
+  revalidatePath(`/projects/${projectId}/backlog`);
+}

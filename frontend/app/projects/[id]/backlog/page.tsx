@@ -1,11 +1,30 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 
-import Navbar from "@/app/components/navbar";
 
-import { assignTaskToTeam, createTask } from "./actions";
+import Navbar from "@/app/components/navbar";
+import DescriptionButton from "@/app/components/DescriptionButton";
+
+import { assignTaskToTeam, createTask, deleteTask } from "./actions";
+
+import { Trash2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+const RiskAndPriority = [
+  { id: 1, name: "Very low" },
+  { id: 2, name: "Low" },
+  { id: 3, name: "Medium" },
+  { id: 4, name: "High" },
+  { id: 5, name: "Very high" }
+];
+
+function getRiskOrPriorityName(value: number | null) {
+  if (value === null) return "—";
+  const item = RiskAndPriority.find(r => r.id === value);
+  return item ? item.name : "Unknown";
+}
+
 
 type Task = {
   id_task: number;
@@ -62,6 +81,10 @@ async function getTasks(projectId: string): Promise<Task[]> {
   return fetchWithAuth(`/api/tasks?project_id=${projectId}`);
 }
 
+
+
+
+
 export default async function BacklogView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -69,6 +92,10 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
   const tasks = await getTasks(id);
   const teams = await getTeamsWithTasks(id);
 
+
+
+  
+  
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
       <Navbar />
@@ -114,12 +141,17 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
 
                 {tasks.map((task) => (
                   <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                    <td className="p-3">{task.name}</td>
-                    <td className="p-3">{task.description}</td>
+                    <td className="p-3 align-top">
+                      <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                        {task.name ?? "—"}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <DescriptionButton text={task.description} />
+                    </td>
                     <td className="p-3">{task.story_points}</td>
-                    <td className="p-3">{task.risk}</td>
-                    <td className="p-3">{task.priority}</td>
-
+                    <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
+                    <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
                     <td className="p-3">
                       <form action={assignTaskToTeam} className="flex items-center gap-2">
                         <input type="hidden" name="task_id" value={task.id_task} />
@@ -130,12 +162,15 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
                           defaultValue={String(task.fk_teamid_team ?? "null")}
                           className="rounded-lg border border-[#c8a27a] bg-white p-2"
                         >
-                          <option value="null">Remove team</option>
-                          {teams.map((team) => (
-                            <option key={team.team_id} value={team.team_id}>
-                              {team.team_name ?? "Unnamed team"}
-                            </option>
-                          ))}
+                          {teams.length === 0 ? (
+                            <option value="null" disabled>No teams found</option>
+                          ) : (
+                            teams.map((team) => (
+                              <option key={team.team_id} value={team.team_id}>
+                                {team.team_name ?? "Unnamed team"}
+                              </option>
+                            ))
+                          )}
                         </select>
 
                         <button
@@ -143,6 +178,17 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
                           className="rounded-lg bg-[#b08968] px-3 py-2 text-white hover:bg-[#8c6a4f]"
                         >
                           Save
+                        </button>
+                      </form>
+                      <form action={deleteTask}>
+                        <input type="hidden" name="task_id" value={task.id_task} />
+                        <input type="hidden" name="project_id" value={id} />
+
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700"
+                        >
+                          <Trash2 size={18} />
                         </button>
                       </form>
                     </td>
@@ -182,12 +228,17 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
 
                     {team.tasks.map((task) => (
                       <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                        <td className="p-3">{task.name}</td>
-                        <td className="p-3">{task.description}</td>
+                        <td className="p-3 align-top">
+                          <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
+                            {task.name ?? "—"}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <DescriptionButton text={task.description} />
+                        </td>
                         <td className="p-3">{task.story_points}</td>
-                        <td className="p-3">{task.risk}</td>
-                        <td className="p-3">{task.priority}</td>
-
+                        <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
+                        <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
                         <td className="p-3">
                           <form action={assignTaskToTeam} className="flex items-center gap-2">
                             <input type="hidden" name="task_id" value={task.id_task} />
@@ -258,21 +309,37 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
 
               <div>
                 <label className="mb-1 block font-medium">Risk</label>
-                <input
-                  type="number"
+                <select
                   name="risk"
                   className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select risk</option>
+                  {RiskAndPriority.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
 
               <div>
                 <label className="mb-1 block font-medium">Priority</label>
-                <input
-                  type="number"
+                <select
                   name="priority"
                   className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select priority</option>
+                  {RiskAndPriority.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
 
               <button
                 type="submit"
