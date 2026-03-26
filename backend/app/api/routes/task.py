@@ -179,23 +179,21 @@ async def get_project_membership_or_404(project_id: int, user_id: int, db: Async
 
     return membership
 
-@router.delete("/api/projects/{project_id}/task/{task_id}")
-async def delete_task(project_id: int, task_id: int, db: AsyncSession = Depends(get_db)):
-    # Fetch the task
-    task = db.query(Task).filter(Task.id_task == task_id).first()
+@router.delete("/{task_id}")
+async def delete_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
 
-    if not task:
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Ensure the task belongs to the given project
-    if task.fk_projectid_project != project_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Task does not belong to this project"
-        )
+    await get_project_membership_or_404(task.fk_projectid_project, current_user.id_user, db)
 
-    # Delete the task
-    db.delete(task)
-    db.commit()
+    await db.delete(task)
+    await db.commit()
 
-    return {"message": "Task deleted successfully"}
+    return {"status": "ok", "task_id": task_id}
