@@ -8,10 +8,13 @@ from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
+from app.models.sprint_status import SprintStatus
 from app.models.task import Task
+from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.sprint import BurndownPoint, SprintCreate, SprintRead, SprintStatsRead
+from app.services.sprint_status import sync_team_sprint_statuses
 
 router = APIRouter(prefix="/sprints", tags=["sprints"])
 
@@ -24,6 +27,7 @@ async def get_sprints(
 ):
     team = await get_team_or_404(team_id, db)
     await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+    await sync_team_sprint_statuses(team_id, db)
 
     result = await db.execute(select(Sprint).where(Sprint.fk_teamid_team == team_id))
     sprints = result.scalars().all()
@@ -38,6 +42,7 @@ async def get_sprints(
                 "id_sprint": sprint.id_sprint,
                 "start_date": sprint.start_date,
                 "end_date": sprint.end_date,
+                "status": sprint.status,
                 "tasks": tasks,
             }
         )
@@ -67,10 +72,16 @@ async def create_sprint(
             detail="Sprint end date cannot be in the past",
         )
 
+    if payload.start_date.date() <= today <= payload.end_date.date():
+        sprint_status = SprintStatus.ACTIVE.value
+    else:
+        sprint_status = SprintStatus.PLANNED.value
+
     sprint = Sprint(
         fk_teamid_team=payload.team_id,
         start_date=payload.start_date,
         end_date=payload.end_date,
+        status=sprint_status,
     )
 
     db.add(sprint)
@@ -89,6 +100,7 @@ async def get_sprint_stats(
 ):
     team = await get_team_or_404(team_id, db)
     await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+    await sync_team_sprint_statuses(team_id, db)
 
     result = await db.execute(
         select(Sprint).where(
@@ -135,6 +147,7 @@ async def get_sprint_stats(
         team_id=team_id,
         start_date=sprint.start_date,
         end_date=sprint.end_date,
+        status=sprint.status,
         total_tasks=len(tasks),
         total_story_points=round(total_story_points, 2),
         sprint_length_days=sprint_length_days,
@@ -143,6 +156,87 @@ async def get_sprint_stats(
         planned_points_per_day=round(planned_points_per_day, 2),
         burndown_points=burndown_points,
     )
+
+
+@router.post("/{sprint_id}/close")
+async def close_sprint(
+    sprint_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Sprint).where(Sprint.id_sprint == sprint_id))
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+
+    if sprint.status == SprintStatus.COMPLETED.value:
+        raise HTTPException(status_code=400, detail="Sprint is already completed")
+
+    unfinished_result = await db.execute(
+        select(Task)
+        .where(
+            Task.fk_sprintid_sprint == sprint.id_sprint,
+            Task.workflow_status != TaskWorkflowStatus.DONE.value,
+        )
+        .order_by(Task.id_task.asc())
+    )
+    unfinished_tasks = unfinished_result.scalars().all()
+
+    next_sprint_result = await db.execute(
+        select(Sprint)
+        .where(
+            Sprint.fk_teamid_team == sprint.fk_teamid_team,
+            Sprint.id_sprint != sprint.id_sprint,
+            Sprint.start_date > sprint.end_date,
+            Sprint.status != SprintStatus.COMPLETED.value,
+        )
+        .order_by(Sprint.start_date.asc(), Sprint.id_sprint.asc())
+    )
+    next_sprint = next_sprint_result.scalars().first()
+
+    next_board_order = 0
+    if next_sprint is not None:
+        next_order_result = await db.execute(
+            select(Task)
+            .where(
+                Task.fk_sprintid_sprint == next_sprint.id_sprint,
+                Task.workflow_status == TaskWorkflowStatus.TODO.value,
+            )
+            .order_by(Task.board_order.desc(), Task.id_task.desc())
+        )
+        existing_todo_tasks = next_order_result.scalars().all()
+        if existing_todo_tasks:
+            next_board_order = (existing_todo_tasks[0].board_order or 0) + 1
+
+    moved_task_ids: list[int] = []
+
+    for task in unfinished_tasks:
+        task.fk_sprintid_sprint = next_sprint.id_sprint if next_sprint is not None else None
+        task.workflow_status = TaskWorkflowStatus.TODO.value
+        task.board_order = next_board_order if next_sprint is not None else 0
+        if next_sprint is not None:
+            next_board_order += 1
+
+        db.add(task)
+        moved_task_ids.append(task.id_task)
+
+    sprint.status = SprintStatus.COMPLETED.value
+    db.add(sprint)
+
+    await db.commit()
+    await db.refresh(sprint)
+
+    return {
+        "status": "ok",
+        "sprint_id": sprint.id_sprint,
+        "sprint_status": sprint.status,
+        "moved_task_ids": moved_task_ids,
+        "target_sprint_id": next_sprint.id_sprint if next_sprint is not None else None,
+    }
 
 
 async def get_team_or_404(team_id: int, db: AsyncSession):

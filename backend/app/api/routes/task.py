@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
 from app.models.task import Task
+from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskRead
@@ -20,6 +21,11 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 class AssignSprint(BaseModel):
     sprint_id: Optional[int]
+
+
+class UpdateBoardPosition(BaseModel):
+    workflow_status: TaskWorkflowStatus
+    board_order: int
 
 
 @router.get("", response_model=list[TaskRead])
@@ -59,6 +65,8 @@ async def create_task(
         risk=payload.risk,
         priority=payload.priority,
         fk_projectid_project=payload.fk_projectid_project,
+        workflow_status=TaskWorkflowStatus.TODO.value,
+        board_order=0,
     )
 
     db.add(task)
@@ -104,6 +112,8 @@ async def assign_team(
 
     if parsed_team_id is None:
         task.fk_sprintid_sprint = None
+        task.workflow_status = TaskWorkflowStatus.TODO.value
+        task.board_order = 0
 
     db.add(task)
     await db.commit()
@@ -153,11 +163,60 @@ async def assign_sprint(
 
     task.fk_sprintid_sprint = payload.sprint_id
 
+    if payload.sprint_id is None:
+        task.workflow_status = TaskWorkflowStatus.TODO.value
+        task.board_order = 0
+    else:
+        task.workflow_status = task.workflow_status or TaskWorkflowStatus.TODO.value
+        task.board_order = task.board_order or 0
+
     db.add(task)
     await db.commit()
     await db.refresh(task)
 
     return {"status": "ok", "task_id": task_id, "sprint_id": payload.sprint_id}
+
+
+@router.patch("/{task_id}/board-position")
+async def update_board_position(
+    task_id: int,
+    payload: UpdateBoardPosition,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    await get_project_membership_or_404(task.fk_projectid_project, current_user.id_user, db)
+
+    if task.fk_sprintid_sprint is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Only sprint tasks can be moved on the board",
+        )
+
+    if payload.board_order < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Board order must be zero or greater",
+        )
+
+    task.workflow_status = payload.workflow_status.value
+    task.board_order = payload.board_order
+
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    return {
+        "status": "ok",
+        "task_id": task.id_task,
+        "workflow_status": task.workflow_status,
+        "board_order": task.board_order,
+    }
 
 
 

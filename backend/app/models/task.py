@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float
 from app.db.base_class import Base
+from app.models.task_workflow_status import TaskWorkflowStatus
 
 class Task(Base):
     __tablename__ = "task"
@@ -36,6 +37,20 @@ class Task(Base):
         Integer,
         ForeignKey("sprint.id_sprint"),
         nullable=True
+    )
+
+    workflow_status = Column(
+        String,
+        nullable=False,
+        default=TaskWorkflowStatus.TODO.value,
+        server_default=TaskWorkflowStatus.TODO.value,
+    )
+
+    board_order = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
     )
 
     #fk_team_memberid_team_member = Column(

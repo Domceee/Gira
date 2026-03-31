@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from app.models.task_workflow_status import TaskWorkflowStatus
 
 class TaskCreate(BaseModel):
     name: str
@@ -17,6 +18,8 @@ class TaskRead(BaseModel):
     priority: int | None
     fk_teamid_team: int | None
     fk_sprintid_sprint: int | None
+    workflow_status: TaskWorkflowStatus
+    board_order: int
 
     class Config:
         orm_mode = True

@@ -62,3 +62,28 @@ export async function assignTaskToSprint(formData: FormData) {
 
   revalidatePath(`/projects/${project_id}/team/${team_id}`);
 }
+
+export async function closeSprint(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const sprint_id = formData.get("sprint_id");
+  const team_id = formData.get("team_id");
+  const project_id = formData.get("project_id");
+
+  const res = await fetch(`${API_URL}/api/sprints/${sprint_id}/close`, {
+    method: "POST",
+    headers: {
+      Cookie: cookieHeader,
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to close sprint");
+  }
+
+  revalidatePath(`/projects/${project_id}/team/${team_id}`);
+  revalidatePath(`/projects/${project_id}/board`);
+}
