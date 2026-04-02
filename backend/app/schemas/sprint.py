@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List
+from app.models.sprint_status import SprintStatus
 from app.schemas.task import TaskRead
 
 class SprintCreate(BaseModel):
@@ -12,6 +13,7 @@ class SprintRead(BaseModel):
     id_sprint: int
     start_date: datetime
     end_date: datetime
+    status: SprintStatus
     tasks: List[TaskRead]
 
     class Config:
@@ -29,6 +31,7 @@ class SprintStatsRead(BaseModel):
     team_id: int
     start_date: datetime
     end_date: datetime
+    status: SprintStatus
     total_tasks: int
     total_story_points: float
     sprint_length_days: int

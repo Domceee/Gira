@@ -175,6 +175,16 @@ export default async function ProjectView({
 
             <div className="space-y-4">
                 <Link
+                href={`/projects/${id}/board`}
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+                >
+                Board
+                </Link>
+
+                
+            </div>
+            <div className="space-y-4">
+                <Link
                 href={`/projects/${id}/backlog`}
                 className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
                 >

@@ -14,12 +14,15 @@ from app.schemas.project import (
     ProjectUpdate,
     StoryPointsByTeamRead,
 )
+from app.schemas.board import BoardTaskRead, ProjectBoardRead, SprintBoardRead
 from app.schemas.ProjectMember import ProjectMembersAddRequest
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.task import Task
 from app.models.sprint import Sprint
+from app.models.sprint_status import SprintStatus
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
+from app.services.sprint_status import sync_project_sprint_statuses
 from app.api.routes.auth import get_current_user  
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -192,6 +195,52 @@ async def get_project_stats(
         team_backlog_story_points=story_points_for(team_backlog_tasks),
         in_sprint_story_points=story_points_for(in_sprint_tasks),
         story_points_by_team=story_points_by_team,
+    )
+
+
+@router.get("/{project_id}/board", response_model=ProjectBoardRead)
+async def get_project_board(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await get_project_membership_or_404(project_id, current_user.id_user, db)
+    await sync_project_sprint_statuses(project_id, db)
+
+    sprint_result = await db.execute(
+        select(Sprint, Team)
+        .join(Team, Team.id_team == Sprint.fk_teamid_team)
+        .where(
+            Team.fk_projectid_project == project_id,
+            Sprint.status == SprintStatus.ACTIVE.value,
+        )
+        .order_by(Team.name.asc(), Sprint.start_date.asc(), Sprint.id_sprint.asc())
+    )
+    sprint_rows = sprint_result.all()
+
+    boards: list[SprintBoardRead] = []
+    for sprint, team in sprint_rows:
+        task_result = await db.execute(
+            select(Task)
+            .where(Task.fk_sprintid_sprint == sprint.id_sprint)
+            .order_by(Task.workflow_status.asc(), Task.board_order.asc(), Task.id_task.asc())
+        )
+        tasks = task_result.scalars().all()
+
+        boards.append(
+            SprintBoardRead(
+                sprint_id=sprint.id_sprint,
+                team_id=team.id_team,
+                team_name=team.name,
+                start_date=sprint.start_date,
+                end_date=sprint.end_date,
+                tasks=[BoardTaskRead.model_validate(task) for task in tasks],
+            )
+        )
+
+    return ProjectBoardRead(
+        project_id=project_id,
+        boards=boards,
     )
 
 
