@@ -99,7 +99,7 @@ export default function Navbar() {
   return (
     <nav className="w-full border-b border-[#8b6b4a] bg-[#6f4e37] text-white shadow-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/main" className="flex items-center gap-3">
           <Image
             src="/favicon.ico"
             alt="Company Logo"
