@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
-
 import Navbar from "@/app/components/navbar";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 
 type Team = {
   id_team: number;
@@ -11,24 +9,13 @@ type Team = {
 };
 
 async function getTeams(projectId: string): Promise<Team[]> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}/api/projects/${projectId}/teams`, {
-    cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch teams");
-  }
-
+  const res = await apiFetch(`/api/projects/${projectId}/teams`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch teams");
   return res.json();
 }
 
 export default async function SelectTeamPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAuth();
   const { id } = await params;
   const teams = await getTeams(id);
 

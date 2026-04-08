@@ -1,15 +1,10 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
-
-
 import Navbar from "@/app/components/navbar";
 import DescriptionButton from "@/app/components/DescriptionButton";
-
 import { assignTaskToTeam, createTask, deleteTask } from "./actions";
-
+import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 import { Trash2 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const RiskAndPriority = [
   { id: 1, name: "Very low" },
@@ -47,38 +42,30 @@ type TeamBacklog = {
   tasks: Task[];
 };
 
-async function fetchWithAuth(url: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}${url}`, {
-    cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}`);
-  }
-
-  return res.json();
-}
-
 async function getTeamsWithTasks(projectId: string): Promise<TeamBacklog[]> {
-  const teams = (await fetchWithAuth(`/api/projects/${projectId}/teams`)) as TeamSummary[];
+  const res = await apiFetch(`/api/projects/${projectId}/teams`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch teams");
+  const teams = (await res.json()) as TeamSummary[];
 
   return Promise.all(
-    teams.map((team) => fetchWithAuth(`/api/projects/${projectId}/teams/${team.id_team}`))
+    teams.map(async (team) => {
+      const r = await apiFetch(`/api/projects/${projectId}/teams/${team.id_team}`, { cache: "no-store" });
+      if (!r.ok) throw new Error("Failed to fetch team backlog");
+      return r.json();
+    })
   );
 }
 
 async function getProject(id: string) {
-  return fetchWithAuth(`/api/projects/${id}`);
+  const res = await apiFetch(`/api/projects/${id}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch project");
+  return res.json();
 }
 
 async function getTasks(projectId: string): Promise<Task[]> {
-  return fetchWithAuth(`/api/tasks?project_id=${projectId}`);
+  const res = await apiFetch(`/api/tasks?project_id=${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch tasks");
+  return res.json();
 }
 
 
@@ -86,6 +73,7 @@ async function getTasks(projectId: string): Promise<Task[]> {
 
 
 export default async function BacklogView({ params }: { params: Promise<{ id: string }> }) {
+  await requireAuth();
   const { id } = await params;
 
   await getProject(id);

@@ -1,6 +1,7 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 
 type BurndownPoint = {
   label: string;
@@ -90,6 +91,7 @@ export default async function SprintStatsPage({
 }: {
   params: Promise<{ id: string; teamId: string; sprintId: string }>;
 }) {
+  await requireAuth();
   const { id, teamId, sprintId } = await params;
   const stats = await getSprintStats(teamId, sprintId);
   const chartPoints = getChartCoordinates(stats.burndown_points);

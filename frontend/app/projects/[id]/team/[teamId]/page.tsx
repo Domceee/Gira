@@ -4,8 +4,9 @@ import DescriptionButton from "@/app/components/DescriptionButton";
 import Link from "next/link";
 import { CalendarX } from "lucide-react";
 import { createSprint, assignTaskToSprint, closeSprint } from "./actions";
-import { cookies } from "next/headers";
 import CreateSprintForm from "./create-sprint-form";
+import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 
 import { RiskAndPriority, getRiskOrPriorityName } from "@/app/lib/riskPriority";
 
@@ -55,32 +56,16 @@ function formatDate(dateString: string) {
   return new Date(dateString).toISOString().split("T")[0];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-async function fetchWithAuth(url: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await fetch(`${API_URL}${url}`, {
-    cache: "no-store",
-    headers: {
-      Cookie: cookieHeader,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}`);
-  }
-
+async function getTeam(projectId: string, teamId: string): Promise<TeamBacklog> {
+  const res = await apiFetch(`/api/projects/${projectId}/teams/${teamId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch team");
   return res.json();
 }
 
-async function getTeam(projectId: string, teamId: string) {
-  return fetchWithAuth(`/api/projects/${projectId}/teams/${teamId}`) as Promise<TeamBacklog>;
-}
-
-async function getSprints(teamId: string) {
-  return fetchWithAuth(`/api/sprints?team_id=${teamId}`) as Promise<Sprint[]>;
+async function getSprints(teamId: string): Promise<Sprint[]> {
+  const res = await apiFetch(`/api/sprints?team_id=${teamId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch sprints");
+  return res.json();
 }
 
 export default async function TeamView({
@@ -88,6 +73,7 @@ export default async function TeamView({
 }: {
   params: Promise<{ id: string; teamId: string }>;
 }) {
+  await requireAuth();
   const { id, teamId } = await params;
   const team = await getTeam(id, teamId);
   const sortedSprints = (await getSprints(teamId)).sort(

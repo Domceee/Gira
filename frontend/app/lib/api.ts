@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type ApiFetchOptions = RequestInit & {
     cookie?: string;
 }
 
-export async function apiFetch(path: string, options: ApiFetchOptions ={}) {
+export async function apiFetch(path: string, options: ApiFetchOptions = {}) {
     const { cookie, ...fetchOptions } = options;
 
     if (typeof window === "undefined") {
@@ -14,7 +12,7 @@ export async function apiFetch(path: string, options: ApiFetchOptions ={}) {
         const cookieStore = await cookies();
         const forwardedCookie = cookie ?? cookieStore.toString();
 
-        const response = await fetch(`${API_URL}${path}`, {
+        return fetch(`${API_URL}${path}`, {
             ...fetchOptions,
             headers: {
                 "Content-Type": "application/json",
@@ -23,12 +21,6 @@ export async function apiFetch(path: string, options: ApiFetchOptions ={}) {
             },
             cache: fetchOptions.cache ?? "no-store",
         });
-
-        if (response.status === 401) {
-            redirect("/");
-        }
-
-        return response;
     }
 
     return fetch(`/api/proxy${path}`, {

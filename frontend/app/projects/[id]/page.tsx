@@ -1,6 +1,7 @@
 import Navbar from "@/app/components/navbar";
 import Link from "next/link";
 import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 
 type Project = {
   id: number;
@@ -119,6 +120,7 @@ export default async function ProjectView({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAuth();
   const { id } = await params;
   const project = await getProject(id);
   let stats: ProjectStats | null = null;

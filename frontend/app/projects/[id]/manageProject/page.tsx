@@ -1,6 +1,6 @@
 import Navbar from "@/app/components/navbar";
-import { cookies } from "next/headers";
 import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 import ManageProjectForm from "./manage-project-form";
 
 type Project = {
@@ -17,14 +17,7 @@ type PageProps = {
 };
 
 async function getProject(id: string) {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await apiFetch(`/api/projects/${id}`, {
-    method: "GET",
-    cache: "no-store",
-    cookie: cookieHeader,
-  });
+  const res = await apiFetch(`/api/projects/${id}`, { method: "GET", cache: "no-store" });
 
   if (!res.ok) {
     throw new Error("Failed to fetch project");
@@ -34,6 +27,7 @@ async function getProject(id: string) {
 }
 
 export default async function ManageProjectPage({ params }: PageProps) {
+  await requireAuth();
   const { id } = await params;
   const project = await getProject(id);
 

@@ -1,6 +1,7 @@
 import Navbar from "@/app/components/navbar";
 import SprintBoardSection from "@/app/components/board/sprint-board-section";
 import { apiFetch } from "@/app/lib/api";
+import { requireAuth } from "@/app/lib/auth";
 import Link from "next/link";
 
 type BoardTask = {
@@ -48,6 +49,7 @@ export default async function ProjectBoardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAuth();
   const { id } = await params;
   const projectBoard = await getProjectBoard(id);
 

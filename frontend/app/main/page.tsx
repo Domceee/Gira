@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Navbar from "../components/navbar";
-import { cookies } from "next/headers";
 import { apiFetch } from "../lib/api";
+import { requireAuth } from "../lib/auth";
 
 type ProjectListItem = {
   id: number;
@@ -10,19 +10,8 @@ type ProjectListItem = {
 };
 
 async function getProjects() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-
-  const res = await apiFetch("/api/projects", {
-    method: "GET",
-    cache: "no-store",
-    cookie: cookieHeader,
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch projects");
-  }
-
+  const res = await apiFetch("/api/projects", { method: "GET", cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch projects");
   return res.json() as Promise<ProjectListItem[]>;
 }
 
@@ -48,6 +37,7 @@ const news = [
 ];
 
 export default async function HomePage() {
+  await requireAuth();
   const projects = await getProjects();
 
   return (
