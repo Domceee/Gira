@@ -24,13 +24,17 @@ class StoryPointsByTeamRead(BaseModel):
 
 class ProjectStatsRead(BaseModel):
     total_tasks: int
+    active_tasks: int
     unassigned_tasks: int
     team_backlog_tasks: int
     in_sprint_tasks: int
+    done_tasks: int
     total_story_points: float
+    active_story_points: float
     unassigned_story_points: float
     team_backlog_story_points: float
     in_sprint_story_points: float
+    done_story_points: float
     story_points_by_team: list[StoryPointsByTeamRead]
 
 class ProjectUpdate(BaseModel):

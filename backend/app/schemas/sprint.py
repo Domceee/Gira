@@ -24,6 +24,9 @@ class BurndownPoint(BaseModel):
     label: str
     date: datetime
     ideal_remaining_points: float
+    actual_remaining_points: float
+    scope_points: float
+    completed_points: float
 
 
 class SprintStatsRead(BaseModel):
@@ -32,10 +35,17 @@ class SprintStatsRead(BaseModel):
     start_date: datetime
     end_date: datetime
     status: SprintStatus
-    total_tasks: int
-    total_story_points: float
+    committed_tasks: int
+    committed_story_points: float
+    completed_tasks: int
+    completed_story_points: float
+    remaining_tasks: int
+    remaining_story_points: float
+    rolled_over_tasks: int
+    rolled_over_story_points: float
     sprint_length_days: int
     elapsed_days: int
     remaining_days: int
     planned_points_per_day: float
+    completion_rate: float
     burndown_points: List[BurndownPoint]

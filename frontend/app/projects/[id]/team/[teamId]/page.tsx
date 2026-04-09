@@ -8,7 +8,7 @@ import CreateSprintForm from "./create-sprint-form";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 
-import { RiskAndPriority, getRiskOrPriorityName } from "@/app/lib/riskPriority";
+import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 
 type Task = {
   id_task: number;

@@ -22,6 +22,7 @@ from app.models.task import Task
 from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
+from app.models.task_workflow_status import TaskWorkflowStatus
 from app.services.sprint_status import sync_project_sprint_statuses
 from app.api.routes.auth import get_current_user  
 
@@ -158,17 +159,19 @@ async def get_project_stats(
     def story_points_for(items: list[Task]) -> float:
         return float(sum(task.story_points or 0 for task in items))
 
-    unassigned_tasks = [task for task in tasks if task.fk_teamid_team is None]
+    done_tasks = [task for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value]
+    active_tasks = [task for task in tasks if task.workflow_status != TaskWorkflowStatus.DONE.value]
+    unassigned_tasks = [task for task in active_tasks if task.fk_teamid_team is None]
     team_backlog_tasks = [
-        task for task in tasks
+        task for task in active_tasks
         if task.fk_teamid_team is not None and task.fk_sprintid_sprint is None
     ]
-    in_sprint_tasks = [task for task in tasks if task.fk_sprintid_sprint is not None]
+    in_sprint_tasks = [task for task in active_tasks if task.fk_sprintid_sprint is not None]
     story_points_by_team: list[StoryPointsByTeamRead] = []
 
     for team in teams:
         team_story_points = float(
-            sum((task.story_points or 0) for task in tasks if task.fk_teamid_team == team.id_team)
+            sum((task.story_points or 0) for task in active_tasks if task.fk_teamid_team == team.id_team)
         )
         story_points_by_team.append(
             StoryPointsByTeamRead(
@@ -187,13 +190,17 @@ async def get_project_stats(
 
     return ProjectStatsRead(
         total_tasks=len(tasks),
+        active_tasks=len(active_tasks),
         unassigned_tasks=len(unassigned_tasks),
         team_backlog_tasks=len(team_backlog_tasks),
         in_sprint_tasks=len(in_sprint_tasks),
+        done_tasks=len(done_tasks),
         total_story_points=story_points_for(tasks),
+        active_story_points=story_points_for(active_tasks),
         unassigned_story_points=story_points_for(unassigned_tasks),
         team_backlog_story_points=story_points_for(team_backlog_tasks),
         in_sprint_story_points=story_points_for(in_sprint_tasks),
+        done_story_points=story_points_for(done_tasks),
         story_points_by_team=story_points_by_team,
     )
 

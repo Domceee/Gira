@@ -5,6 +5,7 @@ import pytest
 from hamcrest import assert_that, equal_to, has_key, contains_string, has_length, greater_than
 
 from app.models.sprint_status import SprintStatus
+from app.models.sprint_task_event_type import SprintTaskEventType
 from app.models.task_workflow_status import TaskWorkflowStatus
 from tests.conftest import make_execute_result, given, when, then
 
@@ -44,6 +45,26 @@ def _future_dates():
     start = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
     end = (datetime.now(timezone.utc) + timedelta(days=8)).isoformat()
     return start, end
+
+
+def _make_task(task_id: int, story_points: float, status: str = TaskWorkflowStatus.TODO.value):
+    task = MagicMock()
+    task.id_task = task_id
+    task.story_points = story_points
+    task.workflow_status = status
+    task.completed_at = None
+    return task
+
+
+def _make_event(task_id: int, sprint_id: int, event_type: str, story_points: float, occurred_at: datetime, event_id: int):
+    event = MagicMock()
+    event.id_sprint_task_event = event_id
+    event.fk_taskid_task = task_id
+    event.fk_sprintid_sprint = sprint_id
+    event.event_type = event_type
+    event.story_points = story_points
+    event.occurred_at = occurred_at
+    return event
 
 
 class TestCreateSprint:
@@ -253,16 +274,19 @@ class TestGetSprintStats:
             mock_sprint.status = SprintStatus.ACTIVE.value
             mock_sprint.start_date = datetime.now(timezone.utc) - timedelta(days=2)
             mock_sprint.end_date = datetime.now(timezone.utc) + timedelta(days=5)
-            task_a = MagicMock()
-            task_a.story_points = 5.0
-            task_b = MagicMock()
-            task_b.story_points = 3.0
+            task_a = _make_task(1, 5.0, TaskWorkflowStatus.DONE.value)
+            task_a.completed_at = datetime.now(timezone.utc) - timedelta(days=1)
+            task_b = _make_task(2, 3.0, TaskWorkflowStatus.TODO.value)
+            event_a = _make_event(1, 1, SprintTaskEventType.ADDED.value, 5.0, mock_sprint.start_date, 1)
+            event_b = _make_event(2, 1, SprintTaskEventType.ADDED.value, 3.0, mock_sprint.start_date, 2)
+            event_c = _make_event(1, 1, SprintTaskEventType.COMPLETED.value, 5.0, task_a.completed_at, 3)
             mock_db.execute.side_effect = [
                 make_execute_result(scalar=mock_team),
                 make_execute_result(scalar=mock_member),
                 make_execute_result(scalars_list=[mock_sprint]),
                 make_execute_result(scalar=mock_sprint),
                 make_execute_result(scalars_list=[task_a, task_b]),
+                make_execute_result(scalars_list=[event_a, event_b, event_c]),
             ]
 
         with when("the stats endpoint is called"):
@@ -271,9 +295,12 @@ class TestGetSprintStats:
         with then("stats and burndown data are returned"):
             assert_that(response.status_code, equal_to(200))
             body = response.json()
-            assert_that(body["total_story_points"], equal_to(8.0))
-            assert_that(body["total_tasks"], equal_to(2))
+            assert_that(body["committed_story_points"], equal_to(8.0))
+            assert_that(body["committed_tasks"], equal_to(2))
+            assert_that(body["completed_tasks"], equal_to(1))
+            assert_that(body["remaining_tasks"], equal_to(1))
             assert_that(len(body["burndown_points"]), greater_than(0))
+            assert_that(body["burndown_points"][0], has_key("actual_remaining_points"))
 
     async def test_get_sprint_stats_nonexistent_sprint_returns_404(self, client, mock_db):
         with given("the team exists and user is a member but the sprint does not"):

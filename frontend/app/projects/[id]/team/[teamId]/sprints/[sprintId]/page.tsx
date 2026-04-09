@@ -7,6 +7,9 @@ type BurndownPoint = {
   label: string;
   date: string;
   ideal_remaining_points: number;
+  actual_remaining_points: number;
+  scope_points: number;
+  completed_points: number;
 };
 
 type SprintStats = {
@@ -14,12 +17,20 @@ type SprintStats = {
   team_id: number;
   start_date: string;
   end_date: string;
-  total_tasks: number;
-  total_story_points: number;
+  status: "PLANNED" | "ACTIVE" | "COMPLETED";
+  committed_tasks: number;
+  committed_story_points: number;
+  completed_tasks: number;
+  completed_story_points: number;
+  remaining_tasks: number;
+  remaining_story_points: number;
+  rolled_over_tasks: number;
+  rolled_over_story_points: number;
   sprint_length_days: number;
   elapsed_days: number;
   remaining_days: number;
   planned_points_per_day: number;
+  completion_rate: number;
   burndown_points: BurndownPoint[];
 };
 
@@ -49,7 +60,10 @@ function getChartCoordinates(points: BurndownPoint[]) {
   const height = 280;
   const paddingX = 48;
   const paddingY = 28;
-  const maxPoints = Math.max(...points.map((point) => point.ideal_remaining_points), 0);
+  const maxPoints = Math.max(
+    ...points.map((point) => Math.max(point.ideal_remaining_points, point.actual_remaining_points, point.scope_points)),
+    0
+  );
   const usableWidth = width - paddingX * 2;
   const usableHeight = height - paddingY * 2;
 
@@ -95,7 +109,17 @@ export default async function SprintStatsPage({
   const { id, teamId, sprintId } = await params;
   const stats = await getSprintStats(teamId, sprintId);
   const chartPoints = getChartCoordinates(stats.burndown_points);
-  const chartPath = chartPoints.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const idealChartPath = chartPoints
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+  const actualChartPath = getChartCoordinates(
+    stats.burndown_points.map((point) => ({
+      ...point,
+      ideal_remaining_points: point.actual_remaining_points,
+    }))
+  )
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
   const progressPercent = stats.sprint_length_days === 0
     ? 0
     : Math.round((stats.elapsed_days / stats.sprint_length_days) * 100);
@@ -137,45 +161,68 @@ export default async function SprintStatsPage({
 
                 <div className="rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] px-5 py-4 text-right">
                   <p className="text-sm uppercase tracking-[0.2em] text-[#8b5e3c]">Current Progress</p>
-                  <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{progressPercent}%</p>
-                  <p className="text-[#6f4e37]">{stats.elapsed_days} of {stats.sprint_length_days} days elapsed</p>
+                  <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.completion_rate}%</p>
+                  <p className="text-[#6f4e37]">{stats.elapsed_days} of {stats.sprint_length_days} days elapsed, sprint is {stats.status.toLowerCase()}</p>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-4">
               <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Tasks</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.total_tasks}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">Tasks currently assigned to this sprint.</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Committed</p>
+                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.committed_tasks}</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.committed_story_points)} points committed to this sprint.</p>
               </div>
               <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Story Points</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{formatPoints(stats.total_story_points)}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">Total planned effort in this sprint.</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completed</p>
+                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.completed_tasks}</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.completed_story_points)} points finished.</p>
               </div>
               <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Remaining Days</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.remaining_days}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">Time left before the sprint end date.</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Remaining</p>
+                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.remaining_tasks}</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.remaining_story_points)} points still open.</p>
+              </div>
+              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Rolled Over</p>
+                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.rolled_over_tasks}</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.rolled_over_story_points)} points left the sprint unfinished.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Timeline</p>
+                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{progressPercent}%</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">{stats.remaining_days} days remaining in the sprint calendar.</p>
               </div>
               <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Planned Burn</p>
                 <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{formatPoints(stats.planned_points_per_day)}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">Ideal story points to burn per day.</p>
+                <p className="mt-2 text-sm text-[#6f4e37]">Ideal story points to burn per sprint day.</p>
               </div>
             </div>
 
             <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
               <div className="mb-6 flex flex-col gap-2">
                 <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
-                  Burndown Projection
+                  Burndown
                 </p>
-                <h2 className="text-3xl font-bold text-[#5c3b28]">Ideal Burndown Chart</h2>
+                <h2 className="text-3xl font-bold text-[#5c3b28]">Actual vs Ideal Burndown</h2>
                 <p className="max-w-3xl text-[#6f4e37]">
-                  This chart shows the ideal path from the sprint&apos;s total planned story points down to zero by the last day.
-                  Hover each point to inspect the target remaining points for that day.
+                  The solid line shows actual remaining work based on recorded sprint events. The dashed line shows the ideal path to zero.
                 </p>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-4 text-sm text-[#6f4e37]">
+                <div className="flex items-center gap-2">
+                  <span className="h-0.5 w-8 bg-[#8b5e3c]" />
+                  Actual remaining
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-0.5 w-8 border-t-2 border-dashed border-[#c28d52]" />
+                  Ideal remaining
+                </div>
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] p-4">
@@ -199,13 +246,14 @@ export default async function SprintStatsPage({
                   <line x1="48" y1="252" x2="772" y2="252" stroke="#9f7a56" strokeWidth="2" />
                   <line x1="48" y1="28" x2="48" y2="252" stroke="#9f7a56" strokeWidth="2" />
 
-                  <path d={chartPath} fill="none" stroke="#8b5e3c" strokeWidth="3" strokeLinecap="round" />
+                  <path d={idealChartPath} fill="none" stroke="#c28d52" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" />
+                  <path d={actualChartPath} fill="none" stroke="#8b5e3c" strokeWidth="3" strokeLinecap="round" />
 
                   {chartPoints.map((point) => (
                     <g key={point.label}>
                       <circle cx={point.x} cy={point.y} r="5" fill="#fffaf5" stroke="#8b5e3c" strokeWidth="2">
                         <title>
-                          {`${point.label} (${formatDate(point.date)}): ${formatPoints(point.ideal_remaining_points)} ideal remaining story points`}
+                          {`${point.label} (${formatDate(point.date)}): ${formatPoints(point.actual_remaining_points)} actual remaining, ${formatPoints(point.ideal_remaining_points)} ideal remaining, ${formatPoints(point.scope_points)} scope`}
                         </title>
                       </circle>
                       <text x={point.x} y="270" textAnchor="middle" className="fill-[#7d624a] text-[11px]">
@@ -215,7 +263,7 @@ export default async function SprintStatsPage({
                   ))}
 
                   <text x="18" y="36" className="fill-[#7d624a] text-[12px]">
-                    {formatPoints(stats.total_story_points)}
+                    {formatPoints(stats.committed_story_points)}
                   </text>
                   <text x="30" y="256" className="fill-[#7d624a] text-[12px]">0</text>
                 </svg>

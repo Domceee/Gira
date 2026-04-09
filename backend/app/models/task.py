@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from app.db.base_class import Base
 from app.models.task_workflow_status import TaskWorkflowStatus
 
@@ -44,6 +44,11 @@ class Task(Base):
         nullable=False,
         default=TaskWorkflowStatus.TODO.value,
         server_default=TaskWorkflowStatus.TODO.value,
+    )
+
+    completed_at = Column(
+        DateTime,
+        nullable=True,
     )
 
     board_order = Column(

@@ -9,11 +9,19 @@ from app.db.session import get_db
 from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
+from app.models.sprint_task_event import SprintTaskEvent
+from app.models.sprint_task_event_type import SprintTaskEventType
 from app.models.task import Task
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.sprint import BurndownPoint, SprintCreate, SprintRead, SprintStatsRead
+from app.services.sprint_burndown import (
+    build_burndown_points,
+    build_fallback_events,
+    snapshot_story_points,
+    summarize_sprint_tasks,
+)
 from app.services.sprint_status import sync_team_sprint_statuses
 
 router = APIRouter(prefix="/sprints", tags=["sprints"])
@@ -118,7 +126,6 @@ async def get_sprint_stats(
     )
     tasks = result.scalars().all()
 
-    total_story_points = float(sum(task.story_points or 0 for task in tasks))
     sprint_length_days = max((sprint.end_date.date() - sprint.start_date.date()).days + 1, 1)
 
     if sprint.start_date.tzinfo is not None:
@@ -128,19 +135,25 @@ async def get_sprint_stats(
     current_date = min(max(today, sprint.start_date.date()), sprint.end_date.date())
     elapsed_days = max((current_date - sprint.start_date.date()).days + 1, 0)
     remaining_days = max((sprint.end_date.date() - current_date).days, 0)
-    planned_points_per_day = total_story_points / sprint_length_days if sprint_length_days else 0.0
+    event_result = await db.execute(
+        select(SprintTaskEvent)
+        .where(SprintTaskEvent.fk_sprintid_sprint == sprint.id_sprint)
+        .order_by(SprintTaskEvent.occurred_at.asc(), SprintTaskEvent.id_sprint_task_event.asc())
+    )
+    task_events = event_result.scalars().all()
+    if not task_events:
+        task_events = build_fallback_events(tasks, sprint.start_date)
 
-    burndown_points: list[BurndownPoint] = []
-    for day_index in range(sprint_length_days):
-        point_date = sprint.start_date + timedelta(days=day_index)
-        remaining = max(total_story_points - (planned_points_per_day * day_index), 0.0)
-        burndown_points.append(
-            BurndownPoint(
-                label=f"Day {day_index + 1}",
-                date=point_date,
-                ideal_remaining_points=round(remaining, 2),
-            )
-        )
+    burndown_points = build_burndown_points(sprint.start_date, sprint.end_date, task_events)
+    summary = summarize_sprint_tasks(task_events, tasks)
+    planned_points_per_day = (
+        summary.committed_story_points / sprint_length_days if sprint_length_days else 0.0
+    )
+    completion_rate = (
+        round((summary.completed_story_points / summary.committed_story_points) * 100, 1)
+        if summary.committed_story_points > 0
+        else 0.0
+    )
 
     return SprintStatsRead(
         id_sprint=sprint.id_sprint,
@@ -148,12 +161,19 @@ async def get_sprint_stats(
         start_date=sprint.start_date,
         end_date=sprint.end_date,
         status=sprint.status,
-        total_tasks=len(tasks),
-        total_story_points=round(total_story_points, 2),
+        committed_tasks=summary.committed_tasks,
+        committed_story_points=summary.committed_story_points,
+        completed_tasks=summary.completed_tasks,
+        completed_story_points=summary.completed_story_points,
+        remaining_tasks=summary.remaining_tasks,
+        remaining_story_points=summary.remaining_story_points,
+        rolled_over_tasks=summary.rolled_over_tasks,
+        rolled_over_story_points=summary.rolled_over_story_points,
         sprint_length_days=sprint_length_days,
         elapsed_days=min(elapsed_days, sprint_length_days),
         remaining_days=remaining_days,
         planned_points_per_day=round(planned_points_per_day, 2),
+        completion_rate=completion_rate,
         burndown_points=burndown_points,
     )
 
@@ -213,13 +233,32 @@ async def close_sprint(
             next_board_order = (existing_todo_tasks[0].board_order or 0) + 1
 
     moved_task_ids: list[int] = []
+    occurred_at = datetime.utcnow()
 
     for task in unfinished_tasks:
+        add_sprint_event = SprintTaskEvent(
+            fk_taskid_task=task.id_task,
+            fk_sprintid_sprint=sprint.id_sprint,
+            event_type=SprintTaskEventType.REMOVED.value,
+            story_points=snapshot_story_points(task),
+            occurred_at=occurred_at,
+        )
+        db.add(add_sprint_event)
+
         task.fk_sprintid_sprint = next_sprint.id_sprint if next_sprint is not None else None
         task.workflow_status = TaskWorkflowStatus.TODO.value
         task.board_order = next_board_order if next_sprint is not None else 0
         if next_sprint is not None:
             next_board_order += 1
+            db.add(
+                SprintTaskEvent(
+                    fk_taskid_task=task.id_task,
+                    fk_sprintid_sprint=next_sprint.id_sprint,
+                    event_type=SprintTaskEventType.ADDED.value,
+                    story_points=snapshot_story_points(task),
+                    occurred_at=occurred_at,
+                )
+            )
 
         db.add(task)
         moved_task_ids.append(task.id_task)

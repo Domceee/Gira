@@ -10,11 +10,14 @@ from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
+from app.models.sprint_task_event import SprintTaskEvent
+from app.models.sprint_task_event_type import SprintTaskEventType
 from app.models.task import Task
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskRead
+from app.services.sprint_burndown import snapshot_story_points
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -26,6 +29,69 @@ class AssignSprint(BaseModel):
 class UpdateBoardPosition(BaseModel):
     workflow_status: TaskWorkflowStatus
     board_order: int
+
+
+def utc_now() -> datetime:
+    return datetime.utcnow()
+
+
+def add_sprint_event(
+    db: AsyncSession,
+    *,
+    task: Task,
+    sprint_id: int,
+    event_type: SprintTaskEventType,
+    occurred_at: datetime | None = None,
+) -> None:
+    db.add(
+        SprintTaskEvent(
+            fk_taskid_task=task.id_task,
+            fk_sprintid_sprint=sprint_id,
+            event_type=event_type.value,
+            story_points=snapshot_story_points(task),
+            occurred_at=occurred_at or utc_now(),
+        )
+    )
+
+
+def move_done_task_between_sprints(
+    db: AsyncSession,
+    *,
+    task: Task,
+    previous_sprint_id: int,
+    next_sprint_id: int | None,
+    occurred_at: datetime,
+) -> None:
+    add_sprint_event(
+        db,
+        task=task,
+        sprint_id=previous_sprint_id,
+        event_type=SprintTaskEventType.REOPENED,
+        occurred_at=occurred_at,
+    )
+    add_sprint_event(
+        db,
+        task=task,
+        sprint_id=previous_sprint_id,
+        event_type=SprintTaskEventType.REMOVED,
+        occurred_at=occurred_at,
+    )
+
+    if next_sprint_id is not None:
+        add_sprint_event(
+            db,
+            task=task,
+            sprint_id=next_sprint_id,
+            event_type=SprintTaskEventType.ADDED,
+            occurred_at=occurred_at,
+        )
+        add_sprint_event(
+            db,
+            task=task,
+            sprint_id=next_sprint_id,
+            event_type=SprintTaskEventType.COMPLETED,
+            occurred_at=occurred_at,
+        )
 
 
 @router.get("", response_model=list[TaskRead])
@@ -111,8 +177,27 @@ async def assign_team(
     task.fk_teamid_team = parsed_team_id
 
     if parsed_team_id is None:
+        if task.fk_sprintid_sprint is not None:
+            occurred_at = utc_now()
+            if task.workflow_status == TaskWorkflowStatus.DONE.value:
+                move_done_task_between_sprints(
+                    db,
+                    task=task,
+                    previous_sprint_id=task.fk_sprintid_sprint,
+                    next_sprint_id=None,
+                    occurred_at=occurred_at,
+                )
+            else:
+                add_sprint_event(
+                    db,
+                    task=task,
+                    sprint_id=task.fk_sprintid_sprint,
+                    event_type=SprintTaskEventType.REMOVED,
+                    occurred_at=occurred_at,
+                )
         task.fk_sprintid_sprint = None
         task.workflow_status = TaskWorkflowStatus.TODO.value
+        task.completed_at = None
         task.board_order = 0
 
     db.add(task)
@@ -161,10 +246,47 @@ async def assign_sprint(
                 detail="Sprint must belong to the task's assigned team",
             )
 
+    previous_sprint_id = task.fk_sprintid_sprint
     task.fk_sprintid_sprint = payload.sprint_id
+    occurred_at = utc_now()
+
+    if previous_sprint_id != payload.sprint_id and previous_sprint_id is not None:
+        if task.workflow_status == TaskWorkflowStatus.DONE.value:
+            move_done_task_between_sprints(
+                db,
+                task=task,
+                previous_sprint_id=previous_sprint_id,
+                next_sprint_id=payload.sprint_id,
+                occurred_at=occurred_at,
+            )
+        else:
+            add_sprint_event(
+                db,
+                task=task,
+                sprint_id=previous_sprint_id,
+                event_type=SprintTaskEventType.REMOVED,
+                occurred_at=occurred_at,
+            )
+            if payload.sprint_id is not None:
+                add_sprint_event(
+                    db,
+                    task=task,
+                    sprint_id=payload.sprint_id,
+                    event_type=SprintTaskEventType.ADDED,
+                    occurred_at=occurred_at,
+                )
+    elif previous_sprint_id is None and payload.sprint_id is not None:
+        add_sprint_event(
+            db,
+            task=task,
+            sprint_id=payload.sprint_id,
+            event_type=SprintTaskEventType.ADDED,
+            occurred_at=occurred_at,
+        )
 
     if payload.sprint_id is None:
         task.workflow_status = TaskWorkflowStatus.TODO.value
+        task.completed_at = None
         task.board_order = 0
     else:
         task.workflow_status = task.workflow_status or TaskWorkflowStatus.TODO.value
@@ -204,8 +326,29 @@ async def update_board_position(
             detail="Board order must be zero or greater",
         )
 
+    previous_status = task.workflow_status
     task.workflow_status = payload.workflow_status.value
     task.board_order = payload.board_order
+
+    if previous_status != TaskWorkflowStatus.DONE.value and task.workflow_status == TaskWorkflowStatus.DONE.value:
+        task.completed_at = utc_now()
+        add_sprint_event(
+            db,
+            task=task,
+            sprint_id=task.fk_sprintid_sprint,
+            event_type=SprintTaskEventType.COMPLETED,
+            occurred_at=task.completed_at,
+        )
+    elif previous_status == TaskWorkflowStatus.DONE.value and task.workflow_status != TaskWorkflowStatus.DONE.value:
+        occurred_at = utc_now()
+        task.completed_at = None
+        add_sprint_event(
+            db,
+            task=task,
+            sprint_id=task.fk_sprintid_sprint,
+            event_type=SprintTaskEventType.REOPENED,
+            occurred_at=occurred_at,
+        )
 
     db.add(task)
     await db.commit()

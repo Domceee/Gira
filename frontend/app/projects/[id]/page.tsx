@@ -12,13 +12,17 @@ type Project = {
 
 type ProjectStats = {
   total_tasks: number;
+  active_tasks: number;
   unassigned_tasks: number;
   team_backlog_tasks: number;
   in_sprint_tasks: number;
+  done_tasks: number;
   total_story_points: number;
+  active_story_points: number;
   unassigned_story_points: number;
   team_backlog_story_points: number;
   in_sprint_story_points: number;
+  done_story_points: number;
   story_points_by_team: StoryPointsByTeam[];
 };
 
@@ -138,28 +142,28 @@ export default async function ProjectView({
         {
           label: "Unassigned",
           value: stats.unassigned_tasks,
-          share: getPercent(stats.unassigned_tasks, stats.total_tasks),
+          share: getPercent(stats.unassigned_tasks, stats.active_tasks),
           storyPoints: stats.unassigned_story_points,
           helper: "Tasks still sitting in the project backlog with no team assigned yet.",
         },
-    {
-      label: "Backlog",
-      value: stats.team_backlog_tasks,
-      share: getPercent(stats.team_backlog_tasks, stats.total_tasks),
-      storyPoints: stats.team_backlog_story_points,
-      helper: "Tasks owned by a team, but not scheduled into any sprint yet.",
-    },
+        {
+          label: "Backlog",
+          value: stats.team_backlog_tasks,
+          share: getPercent(stats.team_backlog_tasks, stats.active_tasks),
+          storyPoints: stats.team_backlog_story_points,
+          helper: "Tasks owned by a team, but not scheduled into any sprint yet.",
+        },
         {
           label: "In Sprint",
           value: stats.in_sprint_tasks,
-          share: getPercent(stats.in_sprint_tasks, stats.total_tasks),
+          share: getPercent(stats.in_sprint_tasks, stats.active_tasks),
           storyPoints: stats.in_sprint_story_points,
           helper: "Tasks that are actively planned into a sprint right now.",
         },
       ]
     : [];
   const teamStoryPointSegments = stats
-    ? getPieChartSegments(stats.story_points_by_team, stats.total_story_points)
+    ? getPieChartSegments(stats.story_points_by_team, stats.active_story_points)
     : [];
 
   return (
@@ -217,9 +221,9 @@ export default async function ProjectView({
                     <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
                       Project Statistics
                     </p>
-                    <h2 className="mt-2 text-3xl font-bold text-[#5c3b28]">Task Distribution</h2>
+                    <h2 className="mt-2 text-3xl font-bold text-[#5c3b28]">Active Task Distribution</h2>
                     <p className="mt-2 max-w-2xl text-[#6f4e37]">
-                      Hover a section to see how work is flowing from backlog into active sprint planning.
+                      Done tasks are separated out so this breakdown focuses on work that still needs attention.
                     </p>
                   </div>
 
@@ -227,6 +231,9 @@ export default async function ProjectView({
                     <p className="text-sm uppercase tracking-[0.2em] text-[#8b5e3c]">Project Totals</p>
                     <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.total_tasks} tasks</p>
                     <p className="text-[#6f4e37]">{formatPoints(stats.total_story_points)} story points</p>
+                    <p className="mt-2 text-sm text-[#8a6a52]">
+                      {stats.active_tasks} active, {stats.done_tasks} done
+                    </p>
                   </div>
                 </div>
 
@@ -236,9 +243,27 @@ export default async function ProjectView({
                       key={card.label}
                       className={index === 0 ? "bg-[#9f6b44]" : index === 1 ? "bg-[#7b8f4a]" : "bg-[#7a739b]"}
                       style={{ width: `${card.share}%` }}
-                      title={`${card.label}: ${card.value} tasks, ${card.share}% of project tasks`}
+                      title={`${card.label}: ${card.value} tasks, ${card.share}% of active project tasks`}
                     />
                   ))}
+                </div>
+
+                <div className="mb-6 grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Active Work</p>
+                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.active_tasks}</p>
+                    <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.active_story_points)} points still in play</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completed</p>
+                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.done_tasks}</p>
+                    <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.done_story_points)} points finished</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completion Rate</p>
+                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{getPercent(stats.done_tasks, stats.total_tasks)}%</p>
+                    <p className="mt-2 text-sm text-[#6f4e37]">Based on all tasks currently in the project.</p>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-3">
@@ -267,7 +292,7 @@ export default async function ProjectView({
                   ))}
                 </div>
 
-                {stats.total_story_points > 0 && (
+                {stats.active_story_points > 0 && (
                   <div className="mt-8 rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-6">
                     <div className="mb-6 flex flex-col gap-2">
                       <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
@@ -275,7 +300,7 @@ export default async function ProjectView({
                       </p>
                       <h3 className="text-2xl font-bold text-[#5c3b28]">Distribution Across Teams</h3>
                       <p className="max-w-2xl text-[#6f4e37]">
-                        Hover each slice to see how many story points belong to a team or remain unassigned.
+                        This pie now reflects only active work, so it matches the flow stats above.
                       </p>
                     </div>
 
@@ -300,7 +325,7 @@ export default async function ProjectView({
                             Total
                           </text>
                           <text x="120" y="136" textAnchor="middle" className="fill-[#5c3b28] text-[22px] font-bold">
-                            {formatPoints(stats.total_story_points)}
+                            {formatPoints(stats.active_story_points)}
                           </text>
                         </svg>
                       </div>
