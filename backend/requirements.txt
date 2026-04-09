@@ -33,3 +33,6 @@ aiosmtplib
 python-jose[cryptography]
 python-dotenv
 httpx
+pytest
+pytest-asyncio
+PyHamcrest
