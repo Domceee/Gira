@@ -145,85 +145,65 @@ export default async function SprintStatsPage({
           </aside>
 
           <div className="space-y-8">
-            <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
-                    Sprint Statistics
-                  </p>
-                  <h1 className="mt-2 text-4xl font-bold text-[#5c3b28]">
-                    Sprint {stats.id_sprint}
-                  </h1>
-                  <p className="mt-2 text-lg text-[#6f4e37]">
-                    {formatDate(stats.start_date)} to {formatDate(stats.end_date)}
+                  <h1 className="text-3xl font-bold text-[#5c3b28]">Sprint {stats.id_sprint}</h1>
+                  <p className="mt-1 text-sm text-[#8a6a52]">
+                    {formatDate(stats.start_date)} → {formatDate(stats.end_date)} · {stats.status.toLowerCase()}
                   </p>
                 </div>
-
-                <div className="rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] px-5 py-4 text-right">
-                  <p className="text-sm uppercase tracking-[0.2em] text-[#8b5e3c]">Current Progress</p>
-                  <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.completion_rate}%</p>
-                  <p className="text-[#6f4e37]">{stats.elapsed_days} of {stats.sprint_length_days} days elapsed, sprint is {stats.status.toLowerCase()}</p>
+                <div className="text-right">
+                  <p className="text-4xl font-bold text-[#5c3b28]">{stats.completion_rate}%</p>
+                  <p className="text-xs text-[#8a6a52]">{stats.elapsed_days}/{stats.sprint_length_days} days</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-4">
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Committed</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.committed_tasks}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.committed_story_points)} points committed to this sprint.</p>
+            <div className="grid gap-3 lg:grid-cols-6">
+              <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Committed</p>
+                <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.committed_tasks}</p>
+                <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.committed_story_points)} pts</p>
               </div>
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completed</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.completed_tasks}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.completed_story_points)} points finished.</p>
+              <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Done</p>
+                <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.completed_tasks}</p>
+                <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.completed_story_points)} pts</p>
               </div>
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Remaining</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.remaining_tasks}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.remaining_story_points)} points still open.</p>
+              <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Remaining</p>
+                <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.remaining_tasks}</p>
+                <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.remaining_story_points)} pts</p>
               </div>
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Rolled Over</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.rolled_over_tasks}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.rolled_over_story_points)} points left the sprint unfinished.</p>
+              {stats.status === "COMPLETED" && (
+                <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Rolled Over</p>
+                  <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.rolled_over_tasks}</p>
+                  <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.rolled_over_story_points)} pts</p>
+                </div>
+              )}
+              <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Timeline</p>
+                <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{progressPercent}%</p>
+                <p className="mt-1 text-xs text-[#8a6a52]">{stats.remaining_days}d left</p>
               </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Timeline</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{progressPercent}%</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">{stats.remaining_days} days remaining in the sprint calendar.</p>
-              </div>
-              <div className="rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Planned Burn</p>
-                <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{formatPoints(stats.planned_points_per_day)}</p>
-                <p className="mt-2 text-sm text-[#6f4e37]">Ideal story points to burn per sprint day.</p>
+              <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Burn/day</p>
+                <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{formatPoints(stats.planned_points_per_day)}</p>
+                <p className="mt-1 text-xs text-[#8a6a52]">pts ideal</p>
               </div>
             </div>
 
             <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-              <div className="mb-6 flex flex-col gap-2">
-                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
-                  Burndown
-                </p>
-                <h2 className="text-3xl font-bold text-[#5c3b28]">Actual vs Ideal Burndown</h2>
-                <p className="max-w-3xl text-[#6f4e37]">
-                  The solid line shows actual remaining work based on recorded sprint events. The dashed line shows the ideal path to zero.
-                </p>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-[#5c3b28]">Burndown</h2>
+                <div className="flex gap-4 text-xs text-[#6f4e37]">
+                  <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-6 bg-[#8b5e3c]" />Actual</span>
+                  <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-6 border-t-2 border-dashed border-[#c28d52]" />Ideal</span>
+                </div>
               </div>
 
-              <div className="mb-4 flex flex-wrap gap-4 text-sm text-[#6f4e37]">
-                <div className="flex items-center gap-2">
-                  <span className="h-0.5 w-8 bg-[#8b5e3c]" />
-                  Actual remaining
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-0.5 w-8 border-t-2 border-dashed border-[#c28d52]" />
-                  Ideal remaining
-                </div>
-              </div>
 
               <div className="overflow-x-auto rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] p-4">
                 <svg viewBox="0 0 820 280" className="min-w-[820px]">

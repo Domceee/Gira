@@ -31,7 +31,6 @@ type StatCard = {
   value: number;
   share: number;
   storyPoints: number;
-  helper: string;
 };
 
 type StoryPointsByTeam = {
@@ -144,21 +143,18 @@ export default async function ProjectView({
           value: stats.unassigned_tasks,
           share: getPercent(stats.unassigned_tasks, stats.active_tasks),
           storyPoints: stats.unassigned_story_points,
-          helper: "Tasks still sitting in the project backlog with no team assigned yet.",
         },
         {
           label: "Backlog",
           value: stats.team_backlog_tasks,
           share: getPercent(stats.team_backlog_tasks, stats.active_tasks),
           storyPoints: stats.team_backlog_story_points,
-          helper: "Tasks owned by a team, but not scheduled into any sprint yet.",
         },
         {
           label: "In Sprint",
           value: stats.in_sprint_tasks,
           share: getPercent(stats.in_sprint_tasks, stats.active_tasks),
           storyPoints: stats.in_sprint_story_points,
-          helper: "Tasks that are actively planned into a sprint right now.",
         },
       ]
     : [];
@@ -216,25 +212,9 @@ export default async function ProjectView({
           <div className="space-y-8">
             {stats && (
               <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-                <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
-                      Project Statistics
-                    </p>
-                    <h2 className="mt-2 text-3xl font-bold text-[#5c3b28]">Active Task Distribution</h2>
-                    <p className="mt-2 max-w-2xl text-[#6f4e37]">
-                      Done tasks are separated out so this breakdown focuses on work that still needs attention.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[#d4b08a] bg-[#fdf7f2] px-5 py-4 text-right">
-                    <p className="text-sm uppercase tracking-[0.2em] text-[#8b5e3c]">Project Totals</p>
-                    <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.total_tasks} tasks</p>
-                    <p className="text-[#6f4e37]">{formatPoints(stats.total_story_points)} story points</p>
-                    <p className="mt-2 text-sm text-[#8a6a52]">
-                      {stats.active_tasks} active, {stats.done_tasks} done
-                    </p>
-                  </div>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-[#5c3b28]">Statistics</h2>
+                  <span className="text-sm text-[#8a6a52]">{stats.total_tasks} tasks · {formatPoints(stats.total_story_points)} pts</span>
                 </div>
 
                 <div className="mb-6 flex h-4 overflow-hidden rounded-full border border-[#d4b08a] bg-[#f1e3d5]">
@@ -248,60 +228,36 @@ export default async function ProjectView({
                   ))}
                 </div>
 
-                <div className="mb-6 grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Active Work</p>
-                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.active_tasks}</p>
-                    <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.active_story_points)} points still in play</p>
+                <div className="grid gap-3 lg:grid-cols-6">
+                  <div className="rounded-xl border border-[#d9c1a7] bg-[#fdf7f2] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Active</p>
+                    <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.active_tasks}</p>
+                    <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.active_story_points)} pts</p>
                   </div>
-                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completed</p>
-                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{stats.done_tasks}</p>
-                    <p className="mt-2 text-sm text-[#6f4e37]">{formatPoints(stats.done_story_points)} points finished</p>
+                  <div className="rounded-xl border border-[#d9c1a7] bg-[#fdf7f2] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Done</p>
+                    <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{stats.done_tasks}</p>
+                    <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(stats.done_story_points)} pts</p>
                   </div>
-                  <div className="rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-5">
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">Completion Rate</p>
-                    <p className="mt-3 text-4xl font-bold text-[#5c3b28]">{getPercent(stats.done_tasks, stats.total_tasks)}%</p>
-                    <p className="mt-2 text-sm text-[#6f4e37]">Based on all tasks currently in the project.</p>
+                  <div className="rounded-xl border border-[#d9c1a7] bg-[#fdf7f2] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">Done %</p>
+                    <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{getPercent(stats.done_tasks, stats.total_tasks)}%</p>
+                    <p className="mt-1 text-xs text-[#8a6a52]">of all tasks</p>
                   </div>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-3">
-                  {statCards.map((card, index) => (
-                    <div
-                      key={card.label}
-                      className="group rounded-2xl border border-[#d9c1a7] bg-[#fffaf5] p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg"
-                      title={`${card.label}: ${card.value} tasks, ${formatPoints(card.storyPoints)} story points`}
-                    >
-                      <div className="mb-5 flex items-center justify-between">
-                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8b5e3c]">
-                          {card.label}
-                        </p>
-                        <span className="text-xs text-[#a67c5b]">{index + 1}/3</span>
-                      </div>
-                      <p className="text-4xl font-bold text-[#5c3b28]">{card.value}</p>
-                      <div className="mt-4 flex items-center justify-between gap-3 text-sm text-[#6f4e37]">
-                        <span>{formatPoints(card.storyPoints)} pts</span>
-                        <span>{card.share}%</span>
-                      </div>
-                      <div className="mt-4 h-px bg-[#ead8c6]" />
-                      <p className="mt-4 text-sm leading-6 text-[#8a6a52] transition group-hover:text-[#4b2e1f]">
-                        {card.helper}
-                      </p>
+                  {statCards.map((card) => (
+                    <div key={card.label} className="rounded-xl border border-[#d9c1a7] bg-[#fdf7f2] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#8b5e3c]">{card.label}</p>
+                      <p className="mt-2 text-3xl font-bold text-[#5c3b28]">{card.value}</p>
+                      <p className="mt-1 text-xs text-[#8a6a52]">{formatPoints(card.storyPoints)} pts · {card.share}%</p>
                     </div>
                   ))}
                 </div>
 
                 {stats.active_story_points > 0 && (
                   <div className="mt-8 rounded-2xl border border-[#d9c1a7] bg-[#fdf7f2] p-6">
-                    <div className="mb-6 flex flex-col gap-2">
-                      <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#8b5e3c]">
-                        Story Points
-                      </p>
-                      <h3 className="text-2xl font-bold text-[#5c3b28]">Distribution Across Teams</h3>
-                      <p className="max-w-2xl text-[#6f4e37]">
-                        This pie now reflects only active work, so it matches the flow stats above.
-                      </p>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-[#5c3b28]">Story Points by Team</h3>
+                      <span className="text-sm text-[#8a6a52]">active work only</span>
                     </div>
 
                     <div className="grid gap-8 lg:grid-cols-[320px_1fr] lg:items-center">
