@@ -55,31 +55,30 @@ async function getSprintStats(teamId: string, sprintId: string) {
   return res.json() as Promise<SprintStats>;
 }
 
-function getChartCoordinates(points: BurndownPoint[]) {
-  const width = 820;
-  const height = 280;
-  const paddingX = 48;
-  const paddingY = 28;
-  const maxPoints = Math.max(
-    ...points.map((point) => Math.max(point.ideal_remaining_points, point.actual_remaining_points, point.scope_points)),
+const CHART = { width: 820, height: 280, paddingX: 60, paddingY: 28 };
+
+function getChartScale(points: BurndownPoint[]) {
+  return Math.max(
+    ...points.map((p) => Math.max(p.ideal_remaining_points, p.actual_remaining_points, p.scope_points)),
     0
   );
-  const usableWidth = width - paddingX * 2;
-  const usableHeight = height - paddingY * 2;
+}
 
-  return points.map((point, index) => {
-    const x = points.length === 1
-      ? width / 2
-      : paddingX + (usableWidth * index) / (points.length - 1);
-    const ratio = maxPoints === 0 ? 0 : point.ideal_remaining_points / maxPoints;
-    const y = height - paddingY - usableHeight * ratio;
+function toY(value: number, maxPoints: number) {
+  const usableHeight = CHART.height - CHART.paddingY * 2;
+  const ratio = maxPoints === 0 ? 0 : value / maxPoints;
+  return CHART.height - CHART.paddingY - usableHeight * ratio;
+}
 
-    return {
-      ...point,
-      x,
-      y,
-    };
-  });
+function toX(index: number, total: number) {
+  const usableWidth = CHART.width - CHART.paddingX * 2;
+  return total === 1 ? CHART.width / 2 : CHART.paddingX + (usableWidth * index) / (total - 1);
+}
+
+function buildPath(points: BurndownPoint[], maxPoints: number, getValue: (p: BurndownPoint) => number) {
+  return points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${toX(i, points.length)} ${toY(getValue(p), maxPoints)}`)
+    .join(" ");
 }
 
 function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -108,18 +107,18 @@ export default async function SprintStatsPage({
   await requireAuth();
   const { id, teamId, sprintId } = await params;
   const stats = await getSprintStats(teamId, sprintId);
-  const chartPoints = getChartCoordinates(stats.burndown_points);
-  const idealChartPath = chartPoints
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-  const actualChartPath = getChartCoordinates(
-    stats.burndown_points.map((point) => ({
-      ...point,
-      ideal_remaining_points: point.actual_remaining_points,
-    }))
-  )
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
+  const pts = stats.burndown_points;
+  const maxPoints = getChartScale(pts);
+  const idealChartPath = buildPath(pts, maxPoints, (p) => p.ideal_remaining_points);
+  const actualChartPath = buildPath(pts, maxPoints, (p) => p.actual_remaining_points);
+  const actualDots = pts.map((p, i) => ({
+    ...p,
+    x: toX(i, pts.length),
+    y: toY(p.actual_remaining_points, maxPoints),
+  }));
+  const midPoints = maxPoints > 0
+    ? [Math.round(maxPoints * 0.75), Math.round(maxPoints * 0.5), Math.round(maxPoints * 0.25)]
+    : [];
   const progressPercent = stats.sprint_length_days === 0
     ? 0
     : Math.round((stats.elapsed_days / stats.sprint_length_days) * 100);
@@ -223,17 +222,26 @@ export default async function SprintStatsPage({
                     );
                   })}
 
-                  <line x1="48" y1="252" x2="772" y2="252" stroke="#9f7a56" strokeWidth="2" />
-                  <line x1="48" y1="28" x2="48" y2="252" stroke="#9f7a56" strokeWidth="2" />
+                  <line x1="60" y1="252" x2="772" y2="252" stroke="#9f7a56" strokeWidth="2" />
+                  <line x1="60" y1="28" x2="60" y2="252" stroke="#9f7a56" strokeWidth="2" />
 
                   <path d={idealChartPath} fill="none" stroke="#c28d52" strokeWidth="2.5" strokeDasharray="10 8" strokeLinecap="round" />
                   <path d={actualChartPath} fill="none" stroke="#8b5e3c" strokeWidth="3" strokeLinecap="round" />
 
-                  {chartPoints.map((point) => (
+                  {midPoints.map((val) => {
+                    const y = toY(val, maxPoints);
+                    return (
+                      <text key={val} x="56" y={y + 4} textAnchor="end" className="fill-[#7d624a] text-[11px]">
+                        {val}
+                      </text>
+                    );
+                  })}
+
+                  {actualDots.map((point) => (
                     <g key={point.label}>
                       <circle cx={point.x} cy={point.y} r="5" fill="#fffaf5" stroke="#8b5e3c" strokeWidth="2">
                         <title>
-                          {`${point.label} (${formatDate(point.date)}): ${formatPoints(point.actual_remaining_points)} actual remaining, ${formatPoints(point.ideal_remaining_points)} ideal remaining, ${formatPoints(point.scope_points)} scope`}
+                          {`${point.label} (${formatDate(point.date)}): ${formatPoints(point.actual_remaining_points)} actual, ${formatPoints(point.ideal_remaining_points)} ideal, ${formatPoints(point.scope_points)} scope`}
                         </title>
                       </circle>
                       <text x={point.x} y="270" textAnchor="middle" className="fill-[#7d624a] text-[11px]">
@@ -242,10 +250,10 @@ export default async function SprintStatsPage({
                     </g>
                   ))}
 
-                  <text x="18" y="36" className="fill-[#7d624a] text-[12px]">
-                    {formatPoints(stats.committed_story_points)}
+                  <text x="56" y="36" textAnchor="end" className="fill-[#7d624a] text-[12px]">
+                    {formatPoints(maxPoints)}
                   </text>
-                  <text x="30" y="256" className="fill-[#7d624a] text-[12px]">0</text>
+                  <text x="56" y="256" textAnchor="end" className="fill-[#7d624a] text-[12px]">0</text>
                 </svg>
               </div>
             </div>

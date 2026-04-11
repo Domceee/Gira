@@ -142,7 +142,7 @@ async def get_sprint_stats(
     )
     task_events = event_result.scalars().all()
     if not task_events:
-        task_events = build_fallback_events(tasks, sprint.start_date)
+        task_events = build_fallback_events(tasks, sprint.start_date, sprint.end_date)
 
     burndown_points = build_burndown_points(sprint.start_date, sprint.end_date, task_events)
     summary = summarize_sprint_tasks(task_events, tasks)

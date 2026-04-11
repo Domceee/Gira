@@ -26,7 +26,7 @@ def snapshot_story_points(task: Task) -> float:
     return float(task.story_points or 0.0)
 
 
-def build_fallback_events(tasks: list[Task], sprint_start: datetime) -> list[SprintTaskEvent]:
+def build_fallback_events(tasks: list[Task], sprint_start: datetime, sprint_end: datetime | None = None) -> list[SprintTaskEvent]:
     fallback_events: list[SprintTaskEvent] = []
 
     for task in tasks:
@@ -38,13 +38,14 @@ def build_fallback_events(tasks: list[Task], sprint_start: datetime) -> list[Spr
                 occurred_at=sprint_start,
             )
         )
-        if task.workflow_status == TaskWorkflowStatus.DONE.value and task.completed_at is not None:
+        if task.workflow_status == TaskWorkflowStatus.DONE.value:
+            completed_at = task.completed_at or sprint_end or sprint_start
             fallback_events.append(
                 SprintTaskEvent(
                     fk_taskid_task=task.id_task,
                     event_type=SprintTaskEventType.COMPLETED.value,
                     story_points=snapshot_story_points(task),
-                    occurred_at=task.completed_at,
+                    occurred_at=completed_at,
                 )
             )
 
