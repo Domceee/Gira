@@ -73,6 +73,39 @@ export async function assignTaskToTeam(formData: FormData) {
   revalidatePath(`/projects/${projectId}/backlog`);
 }
 
+export async function editTask(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const taskId = Number(formData.get("task_id"));
+  const projectId = Number(formData.get("project_id"));
+
+  const payload = {
+    name: formData.get("name"),
+    description: formData.get("description"),
+    story_points: toOptionalNumber(formData.get("story_points")),
+    risk: toOptionalNumber(formData.get("risk")),
+    priority: toOptionalNumber(formData.get("priority")),
+  };
+
+  const res = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to edit task");
+  }
+
+  revalidatePath(`/projects/${projectId}/backlog`);
+}
+
 export async function deleteTask(formData: FormData) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
