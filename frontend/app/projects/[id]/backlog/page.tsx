@@ -76,7 +76,7 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
   await requireAuth();
   const { id } = await params;
 
-  let tasks = [];
+  let tasks: Task[] = [];
   let teams: TeamBacklog[] = [];
   let errorMessage: string | null = null;
 
