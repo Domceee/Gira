@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
-import { deleteTask, editTask } from "../../projects/[id]/backlog/actions";
+import { deleteTask, editTask } from "@/app/projects/[id]/backlog/actions";
 
 
 type TaskActionsProps = {
