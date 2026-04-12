@@ -16,7 +16,7 @@ from app.models.task import Task
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.user import User
-from app.schemas.task import TaskCreate, TaskRead
+from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.services.sprint_burndown import snapshot_story_points
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -138,7 +138,36 @@ async def create_task(
     db.add(task)
     await db.commit()
     await db.refresh(task)
+    return task
 
+@router.patch("/{task_id}", response_model=TaskRead)
+async def update_task(
+    task_id: int,
+    payload: TaskUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    await get_project_membership_or_404(task.fk_projectid_project, current_user.id_user, db)
+
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Task name is required")
+
+    task.name = payload.name.strip()
+    task.description = payload.description
+    task.story_points = payload.story_points
+    task.risk = payload.risk
+    task.priority = payload.priority
+    print(f"Updating task id={task.id_task}, name='{task.name}'")  #
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    
     return task
 
 

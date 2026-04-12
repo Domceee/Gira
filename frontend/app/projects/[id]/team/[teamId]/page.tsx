@@ -9,6 +9,7 @@ import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
+import TaskActions from "@/app/components/tasks/TaskActions";
 
 type Task = {
   id_task: number;
@@ -108,7 +109,7 @@ export default async function TeamView({
 
             <h2 className="mb-4 text-2xl font-bold text-[#5c3b28]">Team Backlog</h2>
 
-            <table className="w-full overflow-hidden rounded-lg border-collapse">
+            <table className="w-full rounded-lg border-collapse">
               <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
                 <tr>
                   <th className="p-3 text-left">Name</th>
@@ -117,13 +118,14 @@ export default async function TeamView({
                   <th className="p-3 text-left">Risk</th>
                   <th className="p-3 text-left">Priority</th>
                   <th className="p-3 text-left">Sprint</th>
+                  <th className="p-3 text-left"></th>
                 </tr>
               </thead>
 
               <tbody>
                 {team.tasks.filter((t) => t.fk_sprintid_sprint === null).length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-[#6f4e37]">
+                    <td colSpan={7} className="p-4 text-center text-[#6f4e37]">
                       No tasks in backlog.
                     </td>
                   </tr>
@@ -146,7 +148,6 @@ export default async function TeamView({
                         <td className="p-3">{task.story_points}</td>
                         <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
                         <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
-
                         <td className="p-3">
                           <form action={assignTaskToSprint} className="flex gap-2 items-center">
                             <input type="hidden" name="task_id" value={task.id_task} />
@@ -172,6 +173,17 @@ export default async function TeamView({
                               Save
                             </button>
                           </form>
+                        </td>
+                        <td className="p-3">
+                          <TaskActions
+                            taskId={task.id_task}
+                            projectId={id}
+                            name={task.name}
+                            description={task.description}
+                            story_points={task.story_points}
+                            risk={task.risk}
+                            priority={task.priority}
+                          />
                         </td>
                       </tr>
                     ))

@@ -8,16 +8,66 @@ type Team = {
   name: string | null;
 };
 
+type Project = {
+  id: number;
+  name: string | null;
+  description: string | null;
+  is_owner: boolean;
+};
+
+type TeamMember = {
+  id_user: number;
+  name: string;
+  email: string;
+};
+
+async function getProject(projectId: string): Promise<Project> {
+  const res = await apiFetch(`/api/projects/${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch project");
+  return res.json();
+}
+
 async function getTeams(projectId: string): Promise<Team[]> {
   const res = await apiFetch(`/api/projects/${projectId}/teams`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch teams");
   return res.json();
 }
 
+async function getTeamMembers(projectId: string, teamId: number): Promise<TeamMember[]> {
+  const res = await apiFetch(`/api/projects/${projectId}/teams/${teamId}/members`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch team members");
+  return res.json();
+}
+
+async function getCurrentUser() {
+  const res = await apiFetch(`/api/user/me`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch current user");
+  return res.json();
+}
+
 export default async function SelectTeamPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth();
   const { id } = await params;
+  
+  const project = await getProject(id);
   const teams = await getTeams(id);
+  const currentUser = await getCurrentUser();
+
+  let visibleTeams = teams;
+
+  // If user is not the owner, only show teams they are a member of
+  if (!project.is_owner) {
+    const teamsWithUserMembership = await Promise.all(
+      teams.map(async (team) => {
+        const members = await getTeamMembers(id, team.id_team);
+        const isMember = members.some((member) => member.id_user === currentUser.id_user);
+        return { team, isMember };
+      })
+    );
+    visibleTeams = teamsWithUserMembership
+      .filter(({ isMember }) => isMember)
+      .map(({ team }) => team);
+  }
 
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
@@ -41,12 +91,12 @@ export default async function SelectTeamPage({ params }: { params: Promise<{ id:
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
             <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Select a Team</h2>
 
-            {teams.length === 0 && (
+            {visibleTeams.length === 0 && (
               <p className="text-[#6f4e37]">No teams found for this project.</p>
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {teams.map((team) => (
+              {visibleTeams.map((team) => (
                 <Link
                   key={team.id_team}
                   href={`/projects/${id}/team/${team.id_team}`}

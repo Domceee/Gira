@@ -9,6 +9,13 @@ class TaskCreate(BaseModel):
     priority: int | None = None
     fk_projectid_project: int
 
+class TaskUpdate(BaseModel):
+    name: str
+    description: str | None = None
+    story_points: float | None = None
+    risk: int | None = None
+    priority: int | None = None
+
 class TaskRead(BaseModel):
     id_task: int
     name: str
