@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
-import { deleteTask, editTask } from "@/app/projects/[id]/backlog/actions";
+import { apiFetch } from "@/app/lib/api";
 
 
 type TaskActionsProps = {
@@ -35,9 +36,63 @@ export default function TaskActions({
   risk,
   priority,
 }: TaskActionsProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleDelete = async () => {
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      const response = await apiFetch(`/api/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        setDeleteError("Failed to delete task.");
+        return;
+      }
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setDeleteError("Failed to delete task. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEdit = async (formData: FormData) => {
+    setEditError(null);
+    setIsEditing(true);
+    try {
+      const payload = {
+        name: formData.get("name"),
+        description: formData.get("description"),
+        story_points: formData.get("story_points") ? Number(formData.get("story_points")) : null,
+        risk: formData.get("risk") ? Number(formData.get("risk")) : null,
+        priority: formData.get("priority") ? Number(formData.get("priority")) : null,
+      };
+      const response = await apiFetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        setEditError("Failed to edit task.");
+        return;
+      }
+      setEditing(false);
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setEditError("Failed to edit task. Please try again.");
+    } finally {
+      setIsEditing(false);
+    }
+  };
 
   useEffect(() => {
     closeMenuCallbacks.set(taskId, () => setOpen(false));
@@ -110,16 +165,19 @@ export default function TaskActions({
 
       {open && !editing && (
         <div className="absolute right-0 top-full mt-2 w-56 rounded-md bg-white shadow-lg border border-gray-200 z-[9999]">
-          <form action={deleteTask}>
-            <input type="hidden" name="task_id" value={taskId} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <button
-              type="submit"
-              className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+          {deleteError && (
+            <div className="rounded-xl border border-[#d4b08a] bg-[#fff7ef] px-4 py-3 text-sm text-[#7a3d2b]">
+              {deleteError}
+            </div>
+          )}
 
           <button
             type="button"
@@ -133,7 +191,7 @@ export default function TaskActions({
 
       {editing && (
         <div className="absolute right-0 top-full mt-2 w-[320px] rounded-md bg-white shadow-lg border border-gray-200 z-[9999] p-4">
-          <form action={editTask} className="space-y-3">
+          <form action={handleEdit} className="space-y-3">
             <input type="hidden" name="task_id" value={taskId} />
             <input type="hidden" name="project_id" value={projectId} />
 
@@ -203,9 +261,10 @@ export default function TaskActions({
             <div className="flex items-center justify-between gap-2 pt-2">
               <button
                 type="submit"
-                className="rounded-lg bg-[#b08968] px-4 py-2 text-white hover:bg-[#8c6a4f]"
+                disabled={isEditing}
+                className="rounded-lg bg-[#b08968] px-4 py-2 text-white hover:bg-[#8c6a4f] disabled:opacity-50"
               >
-                Save
+                {isEditing ? "Saving..." : "Save"}
               </button>
               <button
                 type="button"
@@ -215,6 +274,11 @@ export default function TaskActions({
                 Cancel
               </button>
             </div>
+            {editError && (
+              <div className="rounded-xl border border-[#d4b08a] bg-[#fff7ef] px-4 py-3 text-sm text-[#7a3d2b]">
+                {editError}
+              </div>
+            )}
           </form>
         </div>
       )}
