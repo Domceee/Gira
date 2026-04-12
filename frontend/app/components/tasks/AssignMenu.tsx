@@ -27,7 +27,8 @@ export default function AssignMenu({
 }: AssignMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<string>(String(selectedTeamId ?? "null"));
+  const defaultTeamId = selectedTeamId ?? (teams.length > 0 ? teams[0].team_id : null);
+  const [selectedTeam, setSelectedTeam] = useState<string>(String(defaultTeamId));
   const [assignError, setAssignError] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -37,11 +38,8 @@ export default function AssignMenu({
     setIsAssigning(true);
     const teamId = formData.get("team_id");
     try {
-      const response = await apiFetch(`/api/tasks/${taskId}/assign_team`, {
+      const response = await apiFetch(`/api/tasks/${taskId}/assign_team?team_id=${teamId}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          team_id: teamId ? Number(teamId) : null,
-        }),
       });
       if (!response.ok) {
         setAssignError("Failed to assign task to team.");
@@ -121,7 +119,6 @@ export default function AssignMenu({
                 disabled={isAssigning}
                 className="w-full rounded-lg border border-[#c8a27a] bg-white p-2"
               >
-                
                 {teams.map((team) => (
                   <option key={team.team_id} value={team.team_id}>
                     {team.team_name ?? "Unnamed team"}
