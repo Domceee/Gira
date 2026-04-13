@@ -107,6 +107,7 @@ async def get_tasks(
         query = query.where(
             Task.fk_projectid_project == project_id,
             Task.fk_teamid_team == None,
+            Task.fk_sprintid_sprint == None,
         )
 
     result = await db.execute(query)
@@ -163,7 +164,7 @@ async def update_task(
     task.story_points = payload.story_points
     task.risk = payload.risk
     task.priority = payload.priority
-    print(f"Updating task id={task.id_task}, name='{task.name}'")  #
+    
     db.add(task)
     await db.commit()
     await db.refresh(task)
@@ -389,12 +390,6 @@ async def update_board_position(
         "workflow_status": task.workflow_status,
         "board_order": task.board_order,
     }
-
-
-
-
-
-
 
 async def get_project_membership_or_404(project_id: int, user_id: int, db: AsyncSession):
     result = await db.execute(

@@ -41,7 +41,8 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
     # Get tasks assigned to this team but NOT assigned to a sprint
     result = await db.execute(
         select(Task).where(
-            Task.fk_teamid_team == team_id
+            Task.fk_teamid_team == team_id,
+            Task.fk_sprintid_sprint == None,
         )
     )
     tasks = result.scalars().all()

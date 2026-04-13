@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "@/app/components/navbar";
 import DescriptionButton from "@/app/components/DescriptionButton";
 import AssignMenu from "@/app/components/tasks/AssignMenu";
+import BacklogDragBoard from "./BacklogDragBoard";
 import { assignTaskToTeam, createTask, deleteTask } from "./actions";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
@@ -75,9 +76,20 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
   await requireAuth();
   const { id } = await params;
 
-  await getProject(id);
-  const tasks = await getTasks(id);
-  const teams = await getTeamsWithTasks(id);
+  let tasks: Task[] = [];
+  let teams: TeamBacklog[] = [];
+  let errorMessage: string | null = null;
+
+  try {
+    await getProject(id);
+    tasks = await getTasks(id);
+    teams = await getTeamsWithTasks(id);
+  } catch (error) {
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Unable to load backlog data. Please refresh the page.";
+  }
 
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
@@ -99,151 +111,18 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
           </aside>
 
           <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-            <h2 className="mb-4 text-2xl font-bold text-[#5c3b28]">Unassigned Tasks</h2>
-
-            <table className="w-full rounded-lg border-collapse">
-              <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
-                <tr>
-                  <th className="p-3 text-left">Name</th>
-                  <th className="p-3 text-left">Description</th>
-                  <th className="p-3 text-left">Story Points</th>
-                  <th className="p-3 text-left">Risk</th>
-                  <th className="p-3 text-left">Priority</th>
-                  <th className="p-3 text-left">Assign</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {tasks.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="p-4 text-center text-[#6f4e37]">
-                      No unassigned tasks.
-                    </td>
-                  </tr>
-                )}
-
-                {tasks.map((task) => (
-                  <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                    <td className="p-3 align-top">
-                      <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
-                        {task.name ?? "—"}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <DescriptionButton text={task.description} />
-                    </td>
-                    <td className="p-3">{task.story_points}</td>
-                    <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
-                    <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
-                    <td className="p-3">
-                      <AssignMenu
-                        taskId={task.id_task}
-                        projectId={id}
-                        selectedTeamId={task.fk_teamid_team}
-                        teams={teams.map((team) => ({
-                          team_id: team.team_id,
-                          team_name: team.team_name,
-                        }))}
-                      />
-                      <TaskActions
-                        taskId={task.id_task}
-                        projectId={id}
-                        name={task.name}
-                        description={task.description}
-                        story_points={task.story_points}
-                        risk={task.risk}
-                        priority={task.priority}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <h2 className="mb-4 mt-10 text-2xl font-bold text-[#5c3b28]">Teams</h2>
-
-            {teams.map((team) => (
-              <div key={team.team_id} className="mb-10">
-                <h3 className="mb-2 text-xl font-semibold text-[#4b2e1f]">
-                  Team {team.team_name ?? "Unnamed team"}
-                </h3>
-
-                <table className="w-full rounded-lg border-collapse">
-                  <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
-                    <tr>
-                      <th className="p-3 text-left">Name</th>
-                      <th className="p-3 text-left">Description</th>
-                      <th className="p-3 text-left">Story Points</th>
-                      <th className="p-3 text-left">Risk</th>
-                      <th className="p-3 text-left">Priority</th>
-                      <th className="p-3 text-left">Assign</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {team.tasks.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center text-[#6f4e37]">
-                          No tasks assigned.
-                        </td>
-                      </tr>
-                    )}
-
-                    {team.tasks.map((task) => (
-                      <tr key={task.id_task} className="border-b border-[#d8c2a8] hover:bg-[#f7efe7]">
-                        <td className="p-3 align-top">
-                          <div className="max-w-[200px] max-h-[70px] overflow-hidden break-words">
-                            {task.name ?? "—"}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <DescriptionButton text={task.description} />
-                        </td>
-                        <td className="p-3">{task.story_points}</td>
-                        <td className="p-3">{getRiskOrPriorityName(task.risk)}</td>
-                        <td className="p-3">{getRiskOrPriorityName(task.priority)}</td>
-                        <td className="p-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <AssignMenu
-                              taskId={task.id_task}
-                              projectId={id}
-                              selectedTeamId={task.fk_teamid_team}
-                              teams={teams.map((optionTeam) => ({
-                                team_id: optionTeam.team_id,
-                                team_name: optionTeam.team_name,
-                              }))}
-                            />
-
-                            <form action={assignTaskToTeam} className="inline-block">
-                              <input type="hidden" name="task_id" value={task.id_task} />
-                              <input type="hidden" name="project_id" value={id} />
-                              <input type="hidden" name="team_id" value="null" />
-                              <button
-                                type="submit"
-                                className="rounded-lg border border-[#c8a27a] bg-white px-3 py-2 text-sm text-[#5c3b28] hover:bg-[#f7efe7]"
-                              >
-                                Unassign
-                              </button>
-                            </form>
-                            <TaskActions
-                              taskId={task.id_task}
-                              projectId={id}
-                              name={task.name}
-                              description={task.description}
-                              story_points={task.story_points}
-                              risk={task.risk}
-                              priority={task.priority}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {errorMessage ? (
+              <div className="rounded-2xl border border-red-300 bg-red-50 p-6 text-red-900">
+                <h2 className="mb-3 text-2xl font-bold">Unable to load backlog</h2>
+                <p>{errorMessage}</p>
               </div>
-            ))}
+            ) : (
+              <>
+                <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
 
-            <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Task</h3>
+                <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Task</h3>
+              </>
+            )}
 
             <form
               action={createTask}
