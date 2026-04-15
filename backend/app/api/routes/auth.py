@@ -1,6 +1,7 @@
 from datetime import timedelta
 from urllib.parse import urlencode
 import httpx
+import base64
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,22 @@ from app.core.email import send_registration_email
 from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def user_to_dict(user: User) -> dict:
+    """Convert user to dict with base64 encoded picture"""
+    data = {
+        "id_user": user.id_user,
+        "name": user.name,
+        "email": user.email,
+        "country": user.country,
+        "city": user.city,
+        "picture": None,
+    }
+    if user.picture:
+        data["picture"] = base64.b64encode(user.picture).decode('utf-8')
+    return data
+
 
 @router.post("/register", response_model=UserRead, status_code=201)
 async def register(payload: UserCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
@@ -43,7 +60,7 @@ async def register(payload: UserCreate, background_tasks: BackgroundTasks, db: A
     await db.refresh(user)
 
     background_tasks.add_task(send_registration_email, user.email, user.name)
-    return user
+    return UserRead(**user_to_dict(user))
 
 @router.post("/login", response_model=UserRead)
 async def login(payload: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
@@ -74,7 +91,7 @@ async def login(payload: UserLogin, response: Response, db: AsyncSession = Depen
         path="/",
     )
 
-    return user
+    return UserRead(**user_to_dict(user))
 
 @router.get("/google/login")
 async def google_login():
@@ -166,7 +183,17 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserRead)
 async def read_current_user(current_user: User = Depends(get_current_user)):
-    return current_user
+    user_dict = {
+        "id_user": current_user.id_user,
+        "name": current_user.name,
+        "email": current_user.email,
+        "country": current_user.country,
+        "city": current_user.city,
+        "picture": None,
+    }
+    if current_user.picture:
+        user_dict["picture"] = base64.b64encode(current_user.picture).decode('utf-8')
+    return UserRead(**user_dict)
 
 @router.post("/logout")
 async def logout(response: Response):

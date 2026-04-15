@@ -7,6 +7,7 @@ from app.api.routes.projects import router as projects_router
 from app.api.routes.task import router as task_router   
 from app.api.routes import user
 from app.api.routes import sprint
+
 app = FastAPI(title="Gira API")
 
 origins = [

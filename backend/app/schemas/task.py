@@ -15,6 +15,7 @@ class TaskUpdate(BaseModel):
     story_points: float | None = None
     risk: int | None = None
     priority: int | None = None
+    fk_team_memberid_team_member: int | None = None
 
 class TaskRead(BaseModel):
     id_task: int
@@ -25,8 +26,10 @@ class TaskRead(BaseModel):
     priority: int | None
     fk_teamid_team: int | None
     fk_sprintid_sprint: int | None
+    fk_team_memberid_team_member: int | None
     workflow_status: TaskWorkflowStatus
     board_order: int
+    model_config = {
+        "from_attributes": True 
+    }
 
-    class Config:
-        orm_mode = True

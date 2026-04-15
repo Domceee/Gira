@@ -58,8 +58,8 @@ class Task(Base):
         server_default="0",
     )
 
-    #fk_team_memberid_team_member = Column(
-    #    Integer,
-    #    ForeignKey("team_member.id_team_member"),
-    #    nullable=True
-    #)
+    fk_team_memberid_team_member = Column(
+        Integer,
+        ForeignKey("team_member.id_team_member"),
+        nullable=True
+    )

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import Integer, String
 from app.db.base_class import Base
+from sqlalchemy import LargeBinary
 
 class User(Base):
     __tablename__ = "users"
@@ -11,6 +12,7 @@ class User(Base):
     country: Mapped[str] = mapped_column(String, nullable=False, default="")
     city: Mapped[str] = mapped_column(String, nullable=False, default="")
     password: Mapped[str | None] = mapped_column(String, nullable=True)
+    picture: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
     google_sub: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     auth_provider: Mapped[str] = mapped_column(String, nullable=False, default="local")

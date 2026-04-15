@@ -439,9 +439,13 @@ async def get_team_backlog(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Ensure user belongs to the project
     await get_project_membership_or_404(project_id, current_user.id_user, db)
+
+    # Ensure team exists
     team = await get_team_or_404(project_id, team_id, db)
 
+    # Fetch tasks for this team
     result = await db.execute(
         select(Task)
         .where(Task.fk_teamid_team == team_id)
@@ -449,10 +453,33 @@ async def get_team_backlog(
     )
     tasks = result.scalars().all()
 
+    # Fetch team members (joined with User)
+    result = await db.execute(
+        select(TeamMember, User)
+        .join(User, User.id_user == TeamMember.fk_userid_user)
+        .where(TeamMember.fk_teamid_team == team_id)
+    )
+
+    members = [
+        {
+            "id_team_member": tm.id_team_member,
+            "role_in_team": tm.role_in_team,
+            "effectiveness": tm.effectiveness,
+            "user": {
+                "id_user": user.id_user,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture,
+            }
+        }
+        for tm, user in result.all()
+    ]
+
     return {
         "team_id": team.id_team,
         "team_name": team.name,
         "tasks": tasks,
+        "team_members": members,
     }
 
 

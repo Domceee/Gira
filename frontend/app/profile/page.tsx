@@ -11,6 +11,7 @@ interface User {
   email: string;
   country: string;
   city: string;
+  picture?: string;
 }
 
 export default function ProfilePage() {
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pictureBase64, setPictureBase64] = useState<string | null>(null);
 
   async function fetchUser() {
     try {
@@ -46,16 +48,42 @@ export default function ProfilePage() {
     fetchUser();
   }, []);
 
+  function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the data:image/...;base64, prefix
+      const base64 = result.split(",")[1];
+      setPictureBase64(base64);
+    };
+    reader.onerror = () => {
+      setError("Failed to read file");
+    };
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
+    const form = e.currentTarget;
+
     try {
-      const formData = new FormData(e.currentTarget);
+      const formData = new FormData(form);
+      if (pictureBase64) {
+        formData.set("picture_base64", pictureBase64);
+      }
       await updateProfile(formData);
 
       await fetchUser();
+      setPictureBase64(null);
+      // Reset file input
+      const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -97,6 +125,39 @@ export default function ProfilePage() {
               onSubmit={handleSubmit}
               className="space-y-6 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
             >
+              {/* PROFILE PICTURE */}
+              <div>
+                <label className="mb-1 block font-medium">Profile Picture</label>
+                <div className="mb-3 flex items-center gap-4">
+                  {pictureBase64 ? (
+                    <img
+                      src={`data:image/jpeg;base64,${pictureBase64}`}
+                      alt="Preview"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : user.picture ? (
+                    <img
+                      src={`data:image/jpeg;base64,${user.picture}`}
+                      alt="Profile"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <img
+                      src="/default.jpg"
+                      alt="Default Profile"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  )}
+                </div>
+                <input
+                  type="file"
+                  name="picture"
+                  accept="image/*"
+                  onChange={handlePictureChange}
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
               {/* NAME */}
               <div>
                 <label className="mb-1 block font-medium">Name</label>

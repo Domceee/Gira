@@ -30,8 +30,8 @@ export async function createSprint(formData: FormData) {
     const text = await res.text();
     throw new Error(text || "Failed to create sprint");
   }
-  
-  revalidatePath(`/projects/${project_id}/team/${team_id}`);
+
+  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
 }
 
 export async function assignTaskToSprint(formData: FormData) {
@@ -60,7 +60,43 @@ export async function assignTaskToSprint(formData: FormData) {
     throw new Error(text || "Failed to assign task to sprint");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`);
+  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+}
+
+export async function assignTaskToMember(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const task_id = formData.get("task_id");
+  const team_member_id = formData.get("team_member_id");
+  const team_id = formData.get("team_id");
+  const project_id = formData.get("project_id");
+
+  const payload = {
+    team_member_id: team_member_id === "null" ? null : Number(team_member_id),
+  };
+
+  // IMPORTANT: include team_id in the query string
+  const res = await fetch(
+    `${API_URL}/api/tasks/${task_id}/assign_member?team_id=${team_id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookieHeader,
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to assign task to member");
+  }
+
+  // FIX: force Next.js to drop cached page
+  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
 }
 
 export async function closeSprint(formData: FormData) {
@@ -84,6 +120,37 @@ export async function closeSprint(formData: FormData) {
     throw new Error(text || "Failed to close sprint");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`);
-  revalidatePath(`/projects/${project_id}/board`);
+  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  revalidatePath(`/projects/${project_id}/board`, "page");
 }
+
+export async function updateTaskStatus(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const task_id = formData.get("task_id");
+  const team_id = formData.get("team_id");
+  const project_id = formData.get("project_id");
+  const workflow_status = formData.get("workflow_status");
+
+  const res = await fetch(`${API_URL}/api/tasks/${task_id}/board-position`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify({
+      workflow_status,
+      board_order: 0, // you can improve this later
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to update task status");
+  }
+
+  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+}
+
