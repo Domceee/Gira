@@ -1,7 +1,7 @@
 """add news notifications
 
 Revision ID: a2c3d4e5f6b7
-Revises: fe1d1915b4d4
+Revises: 4e5f6a7b8c9d
 Create Date: 2026-04-15 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = "a2c3d4e5f6b7"
-down_revision: Union[str, Sequence[str], None] = "fe1d1915b4d4"
+down_revision: Union[str, Sequence[str], None] = "4e5f6a7b8c9d"
 branch_labels = None
 depends_on = None
 
