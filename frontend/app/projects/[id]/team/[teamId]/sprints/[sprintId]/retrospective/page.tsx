@@ -291,14 +291,31 @@ function RetroColumn({
 
       <div className="space-y-3">
         {items.map((item, index) => (
-          <div key={index} className="flex gap-2">
-            <input
-              type="text"
+          <div key={index} className="flex gap-2 items-start">
+            <textarea
               value={item}
               disabled={disabled}
               onChange={(e) => onUpdate(column, index, e.target.value)}
-              className="flex-1 rounded-lg border border-[#c8a27a] p-2 bg-white"
+              className="
+                flex-1 
+                rounded-lg 
+                border border-[#c8a27a] 
+                p-2 
+                bg-white 
+                text-[#4b2e1f]
+                resize-none 
+                overflow-hidden
+                leading-relaxed
+                min-h-[48px]
+              "
+              rows={1}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = target.scrollHeight + "px";
+              }}
             />
+
             {!disabled && (
               <button
                 onClick={() => onRemove(column, index)}
@@ -322,3 +339,4 @@ function RetroColumn({
     </div>
   );
 }
+
