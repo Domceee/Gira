@@ -48,22 +48,44 @@ export default function ProfilePage() {
     fetchUser();
   }, []);
 
-  function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.currentTarget.files?.[0];
-    if (!file) return;
+async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.currentTarget.files?.[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove the data:image/...;base64, prefix
-      const base64 = result.split(",")[1];
-      setPictureBase64(base64);
-    };
-    reader.onerror = () => {
-      setError("Failed to read file");
-    };
-  }
+  // Load image into HTMLImageElement
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      setError("Failed to process image");
+      return;
+    }
+
+    // Resize logic (max width 512px)
+    const MAX_WIDTH = 512;
+    const scale = MAX_WIDTH / img.width;
+    canvas.width = MAX_WIDTH;
+    canvas.height = img.height * scale;
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Compress to JPEG at 70% quality
+    const compressed = canvas.toDataURL("image/jpeg", 0.7);
+
+    // Remove prefix
+    const base64 = compressed.split(",")[1];
+    setPictureBase64(base64);
+  };
+
+  img.onerror = () => {
+    setError("Failed to load image");
+  };
+}
+
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
