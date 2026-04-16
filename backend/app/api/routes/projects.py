@@ -7,6 +7,8 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.role import Role
 from app.models.user import User
+from app.models.invitation import Invitation
+from app.services.news import create_news_for_users
 from app.schemas.project import (
     ProjectCreate,
     ProjectRead,
@@ -364,6 +366,9 @@ async def add_project_members(
 ):
     await require_project_owner(project_id, current_user.id_user, db)
 
+    project_result = await db.execute(select(Project).where(Project.id_project == project_id))
+    project = project_result.scalar_one_or_none()
+
     if not payload.user_ids:
         return {"message": "No users to add"}
 
@@ -385,22 +390,44 @@ async def add_project_members(
     )
     existing_ids = set(existing_result.scalars().all())
 
-    new_ids = [user_id for user_id in payload.user_ids if user_id not in existing_ids]
+    invitation_result = await db.execute(
+        select(Invitation.fk_userid_user).where(
+            Invitation.fk_projectid_project == project_id,
+            Invitation.is_accepted == False,
+            Invitation.is_declined == False,
+            Invitation.fk_userid_user.in_(payload.user_ids),
+        )
+    )
+    existing_invitation_ids = set(invitation_result.scalars().all())
+
+    new_ids = [
+        user_id
+        for user_id in payload.user_ids
+        if user_id not in existing_ids and user_id not in existing_invitation_ids
+    ]
 
     for user_id in new_ids:
         db.add(
-            ProjectMember(
-                role="Member",
-                is_owner=False,
+            Invitation(
                 fk_userid_user=user_id,
                 fk_projectid_project=project_id,
-                fk_roleid_role=role.id_role,
+                invited_by_user_id=current_user.id_user,
             )
+        )
+
+    if new_ids and project is not None:
+        await create_news_for_users(
+            db=db,
+            user_ids=new_ids,
+            title="Project invitation",
+            message=f"You were invited to project {project.name}.",
+            news_type="project_invite",
+            project_id=project_id,
         )
 
     await db.commit()
 
-    return {"message": "Members added"}
+    return {"message": "Invitations sent"}
 
 @router.get("/{project_id}/teams", response_model=list[TeamRead])
 async def get_project_teams(
@@ -588,7 +615,9 @@ async def add_team_members(
     current_user: User = Depends(get_current_user),
 ):
     await require_project_owner(project_id, current_user.id_user, db)
-    await get_team_or_404(project_id, team_id, db)
+    team = await get_team_or_404(project_id, team_id, db)
+    project_result = await db.execute(select(Project).where(Project.id_project == project_id))
+    project = project_result.scalar_one_or_none()
 
     if not payload.user_ids:
         return {"message": "No users to add"}
@@ -624,6 +653,37 @@ async def add_team_members(
                 effectiveness=None,
             )
         )
+
+    if final_ids and project is not None:
+        await create_news_for_users(
+            db=db,
+            user_ids=final_ids,
+            title="Team assignment",
+            message=f"You were assigned to team {team.name} in project {project.name}.",
+            news_type="team_assignment",
+            project_id=project_id,
+            team_id=team_id,
+        )
+
+        active_sprint_result = await db.execute(
+            select(Sprint.id_sprint)
+            .where(
+                Sprint.fk_teamid_team == team_id,
+                Sprint.status == SprintStatus.ACTIVE.value,
+            )
+        )
+        active_sprint_ids = active_sprint_result.scalars().all()
+        if active_sprint_ids:
+            await create_news_for_users(
+                db=db,
+                user_ids=final_ids,
+                title="Sprint started",
+                message=f"A sprint is currently active for team {team.name}.",
+                news_type="sprint_started",
+                project_id=project_id,
+                team_id=team_id,
+                sprint_id=active_sprint_ids[0],
+            )
 
     await db.commit()
     return {"message": "Team members added"}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Navbar from "../components/navbar";
+import InvitationsBlock from "../components/InvitationsBlock";
 import { apiFetch } from "../lib/api";
 import { requireAuth } from "../lib/auth";
 
@@ -9,36 +10,29 @@ type ProjectListItem = {
   description: string | null;
 };
 
+type NewsItem = {
+  id_news: number;
+  title: string;
+  message: string;
+  created_at: string;
+};
+
 async function getProjects() {
   const res = await apiFetch("/api/projects", { method: "GET", cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch projects");
   return res.json() as Promise<ProjectListItem[]>;
 }
 
-const news = [
-  {
-    id: 1,
-    title: "v0.1 blog",
-    content: "added function to...",
-    date: "2025-04-01",
-  },
-  {
-    id: 2,
-    title: "Team update",
-    content: "komanda atostogauja :)",
-    date: "2026-04-01",
-  },
-  {
-    id: 3,
-    title: "Coming soon",
-    content: "kazkas..",
-    date: "2025-04-01",
-  },
-];
+async function getNews() {
+  const res = await apiFetch("/api/news", { method: "GET", cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json() as Promise<NewsItem[]>;
+}
 
 export default async function HomePage() {
   await requireAuth();
   const projects = await getProjects();
+  const news = await getNews();
 
   return (
     <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
@@ -86,30 +80,39 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* NEWS */}
-          <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-            <h2 className="mb-6 text-3xl font-bold text-[#5c3b28]">News</h2>
+          <div className="space-y-8">
+            <InvitationsBlock />
 
-            <div className="space-y-4">
-              {news.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-4"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-4">
-                    <h3 className="text-lg font-semibold text-[#7b4b2a]">
-                      {item.title}
-                    </h3>
-                    <span className="text-xs text-[#8b6b4a]">{item.date}</span>
-                  </div>
+            <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
+              <h2 className="mb-6 text-3xl font-bold text-[#5c3b28]">News</h2>
 
-                  <p className="text-sm leading-6 text-[#5a4335]">
-                    {item.content}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </aside>
+              <div className="space-y-4">
+                {news.length === 0 ? (
+                  <p className="text-[#6f4e37]">No notifications yet.</p>
+                ) : (
+                  news.map((item) => (
+                    <article
+                      key={item.id_news}
+                      className="rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-4"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <h3 className="text-lg font-semibold text-[#7b4b2a]">
+                          {item.title}
+                        </h3>
+                        <span className="text-xs text-[#8b6b4a]">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <p className="text-sm leading-6 text-[#5a4335]">
+                        {item.message}
+                      </p>
+                    </article>
+                  ))
+                )}
+              </div>
+            </aside>
+          </div>
 
         </section>
       </main>

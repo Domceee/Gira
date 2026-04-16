@@ -1,9 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import model_validator
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    DATABASE_URL: str = Field(validation_alias="APP_DATABASE_URL")
+    APP_DATABASE_URL: str | None = None
+    DATABASE_URL: str | None = None
 
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
@@ -19,5 +20,19 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
     FRONTEND_URL: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _load_database_url(cls, values):
+        if isinstance(values, dict):
+            values["DATABASE_URL"] = values.get("DATABASE_URL") or values.get("APP_DATABASE_URL")
+        return values
+
+    @model_validator(mode="after")
+    @classmethod
+    def _require_database_url(cls, values):
+        if values.DATABASE_URL is None:
+            raise ValueError("DATABASE_URL or APP_DATABASE_URL must be set")
+        return values
 
 settings = Settings()

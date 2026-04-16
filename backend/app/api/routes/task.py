@@ -15,8 +15,10 @@ from app.models.sprint_task_event_type import SprintTaskEventType
 from app.models.task import Task
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
+from app.models.team_member import TeamMember
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
+from app.services.news import create_news_for_users
 from app.services.sprint_burndown import snapshot_story_points
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -204,7 +206,25 @@ async def assign_team(
         if team is None:
             raise HTTPException(status_code=404, detail="Team not found")
 
+    previous_team_id = task.fk_teamid_team
     task.fk_teamid_team = parsed_team_id
+
+    if parsed_team_id is not None and parsed_team_id != previous_team_id:
+        member_result = await db.execute(
+            select(TeamMember.fk_userid_user).where(TeamMember.fk_teamid_team == parsed_team_id)
+        )
+        member_ids = member_result.scalars().all()
+        if member_ids:
+            await create_news_for_users(
+                db=db,
+                user_ids=member_ids,
+                title="Task assigned",
+                message=f"Task '{task.name or task.id_task}' was assigned to team {team.name}.",
+                news_type="task_assigned",
+                project_id=task.fk_projectid_project,
+                team_id=parsed_team_id,
+                task_id=task.id_task,
+            )
 
     if parsed_team_id is None:
         if task.fk_sprintid_sprint is not None:

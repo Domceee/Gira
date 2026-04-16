@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
+import io
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +17,9 @@ from app.models.sprint_task_event_type import SprintTaskEventType
 from app.models.task import Task
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
+from app.models.team_member import TeamMember
 from app.models.user import User
+from app.services.news import create_news_for_users
 from app.schemas.sprint import BurndownPoint, SprintCreate, SprintRead, SprintStatsRead
 from app.services.sprint_burndown import (
     build_burndown_points,
@@ -93,6 +98,26 @@ async def create_sprint(
     )
 
     db.add(sprint)
+    await db.flush()
+
+    if sprint_status == SprintStatus.ACTIVE.value:
+        member_result = await db.execute(
+            select(TeamMember.fk_userid_user)
+            .where(TeamMember.fk_teamid_team == team.id_team)
+        )
+        member_ids = member_result.scalars().all()
+        if member_ids:
+            await create_news_for_users(
+                db=db,
+                user_ids=member_ids,
+                title="Sprint started",
+                message=f"Sprint {sprint.id_sprint} has started for team {team.name}.",
+                news_type="sprint_started",
+                project_id=team.fk_projectid_project,
+                team_id=team.id_team,
+                sprint_id=sprint.id_sprint,
+            )
+
     await db.commit()
     await db.refresh(sprint)
 
@@ -175,6 +200,90 @@ async def get_sprint_stats(
         planned_points_per_day=round(planned_points_per_day, 2),
         completion_rate=completion_rate,
         burndown_points=burndown_points,
+    )
+
+
+@router.get("/{sprint_id}/export")
+async def export_sprint(
+    sprint_id: int,
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    team = await get_team_or_404(team_id, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+    await sync_team_sprint_statuses(team_id, db)
+
+    result = await db.execute(
+        select(Sprint).where(
+            Sprint.id_sprint == sprint_id,
+            Sprint.fk_teamid_team == team_id,
+        )
+    )
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    if sprint.status != SprintStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=400,
+            detail="Sprint export is only available for completed sprints",
+        )
+
+    task_result = await db.execute(
+        select(Task).where(Task.fk_sprintid_sprint == sprint.id_sprint)
+    )
+    tasks = task_result.scalars().all()
+
+    workbook = Workbook()
+    summary_sheet = workbook.active
+    summary_sheet.title = "Sprint Summary"
+
+    summary_sheet.append(["Field", "Value"])
+    summary_sheet.append(["Sprint ID", sprint.id_sprint])
+    summary_sheet.append(["Team ID", sprint.fk_teamid_team])
+    summary_sheet.append(["Start Date", sprint.start_date.isoformat()])
+    summary_sheet.append(["End Date", sprint.end_date.isoformat()])
+    summary_sheet.append(["Status", sprint.status])
+    summary_sheet.append(["Total Tasks", len(tasks)])
+    summary_sheet.append(["Completed Tasks", sum(1 for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
+    summary_sheet.append(["Committed Story Points", sum((task.story_points or 0) for task in tasks)])
+    summary_sheet.append(["Completed Story Points", sum((task.story_points or 0) for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
+
+    task_sheet = workbook.create_sheet("Sprint Tasks")
+    task_sheet.append([
+        "Task ID",
+        "Name",
+        "Status",
+        "Story Points",
+        "Completed At",
+        "Board Order",
+        "Description",
+    ])
+
+    for task in tasks:
+        task_sheet.append([
+            task.id_task,
+            task.name or "",
+            task.workflow_status,
+            task.story_points or 0,
+            task.completed_at.isoformat() if task.completed_at else "",
+            task.board_order,
+            task.description or "",
+        ])
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    filename = f"sprint-{sprint.id_sprint}-report.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+        },
     )
 
 

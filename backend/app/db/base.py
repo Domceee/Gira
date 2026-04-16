@@ -10,3 +10,5 @@ from app.models.task import Task
 from app.models.sprint_task_event import SprintTaskEvent
 from app.models.team_member import TeamMember
 from app.models.team import Team
+from app.models.news import News
+from app.models.invitation import Invitation

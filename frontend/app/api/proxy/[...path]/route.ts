@@ -9,7 +9,11 @@ async function handleProxy(
   const { path } = await context.params;
   const targetPath = path.join("/");
   const search = request.nextUrl.search || "";
-  const targetUrl = `${API_URL}/${targetPath}${search}`;
+
+  const apiPaths = new Set(["sprints", "tasks", "projects", "news", "user", "invitations", "health"]);
+  const pathPrefix = path[0] || "";
+  const baseUrl = apiPaths.has(pathPrefix) ? `${API_URL}/api` : API_URL;
+  const targetUrl = `${baseUrl}/${targetPath}${search}`;
   const cookieHeader = request.headers.get("cookie") || "";
 
   const headers = new Headers(request.headers);
