@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { apiFetch } from "@/lib/api";
-import styles from "./retrospective.module.css";
+import { apiFetch } from "@/app/lib/api";
+import Navbar from "@/app/components/navbar";
+import Link from "next/link";
+
+/* -------------------- TYPES -------------------- */
 
 interface RetroData {
   start_doing: string[];
@@ -11,15 +14,31 @@ interface RetroData {
   continue_doing: string[];
 }
 
+interface RetroColumnProps {
+  title: string;
+  items: string[];
+  column: keyof RetroData;
+  onUpdate: (column: keyof RetroData, index: number, value: string) => void;
+  onAdd: (column: keyof RetroData) => void;
+  onRemove: (column: keyof RetroData, index: number) => void;
+  disabled: boolean;
+}
+
+/* -------------------- PAGE -------------------- */
+
 export default function RetrospectivePage() {
-  const params = useParams();
-  const sprintId = params.sprintId as string;
+  const { id: projectId, teamId, sprintId } = useParams() as {
+    id: string;
+    teamId: string;
+    sprintId: string;
+  };
 
   const [retroData, setRetroData] = useState<RetroData>({
     start_doing: [],
     stop_doing: [],
     continue_doing: [],
   });
+
   const [isFinished, setIsFinished] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,17 +46,16 @@ export default function RetrospectivePage() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Fetch retrospective data
+  /* -------------------- FETCH -------------------- */
+
   const fetchRetroData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiFetch(
-        `/api/sprints/${sprintId}/retrospective`,
-        {
-          method: "GET",
-        }
-      );
+
+      const response = await apiFetch(`/api/sprints/${sprintId}/retrospective`, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -48,9 +66,8 @@ export default function RetrospectivePage() {
       } else {
         setError("Failed to load retrospective");
       }
-    } catch (err) {
+    } catch {
       setError("Error loading retrospective");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -60,7 +77,8 @@ export default function RetrospectivePage() {
     fetchRetroData();
   }, [fetchRetroData]);
 
-  // Handle text change for individual items
+  /* -------------------- MUTATORS -------------------- */
+
   const updateItem = (
     column: keyof RetroData,
     index: number,
@@ -72,7 +90,6 @@ export default function RetrospectivePage() {
     }));
   };
 
-  // Add new item to column
   const addItem = (column: keyof RetroData) => {
     setRetroData((prev) => ({
       ...prev,
@@ -80,7 +97,6 @@ export default function RetrospectivePage() {
     }));
   };
 
-  // Remove item from column
   const removeItem = (column: keyof RetroData, index: number) => {
     setRetroData((prev) => ({
       ...prev,
@@ -88,50 +104,36 @@ export default function RetrospectivePage() {
     }));
   };
 
-  // Save retrospective data
+  /* -------------------- SAVE / FINISH -------------------- */
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setError(null);
       setSaveSuccess(false);
 
-      const response = await apiFetch(
-        `/api/sprints/${sprintId}/retrospective`,
-        {
-          method: "PATCH",
-          body: JSON.stringify(retroData),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiFetch(`/api/sprints/${sprintId}/retrospective`, {
+        method: "PATCH",
+        body: JSON.stringify(retroData),
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        const error = await response.json();
-        setError(
-          error.detail || "Failed to save retrospective"
-        );
+        const err = await response.json();
+        setError(err.detail || "Failed to save retrospective");
       }
-    } catch (err) {
+    } catch {
       setError("Error saving retrospective");
-      console.error(err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Finish retrospective
   const handleFinish = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to finish the retrospective? It will no longer be editable."
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm("Finish retrospective? It will become read‑only.")) return;
 
     try {
       setIsFinishing(true);
@@ -139,109 +141,142 @@ export default function RetrospectivePage() {
 
       const response = await apiFetch(
         `/api/sprints/${sprintId}/retrospective/finish`,
-        {
-          method: "PATCH",
-        }
+        { method: "PATCH" }
       );
 
       if (response.ok) {
         setIsFinished(true);
       } else {
-        const error = await response.json();
-        setError(
-          error.detail || "Failed to finish retrospective"
-        );
+        const err = await response.json();
+        setError(err.detail || "Failed to finish retrospective");
       }
-    } catch (err) {
+    } catch {
       setError("Error finishing retrospective");
-      console.error(err);
     } finally {
       setIsFinishing(false);
     }
   };
 
+  /* -------------------- LOADING -------------------- */
+
   if (loading) {
-    return <div className={styles.loading}>Loading retrospective...</div>;
+    return (
+      <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f] flex items-center justify-center">
+        Loading retrospective...
+      </div>
+    );
   }
 
+  /* -------------------- RENDER -------------------- */
+
   return (
-    <div className={styles.container}>
-      <h1>Sprint Retrospective</h1>
+    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
+      <Navbar />
 
-      {error && <div className={styles.error}>{error}</div>}
-      {saveSuccess && (
-        <div className={styles.success}>Retrospective saved successfully!</div>
-      )}
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <section className="grid grid-cols-[260px_1fr] gap-8">
 
-      {isFinished && (
-        <div className={styles.finished}>
-          This retrospective is finished and cannot be edited.
-        </div>
-      )}
+          {/* Sidebar */}
+          <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
+            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
 
-      <div className={styles.columnsContainer}>
-        <Column
-          title="Start Doing"
-          items={retroData.start_doing}
-          column="start_doing"
-          onUpdate={updateItem}
-          onAdd={addItem}
-          onRemove={removeItem}
-          disabled={isFinished}
-        />
-        <Column
-          title="Stop Doing"
-          items={retroData.stop_doing}
-          column="stop_doing"
-          onUpdate={updateItem}
-          onAdd={addItem}
-          onRemove={removeItem}
-          disabled={isFinished}
-        />
-        <Column
-          title="Continue Doing"
-          items={retroData.continue_doing}
-          column="continue_doing"
-          onUpdate={updateItem}
-          onAdd={addItem}
-          onRemove={removeItem}
-          disabled={isFinished}
-        />
-      </div>
+            <div className="space-y-4">
+              <Link
+                href={`/projects/${projectId}/teams-dashboard?team=${teamId}`}
+                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
+              >
+                Back
+              </Link>
+            </div>
+          </aside>
 
-      {!isFinished && (
-        <div className={styles.buttonContainer}>
-          <button
-            className={styles.saveButton}
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save Retrospective"}
-          </button>
-          <button
-            className={styles.finishButton}
-            onClick={handleFinish}
-            disabled={isFinishing}
-          >
-            {isFinishing ? "Finishing..." : "Finish Retrospective"}
-          </button>
-        </div>
-      )}
+          {/* Main content */}
+          <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
+
+            <h1 className="text-3xl font-bold text-[#5c3b28] mb-6">
+              Sprint Retrospective
+            </h1>
+
+            {error && (
+              <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-red-900">
+                {error}
+              </div>
+            )}
+
+            {saveSuccess && (
+              <div className="mb-4 rounded-xl border border-green-300 bg-green-50 p-4 text-green-900">
+                Retrospective saved successfully!
+              </div>
+            )}
+
+            {isFinished && (
+              <div className="mb-4 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-yellow-900">
+                This retrospective is finished and cannot be edited.
+              </div>
+            )}
+
+            {/* Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <RetroColumn
+                title="Start Doing"
+                items={retroData.start_doing}
+                column="start_doing"
+                onUpdate={updateItem}
+                onAdd={addItem}
+                onRemove={removeItem}
+                disabled={isFinished}
+              />
+
+              <RetroColumn
+                title="Stop Doing"
+                items={retroData.stop_doing}
+                column="stop_doing"
+                onUpdate={updateItem}
+                onAdd={addItem}
+                onRemove={removeItem}
+                disabled={isFinished}
+              />
+
+              <RetroColumn
+                title="Continue Doing"
+                items={retroData.continue_doing}
+                column="continue_doing"
+                onUpdate={updateItem}
+                onAdd={addItem}
+                onRemove={removeItem}
+                disabled={isFinished}
+              />
+            </div>
+
+            {!isFinished && (
+              <div className="mt-8 flex gap-4">
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f]"
+                >
+                  {isSaving ? "Saving..." : "Save Retrospective"}
+                </button>
+
+                <button
+                  onClick={handleFinish}
+                  disabled={isFinishing}
+                  className="rounded-lg bg-[#8b6b4a] px-6 py-3 font-semibold text-white hover:bg-[#9c7654]"
+                >
+                  {isFinishing ? "Finishing..." : "Finish Retrospective"}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
 
-interface ColumnProps {
-  title: string;
-  items: string[];
-  column: "start_doing" | "stop_doing" | "continue_doing";
-  onUpdate: (column: string, index: number, value: string) => void;
-  onAdd: (column: string) => void;
-  onRemove: (column: string, index: number) => void;
-  disabled: boolean;
-}
+/* -------------------- COLUMN COMPONENT -------------------- */
 
-function Column({
+function RetroColumn({
   title,
   items,
   column,
@@ -249,26 +284,25 @@ function Column({
   onAdd,
   onRemove,
   disabled,
-}: ColumnProps) {
+}: RetroColumnProps) {
   return (
-    <div className={styles.column}>
-      <h2>{title}</h2>
-      <div className={styles.items}>
+    <div className="rounded-xl border border-[#d9c1a7] bg-[#fffaf5] p-4 shadow-sm">
+      <h2 className="text-xl font-bold text-[#5c3b28] mb-3">{title}</h2>
+
+      <div className="space-y-3">
         {items.map((item, index) => (
-          <div key={index} className={styles.itemRow}>
+          <div key={index} className="flex gap-2">
             <input
               type="text"
               value={item}
-              onChange={(e) => onUpdate(column, index, e.target.value)}
-              placeholder={`Enter what we should ${title.toLowerCase().slice(0, -6)}`}
               disabled={disabled}
-              className={styles.input}
+              onChange={(e) => onUpdate(column, index, e.target.value)}
+              className="flex-1 rounded-lg border border-[#c8a27a] p-2 bg-white"
             />
             {!disabled && (
               <button
-                className={styles.removeButton}
                 onClick={() => onRemove(column, index)}
-                title="Remove item"
+                className="rounded-lg bg-red-200 px-3 py-2 text-red-800 hover:bg-red-300"
               >
                 ✕
               </button>
@@ -276,10 +310,11 @@ function Column({
           </div>
         ))}
       </div>
+
       {!disabled && (
         <button
-          className={styles.addButton}
           onClick={() => onAdd(column)}
+          className="mt-4 w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-3 py-2 text-sm font-medium text-[#4b2e1f] hover:-translate-y-0.5 hover:shadow"
         >
           + Add Item
         </button>

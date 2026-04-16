@@ -1,6 +1,7 @@
 import Navbar from "@/app/components/navbar";
 import DescriptionButton from "@/app/components/DescriptionButton";
 
+
 import Link from "next/link";
 import { CalendarX } from "lucide-react";
 import { createSprint, assignTaskToSprint, assignTaskToMember, closeSprint } from "./actions";
@@ -13,6 +14,9 @@ import { requireAuth } from "@/app/lib/auth";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
 import AssignMemberForm from "./AssignMemberForm";
+
+import LastRetrospective from "./LastRetrospective";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -109,7 +113,7 @@ export default function TeamViewContent({
   return (
     <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
             <h1 className="mb-6 text-3xl font-bold text-[#5c3b28]">Team {team.team_name}</h1>
-
+            <LastRetrospective teamId={teamId} projectId={projectId} />
             <h2 className="mb-4 text-2xl font-bold text-[#5c3b28]">Team Backlog</h2>
 
             <table className="w-full rounded-lg border-collapse">
@@ -218,7 +222,7 @@ export default function TeamViewContent({
                 )}
               </tbody>
             </table>
-
+              
             <h2 className="mb-4 mt-10 text-2xl font-bold text-[#5c3b28]">Sprints</h2>
             <p className="mb-6 max-w-3xl text-[#6f4e37]">
               Each sprint has its own statistics page. Use the{" "}
@@ -250,7 +254,13 @@ export default function TeamViewContent({
                       <ChartIcon className="h-4 w-4" />
                       View Sprint Stats
                     </Link>
-
+                    <Link
+                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
+                      className="inline-flex items-center gap-2 self-start rounded-xl border border-[#b08968] bg-[#fff1e6] px-4 py-2 text-sm font-semibold text-[#5c3b28] transition hover:-translate-y-0.5 hover:shadow"
+                      title={`Open retrospective for sprint ${sprint.id_sprint}`}
+                    >
+                      📝 Retrospective
+                    </Link>
                     <form action={closeSprint}>
                       <input type="hidden" name="sprint_id" value={sprint.id_sprint} />
                       <input type="hidden" name="team_id" value={teamId} />
@@ -529,15 +539,27 @@ export default function TeamViewContent({
                     {formatDate(sprint.end_date)})
                   </h3>
 
-                  <Link
-                    href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                    className="inline-flex items-center gap-2 self-start rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-2 text-sm font-semibold text-[#4b2e1f] transition hover:-translate-y-0.5 hover:shadow"
-                    title={`View sprint ${sprint.id_sprint} statistics`}
-                  >
-                    <ChartIcon className="h-4 w-4" />
-                    View Sprint Stats
-                  </Link>
+                  {/* ⭐ Group buttons together just like Active Sprints */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                      className="inline-flex items-center gap-2 self-start rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-2 text-sm font-semibold text-[#4b2e1f] transition hover:-translate-y-0.5 hover:shadow"
+                      title={`View sprint ${sprint.id_sprint} statistics`}
+                    >
+                      <ChartIcon className="h-4 w-4" />
+                      View Sprint Stats
+                    </Link>
+
+                    <Link
+                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
+                      className="inline-flex items-center gap-2 self-start rounded-xl border border-[#b08968] bg-[#fff1e6] px-4 py-2 text-sm font-semibold text-[#5c3b28] transition hover:-translate-y-0.5 hover:shadow"
+                      title={`Open retrospective for sprint ${sprint.id_sprint}`}
+                    >
+                      📝 Retrospective
+                    </Link>
+                  </div>
                 </div>
+
 
                 <table className="w-full overflow-hidden rounded-lg border-collapse">
                   <thead className="bg-[#e8d6c3] text-[#4b2e1f]">
