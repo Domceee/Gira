@@ -17,11 +17,13 @@ from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.user import User
+from app.models.team_member import TeamMember
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.services.news import create_news_for_users
 from app.services.sprint_burndown import snapshot_story_points
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
 
 
 class AssignSprint(BaseModel):
@@ -443,3 +445,33 @@ async def delete_task(
     await db.commit()
 
     return {"status": "ok", "task_id": task_id}
+
+@router.patch("/{task_id}/assign_member")
+async def assign_member(task_id: int, payload: dict, db: AsyncSession = Depends(get_db)):
+    team_member_id = payload.get("team_member_id")
+
+    # Load task
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(404, "Task not found")
+
+    # Validate team member belongs to same team
+    if team_member_id is not None:
+        result = await db.execute(
+            select(TeamMember).where(
+                TeamMember.id_team_member == team_member_id,
+                TeamMember.fk_teamid_team == task.fk_teamid_team
+            )
+        )
+        tm = result.scalar_one_or_none()
+        if not tm:
+            raise HTTPException(400, "Team member not in this team")
+
+    # Update assignment
+    task.fk_team_memberid_team_member = team_member_id
+    await db.commit()
+    await db.refresh(task)
+
+    return {"success": True}
+

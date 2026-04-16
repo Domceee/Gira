@@ -134,7 +134,7 @@ export default async function SprintStatsPage({
 
             <div className="space-y-4">
               <Link
-                href={`/projects/${id}/team/${teamId}`}
+                href={`/projects/${id}/teams-dashboard?team=${teamId}`}
                 className="flex w-full items-center gap-3 rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
               >
                 <ChartIcon className="h-5 w-5" />

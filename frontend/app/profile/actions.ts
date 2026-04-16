@@ -8,11 +8,12 @@ export async function updateProfile(formData: FormData) {
   const country = formData.get("country");
   const city = formData.get("city");
   const password = formData.get("password");
+  const picture = formData.get("picture_base64");
 
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -24,6 +25,7 @@ export async function updateProfile(formData: FormData) {
       country,
       city,
       password: password || undefined,
+      picture,
     }),
     cache: "no-store",
   });

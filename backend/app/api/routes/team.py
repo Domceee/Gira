@@ -34,11 +34,10 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
         )
     )
     team = result.scalar_one_or_none()
-
     if team is None:
         raise HTTPException(404, "Team not found")
 
-    # Get tasks assigned to this team but NOT assigned to a sprint
+    # Get backlog tasks
     result = await db.execute(
         select(Task).where(
             Task.fk_teamid_team == team_id,
@@ -47,8 +46,38 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
     )
     tasks = result.scalars().all()
 
-    return {
-        "team_id": team.id_team,
-        "team_name": team.name,
-        "tasks": tasks
-    }
+    # get team members + user info
+    from app.models.team_member import TeamMember
+    from app.models.user import User
+
+    result = await db.execute(
+        select(TeamMember, User)
+        .join(User, User.id_user == TeamMember.fk_userid_user)
+        .where(TeamMember.fk_teamid_team == team_id)
+    )
+
+    members = [
+        {
+            "id_team_member": tm.id_team_member,
+            "role_in_team": tm.role_in_team,
+            "effectiveness": tm.effectiveness,
+            "user": {
+                "id_user": user.id_user,
+                "name": user.name,
+                "email": user.email,
+                "picture": user.picture,
+            }
+        }
+        for tm, user in result.all()
+    ]
+
+return {
+    "team_id": team.id_team,
+    "team_name": team.name,
+    "tasks": [
+        TaskRead.model_validate(t).model_dump()
+        for t in tasks
+    ],
+    "team_members": members
+}
+

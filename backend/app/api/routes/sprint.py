@@ -28,6 +28,9 @@ from app.services.sprint_burndown import (
     summarize_sprint_tasks,
 )
 from app.services.sprint_status import sync_team_sprint_statuses
+from app.schemas.task import TaskRead
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter(prefix="/sprints", tags=["sprints"])
 
@@ -47,8 +50,15 @@ async def get_sprints(
 
     output = []
     for sprint in sprints:
-        result = await db.execute(select(Task).where(Task.fk_sprintid_sprint == sprint.id_sprint))
+        result = await db.execute(
+            select(Task)
+            .where(Task.fk_sprintid_sprint == sprint.id_sprint)
+            .order_by(Task.board_order.asc(), Task.id_task.asc())
+        )
+
         tasks = result.scalars().all()
+        for t in tasks:
+            await db.refresh(t)
 
         output.append(
             {
@@ -56,11 +66,21 @@ async def get_sprints(
                 "start_date": sprint.start_date,
                 "end_date": sprint.end_date,
                 "status": sprint.status,
-                "tasks": tasks,
+                "tasks": [
+                    TaskRead.model_validate(t).model_dump()
+                    for t in tasks
+                ],
             }
         )
 
-    return output
+    # ⭐ Convert everything to JSON‑safe types
+    safe_output = jsonable_encoder(output)
+
+    # ⭐ Disable caching
+    return JSONResponse(
+        content=safe_output,
+        headers={"Cache-Control": "no-store"}
+    )
 
 
 @router.post("", response_model=dict)

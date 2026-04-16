@@ -15,6 +15,7 @@ class UserRead(BaseModel):
     email: EmailStr
     country: str | None = None
     city: str | None = None
+    picture: str | None = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -26,3 +27,4 @@ class UserUpdate(BaseModel):
     country: str | None = None
     city: str | None = None
     password: str | None = Field(default=None, min_length=8, max_length=128)
+    picture: str | None = None

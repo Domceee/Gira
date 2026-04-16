@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/app/components/navbar";
-import { updateProfile } from "./actions";
+
 
 interface User {
   id_user: number;
@@ -11,6 +11,7 @@ interface User {
   email: string;
   country: string;
   city: string;
+  picture?: string;
 }
 
 export default function ProfilePage() {
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pictureBase64, setPictureBase64] = useState<string | null>(null);
 
   async function fetchUser() {
     try {
@@ -46,22 +48,92 @@ export default function ProfilePage() {
     fetchUser();
   }, []);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
+async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.currentTarget.files?.[0];
+  if (!file) return;
 
-    try {
-      const formData = new FormData(e.currentTarget);
-      await updateProfile(formData);
+  // Load image into HTMLImageElement
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
 
-      await fetchUser();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
-    } finally {
-      setSaving(false);
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      setError("Failed to process image");
+      return;
     }
+
+    // Resize logic (max width 512px)
+    const MAX_WIDTH = 512;
+    const scale = MAX_WIDTH / img.width;
+    canvas.width = MAX_WIDTH;
+    canvas.height = img.height * scale;
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Compress to JPEG at 70% quality
+    const compressed = canvas.toDataURL("image/jpeg", 0.7);
+
+    // Remove prefix
+    const base64 = compressed.split(",")[1];
+    setPictureBase64(base64);
+  };
+
+  img.onerror = () => {
+    setError("Failed to load image");
+  };
+}
+
+
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  setSaving(true);
+  setError(null);
+
+  const form = e.currentTarget;
+  const formData = new FormData(form);
+
+  const payload = {
+    name: formData.get("name"),
+    email: formData.get("email"),
+    country: formData.get("country"),
+    city: formData.get("city"),
+    password: formData.get("password") || null,
+    picture: pictureBase64 || null,
+  };
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/me`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail ?? "Failed to update profile");
+    }
+
+    await fetchUser();
+    setPictureBase64(null);
+
+    const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to update profile");
+  } finally {
+    setSaving(false);
   }
+}
+
+
+
 
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
@@ -97,6 +169,39 @@ export default function ProfilePage() {
               onSubmit={handleSubmit}
               className="space-y-6 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
             >
+              {/* PROFILE PICTURE */}
+              <div>
+                <label className="mb-1 block font-medium">Profile Picture</label>
+                <div className="mb-3 flex items-center gap-4">
+                  {pictureBase64 ? (
+                    <img
+                      src={`data:image/jpeg;base64,${pictureBase64}`}
+                      alt="Preview"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : user.picture ? (
+                    <img
+                      src={`data:image/jpeg;base64,${user.picture}`}
+                      alt="Profile"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <img
+                      src="/default.jpg"
+                      alt="Default Profile"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  )}
+                </div>
+                <input
+                  type="file"
+                  name="picture"
+                  accept="image/*"
+                  onChange={handlePictureChange}
+                  className="w-full rounded-lg border border-[#c8a27a] p-3"
+                />
+              </div>
+
               {/* NAME */}
               <div>
                 <label className="mb-1 block font-medium">Name</label>
