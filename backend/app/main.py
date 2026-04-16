@@ -7,14 +7,16 @@ from app.api.routes.projects import router as projects_router
 from app.api.routes.task import router as task_router   
 from app.api.routes import user
 from app.api.routes import sprint
+from app.middleware.body_limit import BodySizeLimitMiddleware
 
 app = FastAPI(title="Gira API")
 
 origins = [
     "http://localhost:3000",
     settings.FRONTEND_URL,
+    
 ]
-
+app.add_middleware(BodySizeLimitMiddleware, max_body_size=10 * 1024 * 1024)  # 10 MB limit
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

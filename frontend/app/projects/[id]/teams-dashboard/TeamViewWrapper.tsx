@@ -1,6 +1,10 @@
 import TeamViewContent from "../team/[teamId]/TeamViewContent";
 import { apiFetch } from "@/app/lib/api";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+
 // Reuse the same types as TeamView
 type Task = {
   id_task: number;

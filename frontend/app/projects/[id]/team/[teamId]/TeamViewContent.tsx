@@ -321,11 +321,13 @@ export default function TeamViewContent({
                           </td>
                           <td className="p-3">
                             <TaskStatusForm
+                              key={task.id_task + "-" + task.workflow_status}
                               taskId={task.id_task}
                               teamId={String(teamId)}
                               projectId={projectId}
                               defaultValue={task.workflow_status}
                             />
+
                           </td>
                          
 
@@ -446,11 +448,13 @@ export default function TeamViewContent({
                           </td>
                              <td className="p-3">
                             <TaskStatusForm
+                              key={task.id_task + "-" + task.workflow_status}
                               taskId={task.id_task}
                               teamId={String(teamId)}
                               projectId={projectId}
                               defaultValue={task.workflow_status}
                             />
+
                           </td>
                            
                           <td className="p-3">

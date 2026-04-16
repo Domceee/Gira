@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/app/components/navbar";
-import { updateProfile } from "./actions";
+
 
 interface User {
   id_user: number;
@@ -87,31 +87,53 @@ async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
 }
 
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  setSaving(true);
+  setError(null);
 
-    const form = e.currentTarget;
+  const form = e.currentTarget;
+  const formData = new FormData(form);
 
-    try {
-      const formData = new FormData(form);
-      if (pictureBase64) {
-        formData.set("picture_base64", pictureBase64);
-      }
-      await updateProfile(formData);
+  const payload = {
+    name: formData.get("name"),
+    email: formData.get("email"),
+    country: formData.get("country"),
+    city: formData.get("city"),
+    password: formData.get("password") || null,
+    picture: pictureBase64 || null,
+  };
 
-      await fetchUser();
-      setPictureBase64(null);
-      // Reset file input
-      const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
-    } finally {
-      setSaving(false);
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/me`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail ?? "Failed to update profile");
     }
+
+    await fetchUser();
+    setPictureBase64(null);
+
+    const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to update profile");
+  } finally {
+    setSaving(false);
   }
+}
+
+
+
 
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;

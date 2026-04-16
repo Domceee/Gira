@@ -1,7 +1,7 @@
 "use client";
 
 import { updateTaskStatus } from "./actions";
-import { useTransition, useState } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function TaskStatusForm({
@@ -21,10 +21,18 @@ export default function TaskStatusForm({
   // Local state for the select value
   const [value, setValue] = useState(defaultValue);
 
+  
+  useEffect(() => {
+    console.log("Raw defaultValue:", JSON.stringify(defaultValue));
+    const normalized = defaultValue.trim().toUpperCase();
+    console.log("Task", taskId, "defaultValue from parent:", normalized);
+    setValue(normalized);
+  }, [defaultValue]);
+
   function handleSubmit(formData: FormData) {
     const newStatus = formData.get("workflow_status") as string;
 
-    // ⭐ Optimistic update
+    // Optimistic update
     setValue(newStatus);
 
     startTransition(async () => {

@@ -31,7 +31,10 @@ export async function createSprint(formData: FormData) {
     throw new Error(text || "Failed to create sprint");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  //revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+
+
 }
 
 export async function assignTaskToSprint(formData: FormData) {
@@ -60,7 +63,10 @@ export async function assignTaskToSprint(formData: FormData) {
     throw new Error(text || "Failed to assign task to sprint");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  //revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+
+
 }
 
 export async function assignTaskToMember(formData: FormData) {
@@ -96,7 +102,10 @@ export async function assignTaskToMember(formData: FormData) {
   }
 
   // FIX: force Next.js to drop cached page
-  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+ // revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+
+
 }
 
 export async function closeSprint(formData: FormData) {
@@ -120,8 +129,10 @@ export async function closeSprint(formData: FormData) {
     throw new Error(text || "Failed to close sprint");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
-  revalidatePath(`/projects/${project_id}/board`, "page");
+  //revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  //revalidatePath(`/projects/${project_id}/board`, "page");
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+
 }
 
 export async function updateTaskStatus(formData: FormData) {
@@ -151,6 +162,9 @@ export async function updateTaskStatus(formData: FormData) {
     throw new Error(text || "Failed to update task status");
   }
 
-  revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+  //revalidatePath(`/projects/${project_id}/team/${team_id}`, "page");
+ revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+
+
 }
 
