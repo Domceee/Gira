@@ -157,6 +157,16 @@ export default async function SprintStatsPage({
                   <p className="text-xs text-[#8a6a52]">{stats.elapsed_days}/{stats.sprint_length_days} days</p>
                 </div>
               </div>
+              {stats.status === "COMPLETED" && (
+                <div className="mt-4 flex justify-end">
+                  <a
+                    href={`/api/proxy/sprints/${sprintId}/export?team_id=${teamId}`}
+                    className="inline-flex items-center rounded-full bg-[#8b6b4a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c7654]"
+                  >
+                    Download Excel
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-3 lg:grid-cols-6">

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Breadcrumbs from "./breadcrumbs";
 
 interface User {
   id_user: number;
@@ -159,6 +160,9 @@ export default function Navbar() {
             </div>
           )}
         </div>
+      </div>
+      <div className="border-t border-[#8b6b4a] bg-[#5c3f2d]">
+        <Breadcrumbs />
       </div>
     </nav>
   );
