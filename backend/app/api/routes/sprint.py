@@ -407,6 +407,97 @@ async def close_sprint(
     }
 
 
+@router.get("/{sprint_id}/retrospective")
+async def get_retrospective(
+    sprint_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Sprint).where(Sprint.id_sprint == sprint_id))
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+
+    import json
+    retrospective_data = None
+    if sprint.retrospective_data:
+        try:
+            retrospective_data = json.loads(sprint.retrospective_data)
+        except json.JSONDecodeError:
+            retrospective_data = None
+
+    return {
+        "retrospective_data": retrospective_data,
+        "is_finished": sprint.is_retrospective_finished,
+    }
+
+
+@router.patch("/{sprint_id}/retrospective")
+async def update_retrospective(
+    sprint_id: int,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Sprint).where(Sprint.id_sprint == sprint_id))
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+
+    if sprint.is_retrospective_finished:
+        raise HTTPException(status_code=400, detail="Retrospective is already finished")
+
+    import json
+    sprint.retrospective_data = json.dumps(payload)
+    db.add(sprint)
+
+    await db.commit()
+    await db.refresh(sprint)
+
+    return {
+        "status": "ok",
+        "retrospective_data": payload,
+    }
+
+
+@router.patch("/{sprint_id}/retrospective/finish")
+async def finish_retrospective(
+    sprint_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Sprint).where(Sprint.id_sprint == sprint_id))
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+
+    if sprint.is_retrospective_finished:
+        raise HTTPException(status_code=400, detail="Retrospective is already finished")
+
+    sprint.is_retrospective_finished = True
+    db.add(sprint)
+
+    await db.commit()
+    await db.refresh(sprint)
+
+    return {
+        "status": "ok",
+        "message": "Retrospective finished",
+    }
+
+
 async def get_team_or_404(team_id: int, db: AsyncSession):
     result = await db.execute(select(Team).where(Team.id_team == team_id))
     team = result.scalar_one_or_none()

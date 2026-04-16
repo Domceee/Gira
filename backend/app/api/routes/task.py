@@ -251,6 +251,7 @@ async def assign_team(
         task.workflow_status = TaskWorkflowStatus.TODO.value
         task.completed_at = None
         task.board_order = 0
+        task.fk_team_memberid_team_member = None
 
     db.add(task)
     await db.commit()

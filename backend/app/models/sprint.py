@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, String
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, String, Text, Boolean
 from app.db.base_class import Base
 from app.models.sprint_status import SprintStatus
 
@@ -19,4 +19,17 @@ class Sprint(Base):
         Integer,
         ForeignKey("team.id_team"),
         nullable=False
+    )
+
+    retrospective_data = Column(
+        Text,
+        nullable=True,
+        default=None,
+    )
+
+    is_retrospective_finished = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
     )

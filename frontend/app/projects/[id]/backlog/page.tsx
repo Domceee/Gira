@@ -151,6 +151,7 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
                 <label className="mb-1 block font-medium">Story Points</label>
                 <input
                   type="number"
+                  required
                   step="0.1"
                   name="story_points"
                   className="w-full rounded-lg border border-[#c8a27a] p-3"
