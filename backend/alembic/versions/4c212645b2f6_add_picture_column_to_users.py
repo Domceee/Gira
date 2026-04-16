@@ -23,6 +23,7 @@ def upgrade():
         "users",
         sa.Column("picture", sa.LargeBinary(), nullable=True)
     )
+    op.execute("UPDATE users SET picture = NULL;")
 
 def downgrade():
     op.drop_column("users", "picture")
