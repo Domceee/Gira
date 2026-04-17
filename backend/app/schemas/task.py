@@ -27,9 +27,15 @@ class TaskRead(BaseModel):
     fk_teamid_team: int | None
     fk_sprintid_sprint: int | None
     fk_team_memberid_team_member: int | None
+
+    # ⭐ ADD THESE TWO
+    multiple_assignees: bool
+    multi_assignees: list[int]
+
     workflow_status: TaskWorkflowStatus
     board_order: int
-    model_config = {
-        "from_attributes": True 
-    }
 
+    model_config = {
+        "from_attributes": True
+    }
+  

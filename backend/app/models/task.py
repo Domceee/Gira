@@ -1,4 +1,6 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text,Boolean
+from sqlalchemy.orm import relationship
+
 from app.db.base_class import Base
 from app.models.task_workflow_status import TaskWorkflowStatus
 
@@ -12,6 +14,15 @@ class Task(Base):
     acceptance_criteria_description = Column(Text, nullable=True)
     risk = Column(Integer, nullable=True)
     priority = Column(Integer, nullable=True)
+    multiple_assignees = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+    )
+
+
+
 
     # Legacy role enum link; latest migration allows this to be null.
     fk_role_enumid_role_enum = Column(
@@ -63,3 +74,12 @@ class Task(Base):
         ForeignKey("team_member.id_team_member"),
         nullable=True
     )
+    assignees = relationship(
+        "TaskAssignee",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+
+    @property
+    def multi_assignees(self):
+        return [a.fk_team_memberid_team_member for a in self.assignees]

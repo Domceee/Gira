@@ -1,5 +1,6 @@
 "use server";
 
+import { apiFetch } from "@/app/lib/api";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
@@ -168,3 +169,15 @@ export async function updateTaskStatus(formData: FormData) {
 
 }
 
+
+export async function assignTaskToMembersMulti(data: {
+  task_id: number;
+  multiple: boolean;
+  team_member_ids?: number[];
+  single_member_id?: number | null;
+}) {
+  await apiFetch(`/api/tasks/${data.task_id}/assign_members_multi`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

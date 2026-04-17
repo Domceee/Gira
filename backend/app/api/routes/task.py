@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Optional
 
+from app.models.task_assignees import TaskAssignee
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.auth import get_current_user
@@ -476,3 +477,61 @@ async def assign_member(task_id: int, payload: dict, db: AsyncSession = Depends(
 
     return {"success": True}
 
+from fastapi import Body
+
+@router.post("/{task_id}/assign_members_multi")
+async def assign_members_multi(
+    task_id: int,
+    payload: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    member_ids: list[int] = payload.get("team_member_ids") or []
+    enable_multi: bool = payload.get("multiple", False)
+    single_member_id = payload.get("single_member_id")
+
+    # Load task
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(404, "Task not found")
+
+    # Always clear multi assignments first
+    await db.execute(
+        delete(TaskAssignee).where(TaskAssignee.fk_taskid_task == task_id)
+    )
+
+    if enable_multi:
+        # MULTI MODE
+        task.multiple_assignees = True
+        task.fk_team_memberid_team_member = None
+
+        # Validate team members
+        if member_ids:
+            result = await db.execute(
+                select(TeamMember.id_team_member).where(
+                    TeamMember.id_team_member.in_(member_ids),
+                    TeamMember.fk_teamid_team == task.fk_teamid_team
+                )
+            )
+            valid_ids = set(result.scalars().all())
+            if valid_ids != set(member_ids):
+                raise HTTPException(400, "Invalid team members")
+
+        # Insert multi assignments
+        for mid in member_ids:
+            db.add(TaskAssignee(
+                fk_taskid_task=task_id,
+                fk_team_memberid_team_member=mid
+            ))
+
+    else:
+        # SINGLE MODE
+        task.multiple_assignees = False
+        task.fk_team_memberid_team_member = (
+            None if single_member_id in (None, "null") else single_member_id
+        )
+
+    await db.commit()
+    await db.refresh(task)
+
+    return {"success": True}

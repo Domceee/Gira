@@ -25,7 +25,12 @@ type Task = {
   risk: number | null;
   priority: number | null;
   fk_sprintid_sprint: number | null;
+
   fk_team_memberid_team_member: number | null;
+
+  multiple_assignees: boolean;
+  multi_assignees: number[];
+
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 };
 
@@ -55,7 +60,11 @@ type TeamBacklog = {
   team_name: string | null;
   tasks: Task[];
   team_members: TeamMember[];
+  active_sprints: Sprint[];
+  planned_sprints: Sprint[];
+  ended_sprints: Sprint[];
 };
+
 
 function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (

@@ -28,9 +28,17 @@ type Task = {
   risk: number | null;
   priority: number | null;
   fk_sprintid_sprint: number | null;
+
   fk_team_memberid_team_member: number | null;
+
+  multiple_assignees: boolean;
+  multi_assignees: number[];
+
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
 };
+
+
+
 
 
 type TeamMember = {
@@ -58,7 +66,11 @@ type TeamBacklog = {
   team_name: string | null;
   tasks: Task[];
   team_members: TeamMember[];
+  active_sprints: Sprint[];
+  planned_sprints: Sprint[];
+  ended_sprints: Sprint[];
 };
+
 
 function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -83,7 +95,7 @@ function formatDate(dateString: string) {
 }
 
 async function getTeam(projectId: string, teamId: string): Promise<TeamBacklog> {
-  const res = await apiFetch(`/api/projects/${projectId}/teams/${teamId}`, { cache: "no-store" });
+  const res = await apiFetch(`/api/projects/${projectId}/teams/b${teamId}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch team");
   return res.json();
 }
@@ -195,17 +207,16 @@ export default function TeamViewContent({
 
                         {/* Member assignment */}
                         <td className="p-3">
-                            <AssignMemberForm
+                          <AssignMemberForm
                               taskId={task.id_task}
                               teamId={String(teamId)}
                               projectId={projectId}
                               teamMembers={team.team_members}
                               defaultValue={task.fk_team_memberid_team_member}
+                              multiple={task.multiple_assignees}
+                              initialMultiAssignees={task.multi_assignees ?? []}
                             />
-
                         </td>
-
-
                         <td className="p-3">
                           <TaskActions
                             taskId={task.id_task}
@@ -327,7 +338,10 @@ export default function TeamViewContent({
                               projectId={projectId}
                               teamMembers={team.team_members}
                               defaultValue={task.fk_team_memberid_team_member}
+                              multiple={task.multiple_assignees}
+                              initialMultiAssignees={task.multi_assignees ?? []}
                             />
+
                           </td>
                           <td className="p-3">
                             <TaskStatusForm
@@ -453,8 +467,9 @@ export default function TeamViewContent({
                                 projectId={projectId}
                                 teamMembers={team.team_members}
                                 defaultValue={task.fk_team_memberid_team_member}
+                                multiple={task.multiple_assignees}
+                                initialMultiAssignees={task.multi_assignees ?? []}
                               />
-
                           </td>
                              <td className="p-3">
                             <TaskStatusForm
