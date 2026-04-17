@@ -109,7 +109,6 @@ export default function Navbar() {
             className="rounded-full object-contain"
           />
           <div>
-            <h1 className="text-xl font-bold tracking-wide">Gira</h1>
             <p className="text-xs text-[#f3e9dc]">
               Itteration Project Management System
             </p>
