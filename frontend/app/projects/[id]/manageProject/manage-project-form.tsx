@@ -35,31 +35,17 @@ export default function ManageProjectForm({ project }: { project: Project }) {
 
   async function handleSearch() {
     setError("");
-
-    if (!emailQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
+    if (!emailQuery.trim()) { setSearchResults([]); return; }
     const res = await apiFetch(
-  `/api/user/search?email=${encodeURIComponent(emailQuery.trim())}&project_id=${project.id}`,
-    {
-    method: "GET",
-    }
+      `/api/user/search?email=${encodeURIComponent(emailQuery.trim())}&project_id=${project.id}`,
+      { method: "GET" }
     );
-
-    if (!res.ok) {
-      setError("Failed to search users");
-      return;
-    }
-
-    const data = await res.json();
-    setSearchResults(data);
+    if (!res.ok) { setError("Failed to search users"); return; }
+    setSearchResults(await res.json());
   }
 
   function addUser(user: UserSearchResult) {
-    const exists = selectedUsers.some((u) => u.id_user === user.id_user);
-    if (exists) return;
+    if (selectedUsers.some((u) => u.id_user === user.id_user)) return;
     setSelectedUsers((prev) => [...prev, user]);
   }
 
@@ -74,10 +60,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
 
       const updateRes = await apiFetch(`/api/projects/${project.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-        }),
+        body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
       });
 
       if (!updateRes.ok) {
@@ -88,11 +71,8 @@ export default function ManageProjectForm({ project }: { project: Project }) {
       if (selectedUsers.length > 0) {
         const addMembersRes = await apiFetch(`/api/projects/${project.id}/members`, {
           method: "POST",
-          body: JSON.stringify({
-            user_ids: selectedUsers.map((u) => u.id_user),
-          }),
+          body: JSON.stringify({ user_ids: selectedUsers.map((u) => u.id_user) }),
         });
-
         if (!addMembersRes.ok) {
           const data = await addMembersRes.json().catch(() => null);
           throw new Error(data?.detail || "Failed to add members");
@@ -110,26 +90,17 @@ export default function ManageProjectForm({ project }: { project: Project }) {
 
   async function handleDelete() {
     if (!project.can_delete) return;
-
-    const first = window.confirm("Are you sure you want to delete this project?");
-    if (!first) return;
-
-    const second = window.confirm("This action cannot be undone. Delete project permanently?");
-    if (!second) return;
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
+    if (!window.confirm("This action cannot be undone. Delete project permanently?")) return;
 
     try {
       setDeleting(true);
       setError("");
-
-      const res = await apiFetch(`/api/projects/${project.id}`, {
-        method: "DELETE",
-      });
-
+      const res = await apiFetch(`/api/projects/${project.id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.detail || "Failed to delete project");
       }
-
       router.push("/main");
       router.refresh();
     } catch (err) {
@@ -139,65 +110,54 @@ export default function ManageProjectForm({ project }: { project: Project }) {
     }
   }
 
+  const inputClass = "w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]";
+  const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]";
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[#4b2e1f]">Project name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3"
-          />
+          <label className={labelClass}>Project name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </div>
-
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[#4b2e1f]">Description</label>
-          <textarea
-            rows={5}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3"
-          />
+          <label className={labelClass}>Description</label>
+          <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
         </div>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-5">
-        <h2 className="text-xl font-semibold text-[#5c3b28]">Add project members</h2>
+      <div className="space-y-4 rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[#555]">Add project members</h2>
 
         <div className="flex gap-3">
           <input
             value={emailQuery}
             onChange={(e) => setEmailQuery(e.target.value)}
             placeholder="Search by email"
-            className="flex-1 rounded-xl border border-[#c8a27a] bg-white px-4 py-3"
+            className={`flex-1 ${inputClass}`}
           />
           <button
             type="button"
             onClick={handleSearch}
-            className="rounded-xl bg-[#8b5e3c] px-5 py-3 font-semibold text-white hover:bg-[#734c30]"
+            className="rounded-lg border border-[#1e1e1e] px-5 py-3 text-sm font-semibold text-[#888] transition hover:bg-[#161616] hover:text-[#f0f0f0]"
           >
             Search
           </button>
         </div>
 
         {searchResults.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {searchResults.map((user) => (
-              <div
-                key={user.id_user}
-                className="flex items-center justify-between rounded-lg border border-[#c8a27a] bg-white px-4 py-3"
-              >
+              <div key={user.id_user} className="flex items-center justify-between rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3">
                 <div>
-                  <p className="font-semibold text-[#4b2e1f]">{user.name}</p>
-                  <p className="text-sm text-[#6f4e37]">{user.email}</p>
-                  <p className="text-sm text-[#6f4e37]">{user.country ?? "Unknown country"}</p>
+                  <p className="text-sm font-semibold text-[#f0f0f0]">{user.name}</p>
+                  <p className="text-xs text-[#555]">{user.email}</p>
+                  <p className="text-xs text-[#555]">{user.country ?? "Unknown country"}</p>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => addUser(user)}
-                  className="rounded-lg bg-[#a47148] px-4 py-2 text-white hover:bg-[#8b5e3c]"
+                  className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-4 py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)]"
                 >
                   Add
                 </button>
@@ -207,24 +167,18 @@ export default function ManageProjectForm({ project }: { project: Project }) {
         )}
 
         {selectedUsers.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-[#5c3b28]">Selected members</h3>
-
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#555]">Selected members</h3>
             {selectedUsers.map((user) => (
-              <div
-                key={user.id_user}
-                className="flex items-center justify-between rounded-lg border border-[#c8a27a] bg-white px-4 py-3"
-              >
+              <div key={user.id_user} className="flex items-center justify-between rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3">
                 <div>
-                  <p className="font-semibold text-[#4b2e1f]">{user.name}</p>
-                  <p className="text-sm text-[#6f4e37]">{user.email}</p>
-                  <p className="text-sm text-[#6f4e37]">{user.country ?? "Unknown country"}</p>
+                  <p className="text-sm font-semibold text-[#f0f0f0]">{user.name}</p>
+                  <p className="text-xs text-[#555]">{user.email}</p>
                 </div>
-
                 <button
                   type="button"
                   onClick={() => removeUser(user.id_user)}
-                  className="rounded-lg border border-red-400 px-4 py-2 text-red-700 hover:bg-red-50"
+                  className="rounded-lg border border-[#ff4040]/30 px-4 py-2 text-sm text-[#ff8080] transition hover:bg-[#ff4040]/10"
                 >
                   Remove
                 </button>
@@ -235,7 +189,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-4 py-3 text-sm text-[#ff8080]">
           {error}
         </p>
       )}
@@ -245,7 +199,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-xl bg-[#8b5e3c] px-6 py-3 font-semibold text-white hover:bg-[#734c30] disabled:opacity-60"
+          className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-6 py-3 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Changes"}
         </button>
@@ -255,7 +209,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
             type="button"
             onClick={handleDelete}
             disabled={deleting || !project.can_delete}
-            className="rounded-xl bg-red-700 px-6 py-3 font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:text-gray-100 disabled:opacity-100"
+            className="rounded-lg border border-[#ff4040]/30 px-6 py-3 text-sm font-semibold text-[#ff8080] transition hover:bg-[#ff4040]/10 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {deleting ? "Deleting..." : "Delete Project"}
           </button>

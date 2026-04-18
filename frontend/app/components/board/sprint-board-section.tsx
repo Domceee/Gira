@@ -22,28 +22,24 @@ type SprintBoardSectionProps = {
   };
 };
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toISOString().split("T")[0];
+function formatDate(d: string) {
+  return new Date(d).toISOString().split("T")[0];
 }
 
 export default function SprintBoardSection({ board }: SprintBoardSectionProps) {
   return (
-    <section className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+    <section className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+      <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#8b5e3c]">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">
             {board.team_name ?? `Team ${board.team_id}`}
           </p>
-          <h2 className="mt-2 text-2xl font-bold text-[#5c3b28]">
-            Sprint {board.sprint_id}
-          </h2>
+          <h2 className="mt-1 text-lg font-bold text-[#f0f0f0]">Sprint {board.sprint_id}</h2>
         </div>
-
-        <div className="rounded-xl border border-[#d4b08a] bg-[#fdf7f2] px-4 py-3 text-sm text-[#6f4e37]">
-          {formatDate(board.start_date)} to {formatDate(board.end_date)}
+        <div className="rounded-lg border border-[#1a1a1a] bg-[#111] px-3 py-2 text-xs text-[#555]">
+          {formatDate(board.start_date)} → {formatDate(board.end_date)}
         </div>
       </div>
-
       <KanbanBoard tasks={board.tasks} />
     </section>
   );

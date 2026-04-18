@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 import io
 
 from fastapi import APIRouter, Depends, HTTPException

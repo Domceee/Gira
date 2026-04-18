@@ -23,10 +23,8 @@ export default function AssignMemberForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // ⭐ Local state for the select value
   const [value, setValue] = useState(defaultValue ?? "null");
 
-  // ⭐ Sync state when server sends new props after refresh()
   useEffect(() => {
     setValue(defaultValue ?? "null");
   }, [defaultValue]);
@@ -34,7 +32,7 @@ export default function AssignMemberForm({
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       await assignTaskToMember(formData);
-      router.refresh(); // triggers new props from server
+      router.refresh();
     });
   }
 
@@ -46,7 +44,7 @@ export default function AssignMemberForm({
 
       <select
         name="team_member_id"
-        className="rounded-lg border border-[#c8a27a] bg-white p-2"
+        className="rounded-lg border border-[#1e1e1e] bg-[#111] px-3 py-2 text-sm text-[#f0f0f0] outline-none"
         value={value}
         onChange={(e) => setValue(e.target.value)}
       >
@@ -61,7 +59,7 @@ export default function AssignMemberForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-[#b08968] px-3 py-2 text-white hover:bg-[#8c6a4f] disabled:opacity-50"
+        className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-3 py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
       >
         {isPending ? "Saving..." : "Save"}
       </button>

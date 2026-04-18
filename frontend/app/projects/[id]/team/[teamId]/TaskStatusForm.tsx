@@ -18,23 +18,16 @@ export default function TaskStatusForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // Local state for the select value
   const [value, setValue] = useState(defaultValue);
 
-  
   useEffect(() => {
-    console.log("Raw defaultValue:", JSON.stringify(defaultValue));
     const normalized = defaultValue.trim().toUpperCase();
-    console.log("Task", taskId, "defaultValue from parent:", normalized);
     setValue(normalized);
   }, [defaultValue]);
 
   function handleSubmit(formData: FormData) {
     const newStatus = formData.get("workflow_status") as string;
-
-    // Optimistic update
     setValue(newStatus);
-
     startTransition(async () => {
       await updateTaskStatus(formData);
       router.refresh();
@@ -49,7 +42,7 @@ export default function TaskStatusForm({
 
       <select
         name="workflow_status"
-        className="rounded-lg border border-[#c8a27a] bg-white p-2"
+        className="rounded-lg border border-[#1e1e1e] bg-[#111] px-3 py-2 text-sm text-[#f0f0f0] outline-none"
         value={value}
         onChange={(e) => setValue(e.target.value)}
       >
@@ -62,7 +55,7 @@ export default function TaskStatusForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-[#b08968] px-3 py-2 text-white hover:bg-[#8c6a4f] disabled:opacity-50"
+        className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-3 py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
       >
         {isPending ? "Saving..." : "Save"}
       </button>

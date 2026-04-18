@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,20 +8,13 @@ from app.models.sprint_status import SprintStatus
 from app.models.team import Team
 
 
-def get_runtime_sprint_status(sprint: Sprint, now: datetime | None = None) -> str:
-    if now is not None:
-        current_time = now
-    elif sprint.start_date.tzinfo is not None:
-        current_time = datetime.now(sprint.start_date.tzinfo)
-    elif sprint.end_date.tzinfo is not None:
-        current_time = datetime.now(sprint.end_date.tzinfo)
-    else:
-        current_time = datetime.utcnow()
+def get_runtime_sprint_status(sprint: Sprint, now: date | None = None) -> str:
+    today = now if now is not None else date.today()
 
     if sprint.status == SprintStatus.COMPLETED.value:
         return SprintStatus.COMPLETED.value
 
-    if sprint.start_date <= current_time:
+    if sprint.start_date.date() <= today:
         return SprintStatus.ACTIVE.value
 
     return SprintStatus.PLANNED.value

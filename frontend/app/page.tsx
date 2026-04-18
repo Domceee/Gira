@@ -3,46 +3,45 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f] flex items-center justify-center">
-      <div className="bg-[#fffaf5] border border-[#b08968] shadow-md rounded-2xl p-10 max-w-lg text-center">
+    <div className="min-h-screen bg-[#080808] text-[#f0f0f0] flex items-center justify-center">
+      <div className="rounded-2xl border border-[#1e1e1e] bg-[#0d0d0d] p-10 max-w-lg w-full text-center shadow-2xl">
 
-        {/* LOGO */}
         <div className="flex justify-center mb-6">
           <Image
             src="/favicon.ico"
             alt="Gira Logo"
-            width={80}
-            height={80}
+            width={72}
+            height={72}
             className="rounded-xl"
           />
         </div>
 
-        <h1 className="text-4xl font-bold mb-4 text-[#5c3b28]">
-          Welcome to Gira
+        <h1 className="text-4xl font-bold mb-3 text-[#f0f0f0]">
+          Welcome to <span className="text-[#39ff14]">Gira</span>
         </h1>
 
-        <p className="text-lg mb-8 text-[#4b2e1f]">
+        <p className="text-sm mb-8 text-[#555]">
           Your project management companion.
         </p>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <Link
             href="/register"
-            className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-6 py-3 text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+            className="block w-full rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-6 py-3 text-[#39ff14] font-semibold transition hover:bg-[rgba(57,255,20,0.14)]"
           >
             Register
           </Link>
 
           <Link
             href="/login"
-            className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-6 py-3 text-[#4b2e1f] font-medium transition hover:-translate-y-1 hover:shadow"
+            className="block w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-6 py-3 text-[#f0f0f0] font-semibold transition hover:bg-[#161616]"
           >
             Login
           </Link>
 
           <Link
             href="/api/auth/google/login"
-            className="block w-full rounded-lg border border-[#dadce0] bg-white px-6 py-3 font-medium text-[#3c4043] transition hover:bg-[#f8f9fa] hover:shadow"
+            className="block w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-6 py-3 font-semibold text-[#f0f0f0] transition hover:bg-[#161616]"
           >
             <span className="flex items-center justify-center gap-3">
               <svg className="h-5 w-5 shrink-0" viewBox="0 0 48 48" aria-hidden="true">

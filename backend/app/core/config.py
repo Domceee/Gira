@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     @classmethod
     def _load_database_url(cls, values):
         if isinstance(values, dict):
-            values["DATABASE_URL"] = values.get("DATABASE_URL") or values.get("APP_DATABASE_URL")
+            values["DATABASE_URL"] = values.get("APP_DATABASE_URL") or values.get("DATABASE_URL")
         return values
 
     @model_validator(mode="after")
