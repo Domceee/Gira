@@ -18,6 +18,15 @@ class BoardTaskRead(BaseModel):
     fk_sprintid_sprint: int | None = None
     workflow_status: TaskWorkflowStatus
     board_order: int
+    fk_team_memberid_team_member: int | None = None
+    assignee_user_id: int | None = None
+    assignee_name: str | None = None
+
+
+class BoardMemberRead(BaseModel):
+    team_member_id: int
+    user_id: int
+    name: str
 
 
 class SprintBoardRead(BaseModel):
@@ -26,9 +35,11 @@ class SprintBoardRead(BaseModel):
     team_name: str | None = None
     start_date: datetime
     end_date: datetime
+    members: list[BoardMemberRead]
     tasks: list[BoardTaskRead]
 
 
 class ProjectBoardRead(BaseModel):
     project_id: int
+    use_swimlane_board: bool = True
     boards: list[SprintBoardRead]

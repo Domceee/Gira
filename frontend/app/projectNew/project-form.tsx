@@ -50,7 +50,7 @@ export default function NewProjectForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">
+        <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
           Project name
         </label>
         <input
@@ -59,12 +59,12 @@ export default function NewProjectForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter project name"
-          className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]"
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]"
         />
       </div>
 
       <div>
-        <label htmlFor="description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">
+        <label htmlFor="description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
           Description
         </label>
         <textarea
@@ -73,7 +73,7 @@ export default function NewProjectForm() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter project description"
           rows={5}
-          className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]"
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]"
         />
       </div>
 
@@ -87,7 +87,7 @@ export default function NewProjectForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-6 py-3 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
+          className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-6 py-3 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
         >
           {submitting ? "Creating..." : "Create Project"}
         </button>
@@ -95,7 +95,7 @@ export default function NewProjectForm() {
         <button
           type="button"
           onClick={() => router.push("/main")}
-          className="rounded-lg border border-[#1e1e1e] px-6 py-3 text-sm font-semibold text-[#888] transition hover:bg-[#161616] hover:text-[#f0f0f0]"
+          className="rounded-lg border border-[#7a8798] px-6 py-3 text-sm font-semibold text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
         >
           Cancel
         </button>
@@ -103,3 +103,4 @@ export default function NewProjectForm() {
     </form>
   );
 }
+

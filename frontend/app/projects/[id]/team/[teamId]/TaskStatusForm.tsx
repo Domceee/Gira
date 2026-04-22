@@ -1,7 +1,7 @@
 "use client";
 
 import { updateTaskStatus } from "./actions";
-import { useTransition, useState, useEffect } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 export default function TaskStatusForm({
@@ -18,16 +18,7 @@ export default function TaskStatusForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const [value, setValue] = useState(defaultValue);
-
-  useEffect(() => {
-    const normalized = defaultValue.trim().toUpperCase();
-    setValue(normalized);
-  }, [defaultValue]);
-
   function handleSubmit(formData: FormData) {
-    const newStatus = formData.get("workflow_status") as string;
-    setValue(newStatus);
     startTransition(async () => {
       await updateTaskStatus(formData);
       router.refresh();
@@ -42,9 +33,8 @@ export default function TaskStatusForm({
 
       <select
         name="workflow_status"
-        className="rounded-lg border border-[#1e1e1e] bg-[#111] px-3 py-2 text-sm text-[#f0f0f0] outline-none"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-[#ffffff] outline-none"
+        defaultValue={defaultValue.trim().toUpperCase()}
       >
         <option value="TODO">To Do</option>
         <option value="IN_PROGRESS">In Progress</option>
@@ -55,7 +45,7 @@ export default function TaskStatusForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-3 py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
+        className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-3 py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
       >
         {isPending ? "Saving..." : "Save"}
       </button>

@@ -97,14 +97,14 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#080808] text-[#f0f0f0]">
+    <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
-      <p className="p-6 text-[#555]">Loading...</p>
+      <p className="p-6 text-[#c3ceda]">Loading...</p>
     </div>
   );
 
   if (error && !user) return (
-    <div className="min-h-screen bg-[#080808] text-[#f0f0f0]">
+    <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
       <p className="p-6 text-[#ff8080]">{error}</p>
     </div>
@@ -113,31 +113,31 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-[#f0f0f0]">
+    <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
       <main className="mx-auto max-w-2xl px-6 py-8">
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/main" className="text-sm text-[#555] hover:text-[#f0f0f0] transition-colors">← Dashboard</Link>
+          <Link href="/main" className="text-sm text-[#c3ceda] hover:text-[#ffffff] transition-colors">← Dashboard</Link>
         </div>
 
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-8">
-          <h1 className="mb-6 text-xl font-bold text-[#f0f0f0]">Profile Settings</h1>
+        <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-8">
+          <h1 className="mb-6 text-xl font-bold text-[#ffffff]">Profile Settings</h1>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Picture */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Profile Picture</label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Profile Picture</label>
               <div className="mb-3 flex items-center gap-4">
                 {pictureBase64 ? (
-                  <img src={`data:image/jpeg;base64,${pictureBase64}`} alt="Preview" className="h-16 w-16 rounded-lg object-cover border border-[#1e1e1e]" />
+                  <img src={`data:image/jpeg;base64,${pictureBase64}`} alt="Preview" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
                 ) : user.picture ? (
-                  <img src={`data:image/jpeg;base64,${user.picture}`} alt="Profile" className="h-16 w-16 rounded-lg object-cover border border-[#1e1e1e]" />
+                  <img src={`data:image/jpeg;base64,${user.picture}`} alt="Profile" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
                 ) : (
-                  <img src="/default.jpg" alt="Default" className="h-16 w-16 rounded-lg object-cover border border-[#1e1e1e]" />
+                  <img src="/default.jpg" alt="Default" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
                 )}
               </div>
               <input type="file" name="picture" accept="image/*" onChange={handlePictureChange}
-                className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] p-2.5 text-sm text-[#888] file:mr-3 file:rounded file:border-0 file:bg-[#1e1e1e] file:px-3 file:py-1 file:text-xs file:text-[#ccc]" />
+                className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] p-2.5 text-sm text-[#edf3fb] file:mr-3 file:rounded file:border-0 file:bg-[#7a8798] file:px-3 file:py-1 file:text-xs file:text-[#f7faff]" />
             </div>
 
             <Field label="Name" name="name" defaultValue={user.name} required />
@@ -147,12 +147,12 @@ export default function ProfilePage() {
             <Field label="New Password" name="password" type="password" placeholder="Leave empty to keep current password" />
 
             {error && <div className="rounded-lg border border-[#ff4040]/30 bg-[#ff4040]/08 px-4 py-3 text-sm text-[#ff8080]">{error}</div>}
-            {saved && <div className="rounded-lg border border-[rgba(57,255,20,0.2)] bg-[rgba(57,255,20,0.06)] px-4 py-3 text-sm text-[#39ff14]">Changes saved.</div>}
+            {saved && <div className="rounded-lg border border-[rgba(57,231,172,0.25)] bg-[rgba(46,230,166,0.10)] px-4 py-3 text-sm text-[#39e7ac]">Changes saved.</div>}
 
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-6 py-2.5 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
+              className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-6 py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
@@ -166,7 +166,7 @@ export default function ProfilePage() {
 function Field(props: { label: string; name: string; defaultValue?: string; type?: string; placeholder?: string; required?: boolean }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
         {props.label}{props.required ? " *" : ""}
       </label>
       <input
@@ -175,8 +175,9 @@ function Field(props: { label: string; name: string; defaultValue?: string; type
         defaultValue={props.defaultValue}
         required={props.required}
         placeholder={props.placeholder}
-        className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none transition placeholder:text-[#333] focus:border-[rgba(57,255,20,0.3)] focus:ring-2 focus:ring-[rgba(57,255,20,0.1)]"
+        className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none transition placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)] focus:ring-2 focus:ring-[rgba(57,231,172,0.16)]"
       />
     </div>
   );
 }
+

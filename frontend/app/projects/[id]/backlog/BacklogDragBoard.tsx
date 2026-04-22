@@ -77,11 +77,11 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
   };
 
   const sectionClass = (targetKey: string) =>
-    `rounded-xl border p-4 transition ${activeDropTarget === targetKey ? "border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.04)]" : "border-[#1e1e1e] bg-[#0d0d0d]"}`;
+    `rounded-xl border p-4 transition ${activeDropTarget === targetKey ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]" : "border-[#7a8798] bg-[#1f2630]"}`;
 
-  const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#444]";
-  const tdClass = "p-3 text-sm text-[#888]";
-  const trClass = "border-b border-[#1a1a1a] hover:bg-[#111] transition-colors";
+  const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#c3ceda]";
+  const tdClass = "p-3 text-sm text-[#edf3fb]";
+  const trClass = "border-b border-[#667386] hover:bg-[#28313d] transition-colors";
 
   return (
     <>
@@ -89,7 +89,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
 
       {/* Unassigned */}
       <div className={sectionClass("unassigned")} onDragOver={(e) => handleDragOverTarget(e, "unassigned")} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, null)}>
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#888]">Unassigned Tasks</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Unassigned Tasks</h2>
         <table className="w-full border-collapse">
           <thead><tr>
             <th className={thClass}>Name</th><th className={thClass}>Description</th>
@@ -97,10 +97,10 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
             <th className={thClass}>Priority</th><th className={thClass}>Actions</th>
           </tr></thead>
           <tbody>
-            {tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#333]">No unassigned tasks.</td></tr>}
+            {tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">No unassigned tasks.</td></tr>}
             {tasks.map((task) => (
               <tr key={task.id_task} draggable onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
-                <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#f0f0f0]">{task.name ?? "—"}</div></td>
+                <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
                 <td className={tdClass}><DescriptionButton text={task.description} /></td>
                 <td className={tdClass}>{task.story_points ?? "—"}</td>
                 <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
@@ -116,12 +116,12 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
       </div>
 
       {/* Teams */}
-      <h2 className="mb-4 mt-8 text-sm font-bold uppercase tracking-widest text-[#888]">Teams</h2>
+      <h2 className="mb-4 mt-8 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Teams</h2>
       {teams.map((team) => {
         const targetKey = getDropTargetKey(team.team_id);
         return (
           <div key={team.team_id} className={`${sectionClass(targetKey)} mb-6`} onDragOver={(e) => handleDragOverTarget(e, targetKey)} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, team.team_id)}>
-            <h3 className="mb-3 text-sm font-semibold text-[#f0f0f0]">{team.team_name ?? "Unnamed team"}</h3>
+            <h3 className="mb-3 text-sm font-semibold text-[#ffffff]">{team.team_name ?? "Unnamed team"}</h3>
             <table className="w-full border-collapse">
               <thead><tr>
                 <th className={thClass}>Name</th><th className={thClass}>Description</th>
@@ -129,10 +129,10 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
                 <th className={thClass}>Priority</th><th className={thClass}>Actions</th>
               </tr></thead>
               <tbody>
-                {team.tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#333]">No tasks assigned.</td></tr>}
+                {team.tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">No tasks assigned.</td></tr>}
                 {team.tasks.map((task) => (
                   <tr key={task.id_task} draggable onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
-                    <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#f0f0f0]">{task.name ?? "—"}</div></td>
+                    <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
                     <td className={tdClass}><DescriptionButton text={task.description} /></td>
                     <td className={tdClass}>{task.story_points ?? "—"}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
@@ -141,7 +141,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
                       <div className="flex flex-wrap items-center gap-2">
                         <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
                         <button type="button" disabled={isSaving} onClick={() => assignTask(task.id_task, null)}
-                          className="rounded-lg border border-[#1e1e1e] px-2.5 py-1.5 text-xs text-[#888] transition hover:bg-[#161616] hover:text-[#f0f0f0] disabled:opacity-50">
+                          className="rounded-lg border border-[#7a8798] px-2.5 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] disabled:opacity-50">
                           Unassign
                         </button>
                         <TaskActions taskId={task.id_task} projectId={projectId} name={task.name} description={task.description} story_points={task.story_points} risk={task.risk} priority={task.priority} />

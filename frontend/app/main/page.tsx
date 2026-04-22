@@ -35,19 +35,19 @@ export default async function HomePage() {
   const news = await getNews();
 
   return (
-    <div className="min-h-screen bg-[#080808] text-[#f0f0f0]">
+    <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-[1.3fr_0.9fr]">
 
           {/* PROJECTS */}
-          <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+          <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-[#f0f0f0]">Projects</h2>
+              <h2 className="text-2xl font-bold text-[#ffffff]">Projects</h2>
               <Link
                 href="/projectNew"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1e1e1e] bg-[#111] text-xl font-bold text-[#39ff14] transition hover:bg-[#161616] hover:border-[rgba(57,255,20,0.3)]"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#7a8798] bg-[#28313d] text-xl font-bold text-[#39e7ac] transition hover:bg-[#323d4b] hover:border-[rgba(57,231,172,0.40)]"
               >
                 +
               </Link>
@@ -55,16 +55,16 @@ export default async function HomePage() {
 
             <div className="space-y-3">
               {projects.length === 0 && (
-                <p className="text-sm text-[#444]">No projects yet. Create one to get started.</p>
+                <p className="text-sm text-[#c3ceda]">No projects yet. Create one to get started.</p>
               )}
               {projects.map((project) => (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="block rounded-lg border border-[#1e1e1e] bg-[#111] p-4 transition hover:border-[#2a2a2a] hover:bg-[#141414]"
+                  className="block rounded-lg border border-[#7a8798] bg-[#28313d] p-4 transition hover:border-[#7b8798] hover:bg-[#3a414d]"
                 >
-                  <h3 className="font-semibold text-[#f0f0f0]">{project.name}</h3>
-                  <p className="mt-1 text-sm text-[#555]">
+                  <h3 className="font-semibold text-[#ffffff]">{project.name}</h3>
+                  <p className="mt-1 text-sm text-[#c3ceda]">
                     {project.description ?? "No description"}
                   </p>
                 </Link>
@@ -75,21 +75,21 @@ export default async function HomePage() {
           <div className="space-y-6">
             <InvitationsBlock />
 
-            <aside className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
-              <h2 className="mb-5 text-2xl font-bold text-[#f0f0f0]">News</h2>
+            <aside className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+              <h2 className="mb-5 text-2xl font-bold text-[#ffffff]">News</h2>
               <div className="space-y-3">
                 {news.length === 0 ? (
-                  <p className="text-sm text-[#444]">No notifications yet.</p>
+                  <p className="text-sm text-[#c3ceda]">No notifications yet.</p>
                 ) : (
                   news.map((item) => (
-                    <article key={item.id_news} className="rounded-lg border border-[#1e1e1e] bg-[#111] p-4">
+                    <article key={item.id_news} className="rounded-lg border border-[#7a8798] bg-[#28313d] p-4">
                       <div className="mb-1.5 flex items-center justify-between gap-4">
-                        <h3 className="text-sm font-semibold text-[#f0f0f0]">{item.title}</h3>
-                        <span className="shrink-0 text-xs text-[#444]">
+                        <h3 className="text-sm font-semibold text-[#ffffff]">{item.title}</h3>
+                        <span className="shrink-0 text-xs text-[#c3ceda]">
                           {new Date(item.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-sm leading-6 text-[#666]">{item.message}</p>
+                      <p className="text-sm leading-6 text-[#d3dae3]">{item.message}</p>
                     </article>
                   ))
                 )}
@@ -102,3 +102,4 @@ export default async function HomePage() {
     </div>
   );
 }
+

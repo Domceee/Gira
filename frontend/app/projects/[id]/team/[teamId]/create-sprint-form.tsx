@@ -50,32 +50,32 @@ export default function CreateSprintForm({ action, teamId, projectId, existingSp
   const calculatedEndDate = calculateEndDate(startDate, durationWeeks);
 
   return (
-    <form action={action} onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+    <form action={action} onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
       <input type="hidden" name="team_id" value={teamId} />
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="end_date" value={calculatedEndDate || ""} />
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Start Date</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Start Date</label>
         <input type="date" name="start_date" required value={startDate} onChange={(e) => setStartDate(e.target.value)}
-          className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Duration (Weeks)</label>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Duration (Weeks)</label>
         <input type="number" name="duration_weeks" required min="1" value={durationWeeks} onChange={(e) => setDurationWeeks(e.target.value)} placeholder="e.g. 2"
-          className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
       </div>
 
       {calculatedEndDate && (
-        <div className="rounded-lg border border-[rgba(57,255,20,0.15)] bg-[rgba(57,255,20,0.05)] px-4 py-3 text-sm text-[#39ff14]">
+        <div className="rounded-lg border border-[rgba(57,231,172,0.22)] bg-[rgba(57,231,172,0.10)] px-4 py-3 text-sm text-[#39e7ac]">
           End Date: <strong>{calculatedEndDate}</strong>
         </div>
       )}
 
       {error && <p className="rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-4 py-3 text-sm text-[#ff8080]">{error}</p>}
 
-      <button type="submit" className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-5 py-2.5 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)]">
+      <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-5 py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]">
         Create Sprint
       </button>
     </form>

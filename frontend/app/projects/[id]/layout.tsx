@@ -23,7 +23,7 @@ export default async function ProjectLayout({
   ]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#080808] text-[#f0f0f0]">
+    <div className="flex h-screen overflow-hidden bg-[#171c24] text-[#ffffff]">
       <ProjectSidebar
         projectId={id}
         projectName={project.name}

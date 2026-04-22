@@ -13,6 +13,15 @@ type BoardTask = {
   fk_sprintid_sprint: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   board_order: number;
+  fk_team_memberid_team_member: number | null;
+  assignee_user_id: number | null;
+  assignee_name: string | null;
+};
+
+type BoardMember = {
+  team_member_id: number;
+  user_id: number;
+  name: string;
 };
 
 type SprintBoard = {
@@ -21,11 +30,13 @@ type SprintBoard = {
   team_name: string | null;
   start_date: string;
   end_date: string;
+  members: BoardMember[];
   tasks: BoardTask[];
 };
 
 type ProjectBoard = {
   project_id: number;
+  use_swimlane_board: boolean;
   boards: SprintBoard[];
 };
 
@@ -43,21 +54,25 @@ export default async function ProjectBoardPage({ params }: { params: Promise<{ i
   return (
     <div className="p-6">
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">Board</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#f0f0f0]">Active Sprints</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Board</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Active Sprints</h1>
       </div>
 
       {projectBoard.boards.length === 0 ? (
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
-          <h2 className="text-lg font-bold text-[#f0f0f0]">No active sprint boards</h2>
-          <p className="mt-2 text-sm text-[#555]">
+        <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+          <h2 className="text-lg font-bold text-[#ffffff]">No active sprint boards</h2>
+          <p className="mt-2 text-sm text-[#c3ceda]">
             There are no active sprints for this project right now.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           {projectBoard.boards.map((board) => (
-            <SprintBoardSection key={`${board.team_id}-${board.sprint_id}`} board={board} />
+            <SprintBoardSection
+              key={`${board.team_id}-${board.sprint_id}`}
+              board={board}
+              useSwimlaneBoard={projectBoard.use_swimlane_board}
+            />
           ))}
         </div>
       )}

@@ -98,14 +98,14 @@ export default function TaskActions({ taskId, projectId, name, description, stor
 
   return (
     <div ref={containerRef} className="relative inline-block text-left overflow-visible">
-      <button type="button" onClick={handleToggle} className="rounded p-1.5 text-[#444] transition hover:bg-[#161616] hover:text-[#f0f0f0]">
+      <button type="button" onClick={handleToggle} className="rounded p-1.5 text-[#c3ceda] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
         <MoreHorizontal size={16} />
       </button>
 
       {open && !editing && (
-        <div className="absolute right-0 top-full z-[9999] mt-1 w-44 overflow-hidden rounded-lg border border-[#1e1e1e] bg-[#111] shadow-xl">
+        <div className="absolute right-0 top-full z-[9999] mt-1 w-44 overflow-hidden rounded-lg border border-[#7a8798] bg-[#28313d] shadow-xl">
           <button type="button" onClick={() => { setOpen(false); setEditing(true); }}
-            className="w-full px-4 py-2.5 text-left text-sm text-[#ccc] transition hover:bg-[#161616] hover:text-[#f0f0f0]">
+            className="w-full px-4 py-2.5 text-left text-sm text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
             Edit
           </button>
           <button type="button" onClick={handleDelete} disabled={isDeleting}
@@ -117,45 +117,45 @@ export default function TaskActions({ taskId, projectId, name, description, stor
       )}
 
       {editing && (
-        <div className="absolute right-0 top-full z-[9999] mt-1 w-80 rounded-lg border border-[#1e1e1e] bg-[#111] p-4 shadow-xl">
+        <div className="absolute right-0 top-full z-[9999] mt-1 w-80 rounded-lg border border-[#7a8798] bg-[#28313d] p-4 shadow-xl">
           <form action={handleEdit} className="space-y-3">
             <input type="hidden" name="task_id" value={taskId} />
             <input type="hidden" name="project_id" value={projectId} />
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Name</label>
-              <input name="name" required defaultValue={name} className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</label>
+              <input name="name" required defaultValue={name} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Description</label>
-              <textarea name="description" defaultValue={description ?? ""} rows={3} className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Description</label>
+              <textarea name="description" defaultValue={description ?? ""} rows={3} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Story Points</label>
-                <input type="number" step="0.1" name="story_points" defaultValue={story_points ?? ""} className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Story Points</label>
+                <input type="number" step="0.1" name="story_points" defaultValue={story_points ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Risk</label>
-                <select name="risk" defaultValue={risk ?? ""} className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Risk</label>
+                <select name="risk" defaultValue={risk ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none">
                   <option value="" disabled>Select</option>
                   {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Priority</label>
-              <select name="priority" defaultValue={priority ?? ""} className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Priority</label>
+              <select name="priority" defaultValue={priority ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none">
                 <option value="" disabled>Select</option>
                 {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             </div>
             <div className="flex gap-2 pt-1">
               <button type="submit" disabled={isEditing}
-                className="flex-1 rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50">
+                className="flex-1 rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50">
                 {isEditing ? "Saving..." : "Save"}
               </button>
               <button type="button" onClick={() => setEditing(false)}
-                className="flex-1 rounded-lg border border-[#1e1e1e] py-2 text-sm text-[#888] transition hover:bg-[#161616]">
+                className="flex-1 rounded-lg border border-[#7a8798] py-2 text-sm text-[#edf3fb] transition hover:bg-[#323d4b]">
                 Cancel
               </button>
             </div>
@@ -166,3 +166,4 @@ export default function TaskActions({ taskId, projectId, name, description, stor
     </div>
   );
 }
+

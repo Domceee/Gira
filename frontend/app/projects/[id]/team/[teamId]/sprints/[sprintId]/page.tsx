@@ -73,25 +73,25 @@ export default async function SprintStatsPage({ params }: { params: Promise<{ id
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">Sprint Stats</p>
-            <h1 className="mt-1 text-2xl font-bold text-[#f0f0f0]">Sprint {stats.id_sprint}</h1>
-            <p className="mt-1 text-sm text-[#555]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Sprint Stats</p>
+            <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Sprint {stats.id_sprint}</h1>
+            <p className="mt-1 text-sm text-[#c3ceda]">
               {formatDate(stats.start_date)} → {formatDate(stats.end_date)} · <span className="capitalize">{stats.status.toLowerCase()}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold text-[#39ff14]">{stats.completion_rate}%</p>
-            <p className="text-xs text-[#444]">{stats.elapsed_days}/{stats.sprint_length_days} days</p>
+            <p className="text-4xl font-bold text-[#39e7ac]">{stats.completion_rate}%</p>
+            <p className="text-xs text-[#c3ceda]">{stats.elapsed_days}/{stats.sprint_length_days} days</p>
           </div>
         </div>
         {stats.status === "COMPLETED" && (
           <div className="mt-4 flex justify-end">
             <a
               href={`/api/proxy/sprints/${sprintId}/export?team_id=${teamId}`}
-              className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-4 py-2 text-sm font-semibold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)]"
+              className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-4 py-2 text-sm font-semibold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]"
             >
               Download Excel
             </a>
@@ -109,45 +109,45 @@ export default async function SprintStatsPage({ params }: { params: Promise<{ id
           { label: "Timeline", value: `${progressPercent}%`, sub: `${stats.remaining_days}d left` },
           { label: "Burn/day", value: formatPoints(stats.planned_points_per_day), sub: "pts ideal" },
         ].map((card) => (
-          <div key={card.label} className="rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#444]">{card.label}</p>
-            <p className="mt-2 text-2xl font-bold text-[#f0f0f0]">{card.value}</p>
-            <p className="mt-0.5 text-xs text-[#444]">{card.sub}</p>
+          <div key={card.label} className="rounded-lg border border-[#7a8798] bg-[#1f2630] p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">{card.label}</p>
+            <p className="mt-2 text-2xl font-bold text-[#ffffff]">{card.value}</p>
+            <p className="mt-0.5 text-xs text-[#c3ceda]">{card.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Burndown chart */}
-      <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[#888]">Burndown</h2>
-          <div className="flex gap-4 text-xs text-[#555]">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-5 bg-[#39ff14]" />Actual</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-5 border-t-2 border-dashed border-[#444]" />Ideal</span>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Burndown</h2>
+          <div className="flex gap-4 text-xs text-[#c3ceda]">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-5 bg-[#39e7ac]" />Actual</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-5 border-t-2 border-dashed border-[#c3ceda]" />Ideal</span>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg border border-[#1a1a1a] bg-[#111] p-4">
+        <div className="overflow-x-auto rounded-lg border border-[#667386] bg-[#28313d] p-4">
           <svg viewBox="0 0 820 280" className="min-w-[820px]">
             {[0, 1, 2, 3, 4].map((line) => (
-              <line key={line} x1="48" y1={28 + line * 56} x2="772" y2={28 + line * 56} stroke="#1a1a1a" strokeDasharray="6 8" strokeWidth="1" />
+              <line key={line} x1="48" y1={28 + line * 56} x2="772" y2={28 + line * 56} stroke="#667386" strokeDasharray="6 8" strokeWidth="1" />
             ))}
-            <line x1="60" y1="252" x2="772" y2="252" stroke="#2a2a2a" strokeWidth="2" />
-            <line x1="60" y1="28" x2="60" y2="252" stroke="#2a2a2a" strokeWidth="2" />
-            <path d={idealPath} fill="none" stroke="#333" strokeWidth="2" strokeDasharray="10 8" strokeLinecap="round" />
-            <path d={actualPath} fill="none" stroke="#39ff14" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="60" y1="252" x2="772" y2="252" stroke="#7b8798" strokeWidth="2" />
+            <line x1="60" y1="28" x2="60" y2="252" stroke="#7b8798" strokeWidth="2" />
+            <path d={idealPath} fill="none" stroke="#93a0b1" strokeWidth="2" strokeDasharray="10 8" strokeLinecap="round" />
+            <path d={actualPath} fill="none" stroke="#39e7ac" strokeWidth="2.5" strokeLinecap="round" />
             {midPoints.map((val) => (
-              <text key={val} x="56" y={toY(val, maxPoints) + 4} textAnchor="end" className="fill-[#444] text-[11px]">{val}</text>
+              <text key={val} x="56" y={toY(val, maxPoints) + 4} textAnchor="end" className="fill-[#c3ceda] text-[11px]">{val}</text>
             ))}
             {actualDots.map((point) => (
               <g key={point.label}>
-                <circle cx={point.x} cy={point.y} r="4" fill="#111" stroke="#39ff14" strokeWidth="2">
+                <circle cx={point.x} cy={point.y} r="4" fill="#28313d" stroke="#39e7ac" strokeWidth="2">
                   <title>{`${point.label} (${formatDate(point.date)}): ${formatPoints(point.actual_remaining_points)} actual, ${formatPoints(point.ideal_remaining_points)} ideal`}</title>
                 </circle>
-                <text x={point.x} y="270" textAnchor="middle" className="fill-[#444] text-[11px]">{point.label}</text>
+                <text x={point.x} y="270" textAnchor="middle" className="fill-[#c3ceda] text-[11px]">{point.label}</text>
               </g>
             ))}
-            <text x="56" y="36" textAnchor="end" className="fill-[#444] text-[12px]">{formatPoints(maxPoints)}</text>
-            <text x="56" y="256" textAnchor="end" className="fill-[#444] text-[12px]">0</text>
+            <text x="56" y="36" textAnchor="end" className="fill-[#c3ceda] text-[12px]">{formatPoints(maxPoints)}</text>
+            <text x="56" y="256" textAnchor="end" className="fill-[#c3ceda] text-[12px]">0</text>
           </svg>
         </div>
       </div>

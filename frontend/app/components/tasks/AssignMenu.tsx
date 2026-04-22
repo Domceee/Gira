@@ -58,29 +58,29 @@ export default function AssignMenu({ taskId, projectId, selectedTeamId, teams }:
   return (
     <div ref={containerRef} className="relative inline-block text-left overflow-visible">
       <button type="button" onClick={toggleMenu}
-        className="rounded-lg border border-[#1e1e1e] bg-[#111] px-3 py-1.5 text-xs font-medium text-[#888] transition hover:bg-[#161616] hover:text-[#f0f0f0]">
+        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs font-medium text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
         Assign
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-[9999] mt-1 w-64 rounded-lg border border-[#1e1e1e] bg-[#111] p-4 shadow-xl">
+        <div className="absolute right-0 top-full z-[9999] mt-1 w-64 rounded-lg border border-[#7a8798] bg-[#28313d] p-4 shadow-xl">
           <form action={handleAssign} className="space-y-3">
             <input type="hidden" name="task_id" value={taskId} />
             <input type="hidden" name="project_id" value={projectId} />
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#555]">Team</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Team</label>
               <select name="team_id" value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} disabled={isAssigning}
-                className="w-full rounded-lg border border-[#1e1e1e] bg-[#0d0d0d] px-3 py-2 text-sm text-[#f0f0f0] outline-none">
+                className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none">
                 {teams.map((team) => <option key={team.team_id} value={team.team_id}>{team.team_name ?? "Unnamed team"}</option>)}
               </select>
             </div>
             <div className="flex gap-2">
               <button type="submit" disabled={isAssigning}
-                className="flex-1 rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50">
+                className="flex-1 rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50">
                 {isAssigning ? "Saving..." : "Save"}
               </button>
               <button type="button" onClick={() => setOpen(false)}
-                className="flex-1 rounded-lg border border-[#1e1e1e] py-2 text-sm text-[#888] transition hover:bg-[#161616]">
+                className="flex-1 rounded-lg border border-[#7a8798] py-2 text-sm text-[#edf3fb] transition hover:bg-[#323d4b]">
                 Cancel
               </button>
             </div>
@@ -91,3 +91,4 @@ export default function AssignMenu({ taskId, projectId, selectedTeamId, teams }:
     </div>
   );
 }
+

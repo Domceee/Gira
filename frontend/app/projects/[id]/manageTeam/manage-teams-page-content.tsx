@@ -172,13 +172,13 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
     }
   }
 
-  const inputClass = "w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]";
+  const inputClass = "w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]";
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
       <aside className="space-y-4">
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-5">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#555]">Create Team</h2>
+        <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-5">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Create Team</h2>
           <input
             type="text"
             value={teamName}
@@ -190,18 +190,18 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
             type="button"
             onClick={handleCreateTeam}
             disabled={creatingTeam}
-            className="mt-3 w-full rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] py-2.5 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
+            className="mt-3 w-full rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
           >
             {creatingTeam ? "Creating..." : "Create Team"}
           </button>
         </div>
 
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-5">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#555]">Teams in {projectName}</h2>
+        <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-5">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Teams in {projectName}</h2>
           {loadingTeams ? (
-            <p className="text-xs text-[#444]">Loading teams...</p>
+            <p className="text-xs text-[#c3ceda]">Loading teams...</p>
           ) : teams.length === 0 ? (
-            <p className="text-xs text-[#444]">No teams created yet.</p>
+            <p className="text-xs text-[#c3ceda]">No teams created yet.</p>
           ) : (
             <div className="flex flex-col gap-1">
               {teams.map((team) => (
@@ -211,8 +211,8 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
                   onClick={() => setSelectedTeamId(team.id_team)}
                   className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${
                     selectedTeamId === team.id_team
-                      ? "bg-[rgba(57,255,20,0.1)] text-[#39ff14]"
-                      : "text-[#888] hover:bg-[#161616] hover:text-[#f0f0f0]"
+                      ? "bg-[rgba(57,231,172,0.16)] text-[#39e7ac]"
+                      : "text-[#edf3fb] hover:bg-[#323d4b] hover:text-[#ffffff]"
                   }`}
                 >
                   {team.name || "Unnamed team"}
@@ -231,14 +231,14 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
         )}
 
         {selectedTeamId === null ? (
-          <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6 text-sm text-[#444]">
+          <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 text-sm text-[#c3ceda]">
             Select a team to manage it.
           </div>
         ) : (
           <>
-            <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+            <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#555]">Current Team Members</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#c3ceda]">Current Team Members</h2>
                 <span title={!teams.find((t) => t.id_team === selectedTeamId)?.can_delete ? teams.find((t) => t.id_team === selectedTeamId)?.delete_block_reason ?? "Cannot delete" : ""}>
                   <button
                     type="button"
@@ -252,15 +252,15 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
               </div>
 
               {selectedTeamMembers.length === 0 ? (
-                <p className="text-sm text-[#444]">This team has no members yet.</p>
+                <p className="text-sm text-[#c3ceda]">This team has no members yet.</p>
               ) : (
                 <div className="space-y-2">
                   {selectedTeamMembers.map((member) => (
-                    <div key={member.id_user} className="flex items-center justify-between rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3">
+                    <div key={member.id_user} className="flex items-center justify-between rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-[#f0f0f0]">{member.name}</p>
-                        <p className="text-xs text-[#555]">{member.email}</p>
-                        <p className="text-xs text-[#555]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
+                        <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+                        <p className="text-xs text-[#c3ceda]">{member.email}</p>
+                        <p className="text-xs text-[#c3ceda]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
                       </div>
                       <button
                         type="button"
@@ -276,21 +276,21 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
               )}
             </div>
 
-            <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+            <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#555]">Add Project Members to Team</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#c3ceda]">Add Project Members to Team</h2>
                 <button
                   type="button"
                   onClick={handleAddMembersToTeam}
                   disabled={savingMembers}
-                  className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-4 py-2 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:opacity-50"
+                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-4 py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
                 >
                   {savingMembers ? "Saving..." : "Add Selected"}
                 </button>
               </div>
 
               {availableMembers.length === 0 ? (
-                <p className="text-sm text-[#444]">No available project members to add.</p>
+                <p className="text-sm text-[#c3ceda]">No available project members to add.</p>
               ) : (
                 <div className="space-y-2">
                   {availableMembers.map((member) => {
@@ -298,18 +298,18 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
                     return (
                       <label
                         key={member.id_user}
-                        className="flex cursor-pointer items-start gap-4 rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 transition hover:border-[#2a2a2a]"
+                        className="flex cursor-pointer items-start gap-4 rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 transition hover:border-[#7b8798]"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectedUser(member.id_user)}
-                          className="mt-1 h-4 w-4 accent-[#39ff14]"
+                          className="mt-1 h-4 w-4 accent-[#39e7ac]"
                         />
                         <div>
-                          <p className="text-sm font-semibold text-[#f0f0f0]">{member.name}</p>
-                          <p className="text-xs text-[#555]">{member.email}</p>
-                          <p className="text-xs text-[#555]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
+                          <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+                          <p className="text-xs text-[#c3ceda]">{member.email}</p>
+                          <p className="text-xs text-[#c3ceda]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
                         </div>
                       </label>
                     );

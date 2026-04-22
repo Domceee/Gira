@@ -21,11 +21,11 @@ export default async function ManageTeamPage({ params }: { params: Promise<{ id:
   return (
     <div className="p-6">
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">Teams</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#f0f0f0]">Manage Teams</h1>
-        <p className="mt-1 text-sm text-[#555]">Create teams, assign members, and manage roles.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Teams</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Manage Teams</h1>
+        <p className="mt-1 text-sm text-[#c3ceda]">Create teams, assign members, and manage roles.</p>
       </div>
-      <div className="rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-8">
+      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-8">
         <ManageTeamsPageContent projectId={id} projectName={project.name ?? "Unnamed Project"} />
       </div>
     </div>

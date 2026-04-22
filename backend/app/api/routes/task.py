@@ -33,6 +33,7 @@ class AssignSprint(BaseModel):
 class UpdateBoardPosition(BaseModel):
     workflow_status: TaskWorkflowStatus
     board_order: int
+    team_member_id: Optional[int] = None
 
 
 def utc_now() -> datetime:
@@ -378,9 +379,25 @@ async def update_board_position(
             detail="Board order must be zero or greater",
         )
 
+    if payload.team_member_id is not None:
+        team_member_result = await db.execute(
+            select(TeamMember).where(
+                TeamMember.id_team_member == payload.team_member_id,
+                TeamMember.fk_teamid_team == task.fk_teamid_team,
+            )
+        )
+        team_member = team_member_result.scalar_one_or_none()
+
+        if team_member is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Team member not in this team",
+            )
+
     previous_status = task.workflow_status
     task.workflow_status = payload.workflow_status.value
     task.board_order = payload.board_order
+    task.fk_team_memberid_team_member = payload.team_member_id
 
     if previous_status != TaskWorkflowStatus.DONE.value and task.workflow_status == TaskWorkflowStatus.DONE.value:
         task.completed_at = utc_now()
@@ -411,6 +428,7 @@ async def update_board_position(
         "task_id": task.id_task,
         "workflow_status": task.workflow_status,
         "board_order": task.board_order,
+        "team_member_id": task.fk_team_memberid_team_member,
     }
 
 async def get_project_membership_or_404(project_id: int, user_id: int, db: AsyncSession):

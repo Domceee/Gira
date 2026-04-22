@@ -65,8 +65,8 @@ export default async function TeamView({ params }: { params: Promise<{ id: strin
   return (
     <div className="p-6">
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">Team</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#f0f0f0]">{team.team_name ?? `Team ${teamId}`}</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Team</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">{team.team_name ?? `Team ${teamId}`}</h1>
       </div>
       <TeamViewContent
         team={team}

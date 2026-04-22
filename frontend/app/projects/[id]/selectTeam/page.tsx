@@ -70,14 +70,14 @@ export default async function SelectTeamPage({ params }: { params: Promise<{ id:
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center gap-3">
-        <Link href={`/projects/${id}`} className="text-xs text-[#555] hover:text-[#f0f0f0] transition-colors">
+        <Link href={`/projects/${id}`} className="text-xs text-[#c3ceda] hover:text-[#ffffff] transition-colors">
           ← Back
         </Link>
-        <h1 className="text-xl font-bold text-[#f0f0f0]">Select a Team</h1>
+        <h1 className="text-xl font-bold text-[#ffffff]">Select a Team</h1>
       </div>
 
       {visibleTeams.length === 0 && (
-        <p className="text-sm text-[#555]">No teams found for this project.</p>
+        <p className="text-sm text-[#c3ceda]">No teams found for this project.</p>
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -85,12 +85,12 @@ export default async function SelectTeamPage({ params }: { params: Promise<{ id:
           <Link
             key={team.id_team}
             href={`/projects/${id}/team/${team.id_team}`}
-            className="block rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6 transition hover:border-[rgba(57,255,20,0.2)] hover:bg-[#111]"
+            className="block rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 transition hover:border-[rgba(57,231,172,0.25)] hover:bg-[#28313d]"
           >
-            <h3 className="text-base font-semibold text-[#f0f0f0]">
+            <h3 className="text-base font-semibold text-[#ffffff]">
               {team.name ?? "Unnamed team"}
             </h3>
-            <p className="mt-1 text-xs text-[#555]">Team ID: {team.id_team}</p>
+            <p className="mt-1 text-xs text-[#c3ceda]">Team ID: {team.id_team}</p>
           </Link>
         ))}
       </div>

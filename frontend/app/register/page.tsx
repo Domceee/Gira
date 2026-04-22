@@ -35,13 +35,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080808] px-6 py-10 text-[#f0f0f0]">
+    <main className="min-h-screen bg-[#171c24] px-6 py-10 text-[#ffffff]">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-7xl items-center justify-center">
-        <section className="w-full max-w-xl rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-8">
+        <section className="w-full max-w-xl rounded-xl border border-[#7a8798] bg-[#1f2630] p-8">
           <header className="mb-6">
-            <p className="mb-2 text-[#39ff14] text-xs font-bold uppercase tracking-widest">Gira</p>
-            <h1 className="text-2xl font-bold text-[#f0f0f0]">Create account</h1>
-            <p className="mt-1 text-sm text-[#555]">Join Gira — it takes less than a minute.</p>
+            <p className="mb-2 text-[#39e7ac] text-xs font-bold uppercase tracking-widest">Gira</p>
+            <h1 className="text-2xl font-bold text-[#ffffff]">Create account</h1>
+            <p className="mt-1 text-sm text-[#c3ceda]">Join Gira — it takes less than a minute.</p>
           </header>
 
           <form onSubmit={onSubmit} className="space-y-4">
@@ -57,18 +57,18 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-4 py-3 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-4 py-3 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create account"}
             </button>
 
             {error && <div className="rounded-lg border border-[#ff4040]/30 bg-[#ff4040]/08 px-4 py-3 text-sm text-[#ff8080]">{error}</div>}
-            {ok && <div className="rounded-lg border border-[rgba(57,255,20,0.2)] bg-[rgba(57,255,20,0.06)] px-4 py-3 text-sm text-[#39ff14]">Registration successful! Redirecting...</div>}
+            {ok && <div className="rounded-lg border border-[rgba(57,231,172,0.25)] bg-[rgba(46,230,166,0.10)] px-4 py-3 text-sm text-[#39e7ac]">Registration successful! Redirecting...</div>}
           </form>
 
-          <footer className="mt-6 text-sm text-[#555]">
+          <footer className="mt-6 text-sm text-[#c3ceda]">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-[#39ff14] transition hover:opacity-80">Log in</Link>
+            <Link href="/login" className="font-semibold text-[#39e7ac] transition hover:opacity-80">Log in</Link>
           </footer>
         </section>
       </div>
@@ -79,7 +79,7 @@ export default function RegisterPage() {
 function Field(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; required?: boolean }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
         {props.label}{props.required ? " *" : ""}
       </span>
       <input
@@ -88,8 +88,9 @@ function Field(props: { label: string; value: string; onChange: (v: string) => v
         placeholder={props.placeholder}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
-        className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none transition placeholder:text-[#333] focus:border-[rgba(57,255,20,0.3)] focus:ring-2 focus:ring-[rgba(57,255,20,0.1)]"
+        className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none transition placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)] focus:ring-2 focus:ring-[rgba(57,231,172,0.16)]"
       />
     </label>
   );
 }
+

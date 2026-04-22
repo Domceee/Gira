@@ -68,8 +68,8 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
   return (
     <div className="p-6">
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#39ff14]">Backlog</p>
-        <h1 className="mt-1 text-2xl font-bold text-[#f0f0f0]">Project Backlog</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Backlog</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Project Backlog</h1>
       </div>
 
       {errorMessage ? (
@@ -82,40 +82,40 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
           <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
 
           <div className="mt-10">
-            <h3 className="mb-4 text-base font-bold text-[#f0f0f0]">Create New Task</h3>
-            <form action={createTask} className="space-y-4 rounded-xl border border-[#1e1e1e] bg-[#0d0d0d] p-6">
+            <h3 className="mb-4 text-base font-bold text-[#ffffff]">Create New Task</h3>
+            <form action={createTask} className="space-y-4 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
               <input type="hidden" name="fk_projectid_project" value={id} />
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Name</label>
-                <input name="name" required className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none placeholder:text-[#333] focus:border-[rgba(57,255,20,0.3)]" />
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</label>
+                <input name="name" required className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)]" />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Description</label>
-                <textarea name="description" rows={3} className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none placeholder:text-[#333] focus:border-[rgba(57,255,20,0.3)]" />
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Description</label>
+                <textarea name="description" rows={3} className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)]" />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Story Points</label>
-                  <input type="number" step="0.1" name="story_points" className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]" />
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Story Points</label>
+                  <input type="number" step="0.1" name="story_points" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Risk</label>
-                  <select name="risk" defaultValue="3" className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Risk</label>
+                  <select name="risk" defaultValue="3" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]">
                     {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#555]">Priority</label>
-                  <select name="priority" defaultValue="3" className="w-full rounded-lg border border-[#1e1e1e] bg-[#111] px-4 py-3 text-sm text-[#f0f0f0] outline-none focus:border-[rgba(57,255,20,0.3)]">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Priority</label>
+                  <select name="priority" defaultValue="3" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]">
                     {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                   </select>
                 </div>
               </div>
 
-              <button type="submit" className="rounded-lg border border-[rgba(57,255,20,0.3)] bg-[rgba(57,255,20,0.08)] px-5 py-2.5 text-sm font-bold text-[#39ff14] transition hover:bg-[rgba(57,255,20,0.14)]">
+              <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-5 py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]">
                 Create Task
               </button>
             </form>
