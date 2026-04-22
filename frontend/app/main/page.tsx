@@ -35,78 +35,61 @@ export default async function HomePage() {
   const news = await getNews();
 
   return (
-    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
+    <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-[1.3fr_0.9fr]">
 
           {/* PROJECTS */}
-          <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-
+          <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-3xl font-bold text-[#5c3b28]">Projects</h2>
-
+              <h2 className="text-2xl font-bold text-[#ffffff]">Projects</h2>
               <Link
                 href="/projectNew"
-                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#8b5e3c] bg-[#a47148] text-3xl font-bold text-white transition hover:scale-105 hover:bg-[#8b5e3c]"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#7a8798] bg-[#28313d] text-xl font-bold text-[#39e7ac] transition hover:bg-[#323d4b] hover:border-[rgba(57,231,172,0.40)]"
               >
                 +
               </Link>
             </div>
 
-            <div className="space-y-5">
-
+            <div className="space-y-3">
               {projects.length === 0 && (
-                <p className="text-[#6f4e37]">No projects yet.</p>
+                <p className="text-sm text-[#c3ceda]">No projects yet. Create one to get started.</p>
               )}
-
               {projects.map((project) => (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="block rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-5 transition hover:-translate-y-1 hover:shadow-lg"
+                  className="block rounded-lg border border-[#7a8798] bg-[#28313d] p-4 transition hover:border-[#7b8798] hover:bg-[#3a414d]"
                 >
-                  <h3 className="text-2xl font-semibold text-[#4b2e1f]">
-                    {project.name}
-                  </h3>
-
-                  <p className="mt-2 text-sm text-[#6f4e37]">
+                  <h3 className="font-semibold text-[#ffffff]">{project.name}</h3>
+                  <p className="mt-1 text-sm text-[#c3ceda]">
                     {project.description ?? "No description"}
                   </p>
                 </Link>
               ))}
-
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             <InvitationsBlock />
 
-            <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-              <h2 className="mb-6 text-3xl font-bold text-[#5c3b28]">News</h2>
-
-              <div className="space-y-4">
+            <aside className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+              <h2 className="mb-5 text-2xl font-bold text-[#ffffff]">News</h2>
+              <div className="space-y-3">
                 {news.length === 0 ? (
-                  <p className="text-[#6f4e37]">No notifications yet.</p>
+                  <p className="text-sm text-[#c3ceda]">No notifications yet.</p>
                 ) : (
                   news.map((item) => (
-                    <article
-                      key={item.id_news}
-                      className="rounded-xl border border-[#d8b692] bg-[#fdf7f2] p-4"
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-4">
-                        <h3 className="text-lg font-semibold text-[#7b4b2a]">
-                          {item.title}
-                        </h3>
-                        <span className="text-xs text-[#8b6b4a]">
+                    <article key={item.id_news} className="rounded-lg border border-[#7a8798] bg-[#28313d] p-4">
+                      <div className="mb-1.5 flex items-center justify-between gap-4">
+                        <h3 className="text-sm font-semibold text-[#ffffff]">{item.title}</h3>
+                        <span className="shrink-0 text-xs text-[#c3ceda]">
                           {new Date(item.created_at).toLocaleDateString()}
                         </span>
                       </div>
-
-                      <p className="text-sm leading-6 text-[#5a4335]">
-                        {item.message}
-                      </p>
+                      <p className="text-sm leading-6 text-[#d3dae3]">{item.message}</p>
                     </article>
                   ))
                 )}
@@ -119,3 +102,4 @@ export default async function HomePage() {
     </div>
   );
 }
+

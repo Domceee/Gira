@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict
 class ProjectCreate(BaseModel):
     name: str
     description: str | None = None
+    use_swimlane_board: bool = True
 
 
 class ProjectRead(BaseModel):
@@ -11,6 +12,7 @@ class ProjectRead(BaseModel):
     id: int
     name: str | None = None
     description: str | None = None
+    use_swimlane_board: bool = True
     is_owner: bool = False
     can_delete: bool = True
     delete_block_reason: str | None = None
@@ -40,3 +42,4 @@ class ProjectStatsRead(BaseModel):
 class ProjectUpdate(BaseModel):
     name: str
     description: str | None = None
+    use_swimlane_board: bool = True

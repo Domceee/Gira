@@ -1,28 +1,15 @@
-import Link from "next/link";
-import Navbar from "@/app/components/navbar";
-import DescriptionButton from "@/app/components/DescriptionButton";
-import AssignMenu from "@/app/components/tasks/AssignMenu";
 import BacklogDragBoard from "./BacklogDragBoard";
-import { assignTaskToTeam, createTask, deleteTask } from "./actions";
+import { createTask } from "./actions";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
-import { Trash2 } from 'lucide-react';
-import TaskActions from "@/app/components/tasks/TaskActions";
 
 const RiskAndPriority = [
   { id: 1, name: "Very low" },
   { id: 2, name: "Low" },
   { id: 3, name: "Medium" },
   { id: 4, name: "High" },
-  { id: 5, name: "Very high" }
+  { id: 5, name: "Very high" },
 ];
-
-function getRiskOrPriorityName(value: number | null) {
-  if (value === null) return "—";
-  const item = RiskAndPriority.find(r => r.id === value);
-  return item ? item.name : "Unknown";
-}
-
 
 type Task = {
   id_task: number;
@@ -34,22 +21,13 @@ type Task = {
   fk_teamid_team: number | null;
 };
 
-type TeamSummary = {
-  id_team: number;
-  name: string | null;
-};
-
-type TeamBacklog = {
-  team_id: number;
-  team_name: string | null;
-  tasks: Task[];
-};
+type TeamSummary = { id_team: number; name: string | null };
+type TeamBacklog = { team_id: number; team_name: string | null; tasks: Task[] };
 
 async function getTeamsWithTasks(projectId: string): Promise<TeamBacklog[]> {
   const res = await apiFetch(`/api/projects/${projectId}/teams`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch teams");
   const teams = (await res.json()) as TeamSummary[];
-
   return Promise.all(
     teams.map(async (team) => {
       const r = await apiFetch(`/api/projects/${projectId}/teams/${team.id_team}`, { cache: "no-store" });
@@ -71,7 +49,6 @@ async function getTasks(projectId: string): Promise<Task[]> {
   return res.json();
 }
 
-
 export default async function BacklogView({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth();
   const { id } = await params;
@@ -85,122 +62,66 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
     tasks = await getTasks(id);
     teams = await getTeamsWithTasks(id);
   } catch (error) {
-    errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Unable to load backlog data. Please refresh the page.";
+    errorMessage = error instanceof Error ? error.message : "Unable to load backlog data.";
   }
 
   return (
-    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
-      <Navbar />
+    <div className="p-6">
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Backlog</p>
+        <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Project Backlog</h1>
+      </div>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <section className="grid grid-cols-[260px_1fr] gap-8">
-          <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
+      {errorMessage ? (
+        <div className="rounded-xl border border-[#ff4040]/20 bg-[#ff4040]/05 p-6 text-[#ff8080]">
+          <h2 className="mb-2 text-lg font-bold">Unable to load backlog</h2>
+          <p className="text-sm">{errorMessage}</p>
+        </div>
+      ) : (
+        <>
+          <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
 
-            <div className="space-y-4">
-              <Link
-                href={`/projects/${id}`}
-                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
-              >
-                Back
-              </Link>
-            </div>
-          </aside>
-
-          <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-            {errorMessage ? (
-              <div className="rounded-2xl border border-red-300 bg-red-50 p-6 text-red-900">
-                <h2 className="mb-3 text-2xl font-bold">Unable to load backlog</h2>
-                <p>{errorMessage}</p>
-              </div>
-            ) : (
-              <>
-                <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
-
-                <h3 className="mb-4 mt-10 text-xl font-bold text-[#5c3b28]">Create New Task</h3>
-              </>
-            )}
-
-            <form
-              action={createTask}
-              className="space-y-4 rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6"
-            >
+          <div className="mt-10">
+            <h3 className="mb-4 text-base font-bold text-[#ffffff]">Create New Task</h3>
+            <form action={createTask} className="space-y-4 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
               <input type="hidden" name="fk_projectid_project" value={id} />
 
               <div>
-                <label className="mb-1 block font-medium">Name</label>
-                <input
-                  name="name"
-                  required
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</label>
+                <input name="name" required className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)]" />
               </div>
 
               <div>
-                <label className="mb-1 block font-medium">Description</label>
-                <textarea
-                  name="description"
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Description</label>
+                <textarea name="description" rows={3} className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none placeholder:text-[#93a0b1] focus:border-[rgba(57,231,172,0.40)]" />
               </div>
 
-              <div>
-                <label className="mb-1 block font-medium">Story Points</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  name="story_points"
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Story Points</label>
+                  <input type="number" step="0.1" name="story_points" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Risk</label>
+                  <select name="risk" defaultValue="3" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]">
+                    {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Priority</label>
+                  <select name="priority" defaultValue="3" className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]">
+                    {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1 block font-medium">Risk</label>
-                <select
-                  name="risk"
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                  defaultValue="3"
-                >
-                  <option value="" disabled>Select risk</option>
-                  {RiskAndPriority.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-
-              <div>
-                <label className="mb-1 block font-medium">Priority</label>
-                <select
-                  name="priority"
-                  className="w-full rounded-lg border border-[#c8a27a] p-3"
-                  defaultValue="3"
-                >
-                  <option value="" disabled>Select priority</option>
-                  {RiskAndPriority.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-
-              <button
-                type="submit"
-                className="rounded-lg bg-[#b08968] px-6 py-3 font-semibold text-white hover:bg-[#8c6a4f]"
-              >
+              <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-5 py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]">
                 Create Task
               </button>
             </form>
           </div>
-        </section>
-      </main>
+        </>
+      )}
     </div>
   );
 }

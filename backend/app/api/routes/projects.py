@@ -16,7 +16,7 @@ from app.schemas.project import (
     ProjectUpdate,
     StoryPointsByTeamRead,
 )
-from app.schemas.board import BoardTaskRead, ProjectBoardRead, SprintBoardRead
+from app.schemas.board import BoardMemberRead, BoardTaskRead, ProjectBoardRead, SprintBoardRead
 from app.schemas.ProjectMember import ProjectMembersAddRequest
 from app.models.team import Team
 from app.models.team_member import TeamMember
@@ -99,6 +99,7 @@ async def get_projects(
                 id=project.id_project,
                 name=project.name,
                 description=project.description,
+                use_swimlane_board=project.use_swimlane_board,
                 can_delete=can_delete,
                 delete_block_reason=delete_block_reason,
             )
@@ -133,6 +134,7 @@ async def get_project(
         id=project.id_project,
         name=project.name,
         description=project.description,
+        use_swimlane_board=project.use_swimlane_board,
         is_owner=is_owner,
         can_delete=can_delete,
         delete_block_reason=delete_block_reason,
@@ -216,6 +218,13 @@ async def get_project_board(
     await get_project_membership_or_404(project_id, current_user.id_user, db)
     await sync_project_sprint_statuses(project_id, db)
 
+    project_result = await db.execute(
+        select(Project).where(Project.id_project == project_id)
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     sprint_result = await db.execute(
         select(Sprint, Team)
         .join(Team, Team.id_team == Sprint.fk_teamid_team)
@@ -229,12 +238,55 @@ async def get_project_board(
 
     boards: list[SprintBoardRead] = []
     for sprint, team in sprint_rows:
+        member_result = await db.execute(
+            select(TeamMember, User)
+            .join(User, User.id_user == TeamMember.fk_userid_user)
+            .where(TeamMember.fk_teamid_team == team.id_team)
+            .order_by(User.name.asc(), TeamMember.id_team_member.asc())
+        )
+        members = [
+            BoardMemberRead(
+                team_member_id=team_member.id_team_member,
+                user_id=user.id_user,
+                name=user.name,
+            )
+            for team_member, user in member_result.all()
+        ]
+
         task_result = await db.execute(
-            select(Task)
+            select(Task, TeamMember, User)
+            .outerjoin(
+                TeamMember,
+                TeamMember.id_team_member == Task.fk_team_memberid_team_member,
+            )
+            .outerjoin(
+                User,
+                User.id_user == TeamMember.fk_userid_user,
+            )
             .where(Task.fk_sprintid_sprint == sprint.id_sprint)
             .order_by(Task.workflow_status.asc(), Task.board_order.asc(), Task.id_task.asc())
         )
-        tasks = task_result.scalars().all()
+        task_rows = task_result.all()
+
+        tasks: list[BoardTaskRead] = []
+        for task, team_member, assignee in task_rows:
+            tasks.append(
+                BoardTaskRead(
+                    id_task=task.id_task,
+                    name=task.name,
+                    description=task.description,
+                    story_points=task.story_points,
+                    risk=task.risk,
+                    priority=task.priority,
+                    fk_teamid_team=task.fk_teamid_team,
+                    fk_sprintid_sprint=task.fk_sprintid_sprint,
+                    workflow_status=task.workflow_status,
+                    board_order=task.board_order,
+                    fk_team_memberid_team_member=task.fk_team_memberid_team_member,
+                    assignee_user_id=assignee.id_user if assignee is not None else None,
+                    assignee_name=assignee.name if assignee is not None else None,
+                )
+            )
 
         boards.append(
             SprintBoardRead(
@@ -243,12 +295,14 @@ async def get_project_board(
                 team_name=team.name,
                 start_date=sprint.start_date,
                 end_date=sprint.end_date,
-                tasks=[BoardTaskRead.model_validate(task) for task in tasks],
+                members=members,
+                tasks=tasks,
             )
         )
 
     return ProjectBoardRead(
         project_id=project_id,
+        use_swimlane_board=project.use_swimlane_board,
         boards=boards,
     )
 
@@ -268,6 +322,7 @@ async def create_project(
     project = Project(
         name=name,
         description=description,
+        use_swimlane_board=payload.use_swimlane_board,
     )
     db.add(project)
     await db.flush()
@@ -295,6 +350,7 @@ async def create_project(
         id=project.id_project,
         name=project.name,
         description=project.description,
+        use_swimlane_board=project.use_swimlane_board,
         can_delete=True,
     )
 
@@ -321,6 +377,7 @@ async def update_project(
 
     project.name = name
     project.description = payload.description.strip() if payload.description else None
+    project.use_swimlane_board = payload.use_swimlane_board
 
     await db.commit()
     await db.refresh(project)
@@ -330,6 +387,7 @@ async def update_project(
         id=project.id_project,
         name=project.name,
         description=project.description,
+        use_swimlane_board=project.use_swimlane_board,
         is_owner=True,
         can_delete=can_delete,
         delete_block_reason=delete_block_reason,

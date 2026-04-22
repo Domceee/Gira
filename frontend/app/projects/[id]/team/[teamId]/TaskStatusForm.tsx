@@ -1,7 +1,7 @@
 "use client";
 
 import { updateTaskStatus } from "./actions";
-import { useTransition, useState, useEffect } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 export default function TaskStatusForm({
@@ -18,23 +18,7 @@ export default function TaskStatusForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // Local state for the select value
-  const [value, setValue] = useState(defaultValue);
-
-  
-  useEffect(() => {
-    console.log("Raw defaultValue:", JSON.stringify(defaultValue));
-    const normalized = defaultValue.trim().toUpperCase();
-    console.log("Task", taskId, "defaultValue from parent:", normalized);
-    setValue(normalized);
-  }, [defaultValue]);
-
   function handleSubmit(formData: FormData) {
-    const newStatus = formData.get("workflow_status") as string;
-
-    // Optimistic update
-    setValue(newStatus);
-
     startTransition(async () => {
       await updateTaskStatus(formData);
       router.refresh();
@@ -49,9 +33,8 @@ export default function TaskStatusForm({
 
       <select
         name="workflow_status"
-        className="rounded-lg border border-[#c8a27a] bg-white p-2"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-[#ffffff] outline-none"
+        defaultValue={defaultValue.trim().toUpperCase()}
       >
         <option value="TODO">To Do</option>
         <option value="IN_PROGRESS">In Progress</option>
@@ -62,7 +45,7 @@ export default function TaskStatusForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-[#b08968] px-3 py-2 text-white hover:bg-[#8c6a4f] disabled:opacity-50"
+        className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-3 py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
       >
         {isPending ? "Saving..." : "Save"}
       </button>

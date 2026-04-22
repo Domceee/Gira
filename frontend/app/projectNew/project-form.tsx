@@ -17,8 +17,8 @@ export default function NewProjectForm() {
     setError("");
 
     if (!name.trim() || [".", "..", "..."].includes(name.trim())) {
-    setError("Please enter a valid project name.");
-    return;
+      setError("Please enter a valid project name.");
+      return;
     }
 
     try {
@@ -50,10 +50,7 @@ export default function NewProjectForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label
-          htmlFor="name"
-          className="mb-2 block text-sm font-semibold text-[#4b2e1f]"
-        >
+        <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
           Project name
         </label>
         <input
@@ -62,15 +59,12 @@ export default function NewProjectForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter project name"
-          className="w-full rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-[#3e2a1f] outline-none transition focus:border-[#8b5e3c] focus:ring-2 focus:ring-[#d8b692]"
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]"
         />
       </div>
 
       <div>
-        <label
-          htmlFor="description"
-          className="mb-2 block text-sm font-semibold text-[#4b2e1f]"
-        >
+        <label htmlFor="description" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
           Description
         </label>
         <textarea
@@ -79,12 +73,12 @@ export default function NewProjectForm() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter project description"
           rows={5}
-          className="w-full rounded-xl border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-[#3e2a1f] outline-none transition focus:border-[#8b5e3c] focus:ring-2 focus:ring-[#d8b692]"
+          className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]"
         />
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-4 py-3 text-sm text-[#ff8080]">
           {error}
         </p>
       )}
@@ -93,7 +87,7 @@ export default function NewProjectForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl bg-[#8b5e3c] px-6 py-3 font-semibold text-white transition hover:bg-[#734c30] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-6 py-3 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
         >
           {submitting ? "Creating..." : "Create Project"}
         </button>
@@ -101,7 +95,7 @@ export default function NewProjectForm() {
         <button
           type="button"
           onClick={() => router.push("/main")}
-          className="rounded-xl border border-[#8b5e3c] px-6 py-3 font-semibold text-[#8b5e3c] transition hover:bg-[#f3e4d6]"
+          className="rounded-lg border border-[#7a8798] px-6 py-3 text-sm font-semibold text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
         >
           Cancel
         </button>
@@ -109,3 +103,4 @@ export default function NewProjectForm() {
     </form>
   );
 }
+

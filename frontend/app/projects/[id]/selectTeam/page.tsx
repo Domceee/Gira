@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Navbar from "@/app/components/navbar";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 
@@ -48,14 +47,13 @@ async function getCurrentUser() {
 export default async function SelectTeamPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth();
   const { id } = await params;
-  
+
   const project = await getProject(id);
   const teams = await getTeams(id);
   const currentUser = await getCurrentUser();
 
   let visibleTeams = teams;
 
-  // If user is not the owner, only show teams they are a member of
   if (!project.is_owner) {
     const teamsWithUserMembership = await Promise.all(
       teams.map(async (team) => {
@@ -70,49 +68,32 @@ export default async function SelectTeamPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="min-h-screen bg-[#f5ede3] text-[#3e2a1f]">
-      <Navbar />
+    <div className="p-6">
+      <div className="mb-6 flex items-center gap-3">
+        <Link href={`/projects/${id}`} className="text-xs text-[#c3ceda] hover:text-[#ffffff] transition-colors">
+          ← Back
+        </Link>
+        <h1 className="text-xl font-bold text-[#ffffff]">Select a Team</h1>
+      </div>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <section className="grid grid-cols-[260px_1fr] gap-8">
-          <aside className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-6 shadow-md">
-            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Menu</h2>
+      {visibleTeams.length === 0 && (
+        <p className="text-sm text-[#c3ceda]">No teams found for this project.</p>
+      )}
 
-            <div className="space-y-4">
-              <Link
-                href={`/projects/${id}`}
-                className="block w-full rounded-lg border border-[#c8a27a] bg-[#fdf7f2] px-4 py-3 text-left font-medium text-[#4b2e1f] transition hover:-translate-y-1 hover:shadow"
-              >
-                Back
-              </Link>
-            </div>
-          </aside>
-
-          <div className="rounded-2xl border border-[#b08968] bg-[#fffaf5] p-8 shadow-md">
-            <h2 className="mb-6 text-2xl font-bold text-[#5c3b28]">Select a Team</h2>
-
-            {visibleTeams.length === 0 && (
-              <p className="text-[#6f4e37]">No teams found for this project.</p>
-            )}
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {visibleTeams.map((team) => (
-                <Link
-                  key={team.id_team}
-                  href={`/projects/${id}/team/${team.id_team}`}
-                  className="block rounded-xl border border-[#c8a27a] bg-[#fdf7f2] p-6 shadow transition hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <h3 className="mb-2 text-xl font-semibold text-[#4b2e1f]">
-                    {team.name ?? "Unnamed team"}
-                  </h3>
-
-                  <p className="text-[#6f4e37]">Team ID: {team.id_team}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {visibleTeams.map((team) => (
+          <Link
+            key={team.id_team}
+            href={`/projects/${id}/team/${team.id_team}`}
+            className="block rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 transition hover:border-[rgba(57,231,172,0.25)] hover:bg-[#28313d]"
+          >
+            <h3 className="text-base font-semibold text-[#ffffff]">
+              {team.name ?? "Unnamed team"}
+            </h3>
+            <p className="mt-1 text-xs text-[#c3ceda]">Team ID: {team.id_team}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
