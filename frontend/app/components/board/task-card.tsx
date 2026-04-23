@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import TaskDetailsModal from "@/app/components/tasks/TaskDetailsModal";
 
 const RISK_AND_PRIORITY_LABELS: Record<number, string> = {
   1: "Very low", 2: "Low", 3: "Medium", 4: "High", 5: "Very high",
@@ -19,12 +20,17 @@ type TaskCardProps = {
     story_points: number | null;
     risk: number | null;
     priority: number | null;
+    fk_team_memberid_team_member?: number | null;
   };
+  members?: {
+    id_team_member: number;
+    name: string;
+  }[];
   onDragStart?: (taskId: number) => void;
   onDragEnd?: () => void;
 };
 
-export default function TaskCard({ task, onDragStart, onDragEnd }: TaskCardProps) {
+export default function TaskCard({ task, members, onDragStart, onDragEnd }: TaskCardProps) {
   const [open, setOpen] = useState(false);
   const dragStartedRef = useRef(false);
 
@@ -55,30 +61,7 @@ export default function TaskCard({ task, onDragStart, onDragEnd }: TaskCardProps
       </article>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-xl rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Task Details</p>
-                <h3 className="mt-1.5 text-xl font-bold text-[#ffffff]">{task.name ?? "Untitled task"}</h3>
-              </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
-                Close
-              </button>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded border border-[#667386] bg-[#28313d] px-2.5 py-1 text-xs text-[#c3ceda]">{task.story_points ?? 0} pts</span>
-              <span className="rounded border border-[#667386] bg-[#28313d] px-2.5 py-1 text-xs text-[#c3ceda]">Risk: {getRiskOrPriorityLabel(task.risk)}</span>
-              <span className="rounded border border-[#667386] bg-[#28313d] px-2.5 py-1 text-xs text-[#c3ceda]">Priority: {getRiskOrPriorityLabel(task.priority)}</span>
-            </div>
-            <div className="mt-5 rounded-lg border border-[#667386] bg-[#28313d] p-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#c3ceda]">Description</p>
-              <p className="mt-2.5 whitespace-pre-wrap text-sm leading-6 text-[#edf3fb]">
-                {task.description?.trim() || "No description provided."}
-              </p>
-            </div>
-          </div>
-        </div>
+        <TaskDetailsModal task={task} members={members} onClose={() => setOpen(false)} />
       )}
     </>
   );

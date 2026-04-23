@@ -29,6 +29,8 @@ class TaskRead(BaseModel):
     fk_team_memberid_team_member: int | None
     workflow_status: TaskWorkflowStatus
     board_order: int
+    can_delete: bool = True
+    delete_block_reason: str | None = None
     model_config = {
         "from_attributes": True 
     }

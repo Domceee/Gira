@@ -123,6 +123,8 @@ class TestDeleteTask:
             mock_db.execute.side_effect = [
                 make_execute_result(scalar=mock_task),
                 make_execute_result(scalar=mock_member),
+                make_execute_result(scalar=None),
+                make_execute_result(scalar=None),
             ]
 
         with when("the delete endpoint is called"):
@@ -157,6 +159,24 @@ class TestDeleteTask:
 
         with then("404 via the project-not-found path"):
             assert_that(response.status_code, equal_to(404))
+
+    async def test_delete_task_with_sprint_history_returns_400(self, client, mock_db):
+        with given("the task exists but has sprint history"):
+            mock_task = _make_mock_task(task_id=10, project_id=1)
+            mock_member = _make_mock_member(project_id=1)
+            mock_db.execute.side_effect = [
+                make_execute_result(scalar=mock_task),
+                make_execute_result(scalar=mock_member),
+                make_execute_result(scalar=1),
+                make_execute_result(scalar=None),
+            ]
+
+        with when("the delete endpoint is called"):
+            response = await client.delete("/api/tasks/10")
+
+        with then("the server rejects deletion with a clear reason"):
+            assert_that(response.status_code, equal_to(400))
+            assert_that(response.json()["detail"], contains_string("sprint history"))
 
 
 class TestAssignTeam:

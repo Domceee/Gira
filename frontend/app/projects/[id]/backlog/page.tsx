@@ -19,6 +19,8 @@ type Task = {
   risk: number | null;
   priority: number | null;
   fk_teamid_team: number | null;
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type TeamSummary = { id_team: number; name: string | null };

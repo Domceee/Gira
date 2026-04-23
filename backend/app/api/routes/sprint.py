@@ -28,6 +28,7 @@ from app.services.sprint_burndown import (
     summarize_sprint_tasks,
 )
 from app.services.sprint_status import sync_team_sprint_statuses
+from app.services.task_delete import get_task_delete_state
 from app.schemas.task import TaskRead
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -60,16 +61,21 @@ async def get_sprints(
         for t in tasks:
             await db.refresh(t)
 
+        task_reads = []
+        for task in tasks:
+            can_delete, delete_block_reason = await get_task_delete_state(task, db)
+            task_read = TaskRead.model_validate(task)
+            task_read.can_delete = can_delete
+            task_read.delete_block_reason = delete_block_reason
+            task_reads.append(task_read.model_dump())
+
         output.append(
             {
                 "id_sprint": sprint.id_sprint,
                 "start_date": sprint.start_date,
                 "end_date": sprint.end_date,
                 "status": sprint.status,
-                "tasks": [
-                    TaskRead.model_validate(t).model_dump()
-                    for t in tasks
-                ],
+                "tasks": task_reads,
             }
         )
 

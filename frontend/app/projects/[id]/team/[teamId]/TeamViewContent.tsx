@@ -1,4 +1,3 @@
-import DescriptionButton from "@/app/components/DescriptionButton";
 import Link from "next/link";
 import { CalendarX } from "lucide-react";
 import { createSprint, assignTaskToSprint, closeSprint } from "./actions";
@@ -6,7 +5,7 @@ import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
-import AssignMemberForm from "./AssignMemberForm";
+import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -20,6 +19,8 @@ type Task = {
   fk_sprintid_sprint: number | null;
   fk_team_memberid_team_member: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+  can_delete?: boolean;
+  delete_block_reason?: string | null;
 };
 
 type TeamMember = {
@@ -56,7 +57,7 @@ function formatDate(d: string) { return d.split("T")[0]; }
 
 const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#c3ceda] bg-[#28313d]";
 const tdClass = "p-3 text-sm text-[#edf3fb]";
-const trClass = "border-b border-[#667386] hover:bg-[#28313d] transition-colors";
+const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
 
 export default function TeamViewContent({ team, projectId, teamId, activeSprints, plannedSprints, endedSprints }: {
   team: TeamBacklog;
@@ -67,6 +68,12 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   endedSprints: Sprint[];
 }) {
   const backlogTasks = team.tasks.filter((t) => t.fk_sprintid_sprint === null);
+  const taskModalMembers = team.team_members.map((member) => ({
+    id_team_member: member.id_team_member,
+    name: member.user.name,
+  }));
+  const taskNameClass = "max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]";
+  const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
 
   return (
     <div className="space-y-8">
@@ -79,15 +86,15 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               <th className={thClass}>Name</th><th className={thClass}>Desc</th>
               <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
               <th className={thClass}>Priority</th><th className={thClass}>Sprint</th>
-              <th className={thClass}>Member</th><th className={thClass}></th>
+              <th className={`${thClass} text-right`}></th>
             </tr></thead>
             <tbody>
               {backlogTasks.length === 0
-                ? <tr><td colSpan={8} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in backlog.</td></tr>
+                ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in backlog.</td></tr>
                 : backlogTasks.map((task) => (
-                  <tr key={task.id_task} className={trClass}>
-                    <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
-                    <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                  <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                    <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                    <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                     <td className={tdClass}>{task.story_points ?? "—"}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
@@ -105,9 +112,8 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                         <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
                       </form>
                     </td>
-                    <td className={tdClass}><AssignMemberForm taskId={task.id_task} teamId={String(teamId)} projectId={projectId} teamMembers={team.team_members} defaultValue={task.fk_team_memberid_team_member} /></td>
-                    <td className={tdClass}><TaskActions taskId={task.id_task} projectId={projectId} name={task.name} description={task.description} story_points={task.story_points} risk={task.risk} priority={task.priority} /></td>
-                  </tr>
+                    <td className={`${tdClass} text-right`}><TaskActions taskId={task.id_task} canDelete={task.can_delete} /></td>
+                  </TaskDetailsTrigger>
                 ))}
             </tbody>
           </table>
@@ -144,20 +150,19 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 <thead><tr>
                   <th className={thClass}>Name</th><th className={thClass}>Desc</th>
                   <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                  <th className={thClass}>Priority</th><th className={thClass}>Member</th>
-                  <th className={thClass}>Status</th><th className={thClass}>Sprint</th>
+                  <th className={thClass}>Priority</th><th className={thClass}>Status</th>
+                  <th className={thClass}>Sprint</th>
                 </tr></thead>
                 <tbody>
                   {sprint.tasks.length === 0
-                    ? <tr><td colSpan={8} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
+                    ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
                     : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <tr key={task.id_task} className={trClass}>
-                        <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
-                        <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                      <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                        <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                        <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                         <td className={tdClass}>{task.story_points ?? "—"}</td>
                         <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                         <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                        <td className={tdClass}><AssignMemberForm taskId={task.id_task} teamId={String(teamId)} projectId={projectId} teamMembers={team.team_members} defaultValue={task.fk_team_memberid_team_member} /></td>
                         <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
                         <td className={tdClass}>
                           <form action={assignTaskToSprint} className="flex gap-2 items-center">
@@ -173,7 +178,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                             <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
                           </form>
                         </td>
-                      </tr>
+                      </TaskDetailsTrigger>
                     ))}
                 </tbody>
               </table>
@@ -202,20 +207,19 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 <thead><tr>
                   <th className={thClass}>Name</th><th className={thClass}>Desc</th>
                   <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                  <th className={thClass}>Priority</th><th className={thClass}>Member</th>
-                  <th className={thClass}>Status</th><th className={thClass}>Sprint</th>
+                  <th className={thClass}>Priority</th><th className={thClass}>Status</th>
+                  <th className={thClass}>Sprint</th>
                 </tr></thead>
                 <tbody>
                   {sprint.tasks.length === 0
-                    ? <tr><td colSpan={8} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
+                    ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
                     : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <tr key={task.id_task} className={trClass}>
-                        <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
-                        <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                      <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                        <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                        <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                         <td className={tdClass}>{task.story_points ?? "—"}</td>
                         <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                         <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                        <td className={tdClass}><AssignMemberForm taskId={task.id_task} teamId={String(teamId)} projectId={projectId} teamMembers={team.team_members} defaultValue={task.fk_team_memberid_team_member} /></td>
                         <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
                         <td className={tdClass}>
                           <form action={assignTaskToSprint} className="flex gap-2 items-center">
@@ -231,7 +235,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                             <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
                           </form>
                         </td>
-                      </tr>
+                      </TaskDetailsTrigger>
                     ))}
                 </tbody>
               </table>
@@ -274,14 +278,14 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                     : sprint.tasks.map((task) => {
                       const member = team.team_members.find((m) => m.id_team_member === task.fk_team_memberid_team_member);
                       return (
-                        <tr key={task.id_task} className={trClass}>
-                          <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words">{task.name ?? "—"}</div></td>
-                          <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                        <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                          <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                          <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                           <td className={tdClass}>{task.story_points ?? "—"}</td>
                           <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                           <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
                           <td className={tdClass}>{member ? member.user.name : "Unassigned"}</td>
-                        </tr>
+                        </TaskDetailsTrigger>
                       );
                     })}
                 </tbody>

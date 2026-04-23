@@ -7,12 +7,19 @@ type Task = {
   story_points: number | null;
   risk: number | null;
   priority: number | null;
+  fk_team_memberid_team_member: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   board_order: number;
 };
 
+type Member = {
+  id_team_member: number;
+  name: string;
+};
+
 type KanbanColumnProps = {
   title: string;
+  members: Member[];
   tasks: Task[];
   isDropTarget?: boolean;
   onDropTask?: () => void;
@@ -30,7 +37,7 @@ const STATUS_ACCENT: Record<string, string> = {
 };
 
 export default function KanbanColumn({
-  title, tasks, isDropTarget = false,
+  title, members, tasks, isDropTarget = false,
   onDropTask, onDragOverColumn, onDragLeaveColumn, onDragStartTask, onDragEndTask,
 }: KanbanColumnProps) {
   const statusKey = title.replace(/ /g, "_").toUpperCase();
@@ -60,7 +67,7 @@ export default function KanbanColumn({
           </div>
         ) : (
           tasks.map((task) => (
-            <TaskCard key={task.id_task} task={task} onDragStart={onDragStartTask} onDragEnd={onDragEndTask} />
+            <TaskCard key={task.id_task} task={task} members={members} onDragStart={onDragStartTask} onDragEnd={onDragEndTask} />
           ))
         )}
       </div>

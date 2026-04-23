@@ -24,8 +24,10 @@ from app.models.task import Task
 from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
+from app.schemas.task import TaskRead
 from app.models.task_workflow_status import TaskWorkflowStatus
 from app.services.sprint_status import sync_project_sprint_statuses
+from app.services.task_delete import get_task_delete_state
 from app.api.routes.auth import get_current_user  
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -560,10 +562,18 @@ async def get_team_backlog(
         for tm, user in result.all()
     ]
 
+    task_output = []
+    for task in tasks:
+        can_delete, delete_block_reason = await get_task_delete_state(task, db)
+        task_read = TaskRead.model_validate(task).model_dump()
+        task_read["can_delete"] = can_delete
+        task_read["delete_block_reason"] = delete_block_reason
+        task_output.append(task_read)
+
     return {
         "team_id": team.id_team,
         "team_name": team.name,
-        "tasks": tasks,
+        "tasks": task_output,
         "team_members": members,
     }
 

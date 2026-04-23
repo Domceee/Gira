@@ -39,6 +39,11 @@ function formatDate(d: string) {
 }
 
 export default function SprintBoardSection({ board, useSwimlaneBoard }: SprintBoardSectionProps) {
+  const assignmentMembers = board.members.map((member) => ({
+    id_team_member: member.team_member_id,
+    name: member.name,
+  }));
+
   return (
     <section className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
       <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -55,7 +60,7 @@ export default function SprintBoardSection({ board, useSwimlaneBoard }: SprintBo
       {useSwimlaneBoard ? (
         <SwimlaneBoard members={board.members} tasks={board.tasks} />
       ) : (
-        <KanbanBoard tasks={board.tasks} />
+        <KanbanBoard members={assignmentMembers} tasks={board.tasks} />
       )}
     </section>
   );

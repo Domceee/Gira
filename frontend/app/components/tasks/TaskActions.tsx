@@ -1,169 +1,92 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { apiFetch } from "@/app/lib/api";
 
 type TaskActionsProps = {
   taskId: number;
-  projectId: string;
-  name: string;
-  description: string | null;
-  story_points: number | null;
-  risk: number | null;
-  priority: number | null;
+  canDelete?: boolean;
 };
 
-const RiskAndPriority = [
-  { id: 1, name: "Very low" }, { id: 2, name: "Low" }, { id: 3, name: "Medium" },
-  { id: 4, name: "High" }, { id: 5, name: "Very high" },
-];
-
-let currentOpenTaskId: number | null = null;
-const closeMenuCallbacks = new Map<number, () => void>();
-
-export default function TaskActions({ taskId, projectId, name, description, story_points, risk, priority }: TaskActionsProps) {
+export default function TaskActions({ taskId, canDelete = true }: TaskActionsProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  if (!canDelete) {
+    return null;
+  }
 
   const handleDelete = async () => {
     setDeleteError(null);
     setIsDeleting(true);
+
     try {
       const response = await apiFetch(`/api/tasks/${taskId}`, { method: "DELETE" });
-      if (!response.ok) { setDeleteError("Failed to delete task."); return; }
-      setOpen(false);
+      if (!response.ok) {
+        setDeleteError("Failed to delete task.");
+        return;
+      }
+
+      setConfirmingDelete(false);
       router.refresh();
-    } catch { setDeleteError("Failed to delete task. Please try again."); }
-    finally { setIsDeleting(false); }
-  };
-
-  const handleEdit = async (formData: FormData) => {
-    setEditError(null);
-    setIsEditing(true);
-    try {
-      const payload = {
-        name: formData.get("name"),
-        description: formData.get("description"),
-        story_points: formData.get("story_points") ? Number(formData.get("story_points")) : null,
-        risk: formData.get("risk") ? Number(formData.get("risk")) : null,
-        priority: formData.get("priority") ? Number(formData.get("priority")) : null,
-      };
-      const response = await apiFetch(`/api/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify(payload) });
-      if (!response.ok) { setEditError("Failed to edit task."); return; }
-      setEditing(false);
-      setOpen(false);
-      router.refresh();
-    } catch { setEditError("Failed to edit task. Please try again."); }
-    finally { setIsEditing(false); }
-  };
-
-  useEffect(() => {
-    closeMenuCallbacks.set(taskId, () => setOpen(false));
-    return () => { closeMenuCallbacks.delete(taskId); if (currentOpenTaskId === taskId) currentOpenTaskId = null; };
-  }, [taskId]);
-
-  useEffect(() => {
-    if (open) currentOpenTaskId = taskId;
-    else if (currentOpenTaskId === taskId) currentOpenTaskId = null;
-  }, [open, taskId]);
-
-  useEffect(() => {
-    if (!open && !editing) return;
-    const handler = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) { setOpen(false); setEditing(false); }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open, editing]);
-
-  const handleToggle = () => {
-    if (editing) setEditing(false);
-    if (!open) {
-      if (currentOpenTaskId !== null && currentOpenTaskId !== taskId) closeMenuCallbacks.get(currentOpenTaskId)?.();
-      setOpen(true);
-      currentOpenTaskId = taskId;
-    } else {
-      setOpen(false);
-      if (currentOpenTaskId === taskId) currentOpenTaskId = null;
+    } catch {
+      setDeleteError("Failed to delete task. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block text-left overflow-visible">
-      <button type="button" onClick={handleToggle} className="rounded p-1.5 text-[#c3ceda] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
-        <MoreHorizontal size={16} />
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirmingDelete(true)}
+        disabled={isDeleting}
+        aria-label="Delete task"
+        title="Delete task"
+        className="inline-flex h-8 w-8 items-center justify-center rounded border border-[#ff4040]/20 bg-[#ff4040]/05 text-[#ff8080] transition hover:bg-[#ff4040]/10 hover:text-[#ffb0b0] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Trash2 size={16} aria-hidden="true" />
       </button>
 
-      {open && !editing && (
-        <div className="absolute right-0 top-full z-[9999] mt-1 w-44 overflow-hidden rounded-lg border border-[#7a8798] bg-[#28313d] shadow-xl">
-          <button type="button" onClick={() => { setOpen(false); setEditing(true); }}
-            className="w-full px-4 py-2.5 text-left text-sm text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
-            Edit
-          </button>
-          <button type="button" onClick={handleDelete} disabled={isDeleting}
-            className="w-full px-4 py-2.5 text-left text-sm text-[#ff8080] transition hover:bg-[#ff4040]/10 disabled:opacity-50">
-            {isDeleting ? "Deleting..." : "Delete"}
-          </button>
-          {deleteError && <p className="px-4 py-2 text-xs text-[#ff8080]">{deleteError}</p>}
-        </div>
-      )}
+      {confirmingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setConfirmingDelete(false)}>
+          <div
+            className="w-full max-w-sm rounded-xl border border-[#7a8798] bg-[#1f2630] p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-[#ffffff]">Delete task?</h3>
+            <p className="mt-2 text-sm leading-6 text-[#c3ceda]">
+              Are you sure you want to delete this task? This action cannot be undone.
+            </p>
 
-      {editing && (
-        <div className="absolute right-0 top-full z-[9999] mt-1 w-80 rounded-lg border border-[#7a8798] bg-[#28313d] p-4 shadow-xl">
-          <form action={handleEdit} className="space-y-3">
-            <input type="hidden" name="task_id" value={taskId} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</label>
-              <input name="name" required defaultValue={name} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Description</label>
-              <textarea name="description" defaultValue={description ?? ""} rows={3} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Story Points</label>
-                <input type="number" step="0.1" name="story_points" defaultValue={story_points ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none focus:border-[rgba(57,231,172,0.40)]" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Risk</label>
-                <select name="risk" defaultValue={risk ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none">
-                  <option value="" disabled>Select</option>
-                  {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Priority</label>
-              <select name="priority" defaultValue={priority ?? ""} className="w-full rounded-lg border border-[#7a8798] bg-[#1f2630] px-3 py-2 text-sm text-[#ffffff] outline-none">
-                <option value="" disabled>Select</option>
-                {RiskAndPriority.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button type="submit" disabled={isEditing}
-                className="flex-1 rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50">
-                {isEditing ? "Saving..." : "Save"}
-              </button>
-              <button type="button" onClick={() => setEditing(false)}
-                className="flex-1 rounded-lg border border-[#7a8798] py-2 text-sm text-[#edf3fb] transition hover:bg-[#323d4b]">
+            {deleteError && <p className="mt-3 text-sm text-[#ff8080]">{deleteError}</p>}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={isDeleting}
+                className="rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-sm text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] disabled:opacity-50"
+              >
                 Cancel
               </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-lg border border-[#ff4040]/30 bg-[#ff4040]/10 px-4 py-2 text-sm font-bold text-[#ff8080] transition hover:bg-[#ff4040]/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
             </div>
-            {editError && <p className="text-xs text-[#ff8080]">{editError}</p>}
-          </form>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
-

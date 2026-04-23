@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import DescriptionButton from "@/app/components/DescriptionButton";
 import AssignMenu from "@/app/components/tasks/AssignMenu";
 import TaskActions from "@/app/components/tasks/TaskActions";
+import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
 import { apiFetch } from "@/app/lib/api";
 
 type Task = {
@@ -15,6 +15,8 @@ type Task = {
   risk: number | null;
   priority: number | null;
   fk_teamid_team: number | null;
+  can_delete?: boolean;
+  delete_block_reason?: string | null;
 };
 
 type TeamBacklog = { team_id: number; team_name: string | null; tasks: Task[] };
@@ -40,6 +42,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
   const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const suppressNextRowClickRef = useRef(false);
 
   const assignTask = async (taskId: number, teamId: number | null) => {
     setError(null);
@@ -58,11 +61,24 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
   const handleDragStart = (e: DragEvent<HTMLTableRowElement>, taskId: number) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(taskId));
+    suppressNextRowClickRef.current = true;
     setDraggedTaskId(taskId);
     setActiveDropTarget(null);
   };
 
-  const handleDragEnd = () => { setDraggedTaskId(null); setActiveDropTarget(null); };
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setActiveDropTarget(null);
+    window.setTimeout(() => {
+      suppressNextRowClickRef.current = false;
+    }, 0);
+  };
+
+  const handleRowClick = (event: MouseEvent<HTMLTableRowElement>) => {
+    if (!suppressNextRowClickRef.current) return;
+    event.preventDefault();
+    suppressNextRowClickRef.current = false;
+  };
 
   const handleDragOverTarget = (e: DragEvent<HTMLDivElement>, targetKey: string) => {
     e.preventDefault();
@@ -81,7 +97,8 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
 
   const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#c3ceda]";
   const tdClass = "p-3 text-sm text-[#edf3fb]";
-  const trClass = "border-b border-[#667386] hover:bg-[#28313d] transition-colors";
+  const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
+  const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
 
   return (
     <>
@@ -94,22 +111,24 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
           <thead><tr>
             <th className={thClass}>Name</th><th className={thClass}>Description</th>
             <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-            <th className={thClass}>Priority</th><th className={thClass}>Actions</th>
+            <th className={thClass}>Priority</th><th className={`${thClass} text-right`}>Actions</th>
           </tr></thead>
           <tbody>
             {tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">No unassigned tasks.</td></tr>}
             {tasks.map((task) => (
-              <tr key={task.id_task} draggable onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
+              <TaskDetailsTrigger key={task.id_task} task={task} draggable onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
                 <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
-                <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                 <td className={tdClass}>{task.story_points ?? "—"}</td>
                 <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                 <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                <td className={tdClass}>
-                  <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
-                  <TaskActions taskId={task.id_task} projectId={projectId} name={task.name} description={task.description} story_points={task.story_points} risk={task.risk} priority={task.priority} />
+                <td className={`${tdClass} text-right`}>
+                  <div className="flex items-center justify-end gap-2">
+                    <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
+                    <TaskActions taskId={task.id_task} canDelete={task.can_delete} />
+                  </div>
                 </td>
-              </tr>
+              </TaskDetailsTrigger>
             ))}
           </tbody>
         </table>
@@ -126,28 +145,28 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
               <thead><tr>
                 <th className={thClass}>Name</th><th className={thClass}>Description</th>
                 <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                <th className={thClass}>Priority</th><th className={thClass}>Actions</th>
+                <th className={thClass}>Priority</th><th className={`${thClass} text-right`}>Actions</th>
               </tr></thead>
               <tbody>
                 {team.tasks.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">No tasks assigned.</td></tr>}
                 {team.tasks.map((task) => (
-                  <tr key={task.id_task} draggable onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
+                  <TaskDetailsTrigger key={task.id_task} task={task} draggable onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className={trClass}>
                     <td className={tdClass}><div className="max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]">{task.name ?? "—"}</div></td>
-                    <td className={tdClass}><DescriptionButton text={task.description} /></td>
+                    <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                     <td className={tdClass}>{task.story_points ?? "—"}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                    <td className={tdClass}>
-                      <div className="flex flex-wrap items-center gap-2">
+                    <td className={`${tdClass} text-right`}>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
                         <button type="button" disabled={isSaving} onClick={() => assignTask(task.id_task, null)}
                           className="rounded-lg border border-[#7a8798] px-2.5 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] disabled:opacity-50">
                           Unassign
                         </button>
-                        <TaskActions taskId={task.id_task} projectId={projectId} name={task.name} description={task.description} story_points={task.story_points} risk={task.risk} priority={task.priority} />
+                        <TaskActions taskId={task.id_task} canDelete={task.can_delete} />
                       </div>
                     </td>
-                  </tr>
+                  </TaskDetailsTrigger>
                 ))}
               </tbody>
             </table>
