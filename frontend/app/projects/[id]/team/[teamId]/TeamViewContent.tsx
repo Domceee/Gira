@@ -58,6 +58,7 @@ function formatDate(d: string) { return d.split("T")[0]; }
 const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#c3ceda] bg-[#28313d]";
 const tdClass = "p-3 text-sm text-[#edf3fb]";
 const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
+const taskTableClass = "w-full table-fixed border-collapse";
 
 export default function TeamViewContent({ team, projectId, teamId, activeSprints, plannedSprints, endedSprints }: {
   team: TeamBacklog;
@@ -74,6 +75,38 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   }));
   const taskNameClass = "max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]";
   const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
+  const backlogColumnGroup = (
+    <colgroup>
+      <col className="w-[18%]" />
+      <col className="w-[24%]" />
+      <col className="w-[7%]" />
+      <col className="w-[11%]" />
+      <col className="w-[11%]" />
+      <col className="w-[21%]" />
+      <col className="w-[8%]" />
+    </colgroup>
+  );
+  const sprintColumnGroup = (
+    <colgroup>
+      <col className="w-[18%]" />
+      <col className="w-[23%]" />
+      <col className="w-[7%]" />
+      <col className="w-[10%]" />
+      <col className="w-[10%]" />
+      <col className="w-[13%]" />
+      <col className="w-[19%]" />
+    </colgroup>
+  );
+  const endedSprintColumnGroup = (
+    <colgroup>
+      <col className="w-[20%]" />
+      <col className="w-[28%]" />
+      <col className="w-[8%]" />
+      <col className="w-[12%]" />
+      <col className="w-[12%]" />
+      <col className="w-[20%]" />
+    </colgroup>
+  );
 
   return (
     <div className="space-y-8">
@@ -81,7 +114,8 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
       <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
         <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Team Backlog</h2>
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+          <table className={taskTableClass}>
+            {backlogColumnGroup}
             <thead><tr>
               <th className={thClass}>Name</th><th className={thClass}>Desc</th>
               <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
@@ -146,7 +180,8 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className={taskTableClass}>
+                {sprintColumnGroup}
                 <thead><tr>
                   <th className={thClass}>Name</th><th className={thClass}>Desc</th>
                   <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
@@ -203,7 +238,8 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               </Link>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className={taskTableClass}>
+                {sprintColumnGroup}
                 <thead><tr>
                   <th className={thClass}>Name</th><th className={thClass}>Desc</th>
                   <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
@@ -266,7 +302,8 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               </Link>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className={taskTableClass}>
+                {endedSprintColumnGroup}
                 <thead><tr>
                   <th className={thClass}>Name</th><th className={thClass}>Desc</th>
                   <th className={thClass}>Pts</th><th className={thClass}>Risk</th>

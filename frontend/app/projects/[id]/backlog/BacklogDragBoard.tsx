@@ -2,7 +2,6 @@
 
 import { useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import AssignMenu from "@/app/components/tasks/AssignMenu";
 import TaskActions from "@/app/components/tasks/TaskActions";
 import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
 import { apiFetch } from "@/app/lib/api";
@@ -20,7 +19,7 @@ type Task = {
 };
 
 type TeamBacklog = { team_id: number; team_name: string | null; tasks: Task[] };
-type BacklogDragBoardProps = { projectId: string; tasks: Task[]; teams: TeamBacklog[] };
+type BacklogDragBoardProps = { tasks: Task[]; teams: TeamBacklog[] };
 
 const RiskAndPriority = [
   { id: 1, name: "Very low" }, { id: 2, name: "Low" }, { id: 3, name: "Medium" },
@@ -36,7 +35,7 @@ function getDropTargetKey(teamId: number | null) {
   return teamId === null ? "unassigned" : `team-${teamId}`;
 }
 
-export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDragBoardProps) {
+export default function BacklogDragBoard({ tasks, teams }: BacklogDragBoardProps) {
   const router = useRouter();
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
@@ -99,6 +98,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
   const tdClass = "p-3 text-sm text-[#edf3fb]";
   const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
   const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
+  const tableClass = "w-full table-fixed border-collapse";
 
   return (
     <>
@@ -107,7 +107,15 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
       {/* Unassigned */}
       <div className={sectionClass("unassigned")} onDragOver={(e) => handleDragOverTarget(e, "unassigned")} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, null)}>
         <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Unassigned Tasks</h2>
-        <table className="w-full border-collapse">
+        <table className={tableClass}>
+          <colgroup>
+            <col className="w-[22%]" />
+            <col className="w-[34%]" />
+            <col className="w-[8%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+          </colgroup>
           <thead><tr>
             <th className={thClass}>Name</th><th className={thClass}>Description</th>
             <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
@@ -123,8 +131,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
                 <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                 <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
                 <td className={`${tdClass} text-right`}>
-                  <div className="flex items-center justify-end gap-2">
-                    <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
+                  <div className="flex items-center justify-end">
                     <TaskActions taskId={task.id_task} canDelete={task.can_delete} />
                   </div>
                 </td>
@@ -141,7 +148,15 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
         return (
           <div key={team.team_id} className={`${sectionClass(targetKey)} mb-6`} onDragOver={(e) => handleDragOverTarget(e, targetKey)} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, team.team_id)}>
             <h3 className="mb-3 text-sm font-semibold text-[#ffffff]">{team.team_name ?? "Unnamed team"}</h3>
-            <table className="w-full border-collapse">
+            <table className={tableClass}>
+              <colgroup>
+                <col className="w-[22%]" />
+                <col className="w-[34%]" />
+                <col className="w-[8%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+              </colgroup>
               <thead><tr>
                 <th className={thClass}>Name</th><th className={thClass}>Description</th>
                 <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
@@ -157,12 +172,7 @@ export default function BacklogDragBoard({ projectId, tasks, teams }: BacklogDra
                     <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
                     <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
                     <td className={`${tdClass} text-right`}>
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <AssignMenu taskId={task.id_task} projectId={projectId} selectedTeamId={task.fk_teamid_team} teams={teams.map((t) => ({ team_id: t.team_id, team_name: t.team_name }))} />
-                        <button type="button" disabled={isSaving} onClick={() => assignTask(task.id_task, null)}
-                          className="rounded-lg border border-[#7a8798] px-2.5 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] disabled:opacity-50">
-                          Unassign
-                        </button>
+                      <div className="flex items-center justify-end">
                         <TaskActions taskId={task.id_task} canDelete={task.can_delete} />
                       </div>
                     </td>

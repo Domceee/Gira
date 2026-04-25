@@ -81,7 +81,7 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
         </div>
       ) : (
         <>
-          <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
+          <BacklogDragBoard tasks={tasks} teams={teams} />
 
           <div className="mt-10">
             <h3 className="mb-4 text-base font-bold text-[#ffffff]">Create New Task</h3>
