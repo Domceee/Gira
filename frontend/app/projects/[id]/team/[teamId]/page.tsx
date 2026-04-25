@@ -14,6 +14,8 @@ type Task = {
   fk_sprintid_sprint: number | null;
   fk_team_memberid_team_member: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type TeamMember = {

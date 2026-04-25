@@ -12,9 +12,11 @@ from app.services.news import create_news_for_users
 from app.schemas.project import (
     ProjectCreate,
     ProjectRead,
+    ProjectStatsTeamOptionRead,
     ProjectStatsRead,
     ProjectUpdate,
     StoryPointsByTeamRead,
+    TeamVelocitySprintRead,
 )
 from app.schemas.board import BoardMemberRead, BoardTaskRead, ProjectBoardRead, SprintBoardRead
 from app.schemas.ProjectMember import ProjectMembersAddRequest
@@ -23,9 +25,13 @@ from app.models.team_member import TeamMember
 from app.models.task import Task
 from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
+from app.models.sprint_task_event import SprintTaskEvent
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
+from app.schemas.task import TaskRead
 from app.models.task_workflow_status import TaskWorkflowStatus
+from app.services.sprint_burndown import build_fallback_events, summarize_sprint_tasks
 from app.services.sprint_status import sync_project_sprint_statuses
+from app.services.task_delete import get_task_delete_state
 from app.api.routes.auth import get_current_user  
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -144,6 +150,7 @@ async def get_project(
 @router.get("/{project_id}/stats", response_model=ProjectStatsRead)
 async def get_project_stats(
     project_id: int,
+    team_id: int | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -159,6 +166,18 @@ async def get_project_stats(
         .order_by(Team.id_team.asc())
     )
     teams = team_result.scalars().all()
+    team_options = [
+        ProjectStatsTeamOptionRead(
+            team_id=team.id_team,
+            label=team.name or f"Team {team.id_team}",
+        )
+        for team in teams
+    ]
+    selected_team = next((team for team in teams if team.id_team == team_id), None) if team_id is not None else None
+    if team_id is not None and selected_team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if selected_team is None and teams:
+        selected_team = teams[0]
 
     def story_points_for(items: list[Task]) -> float:
         return float(sum(task.story_points or 0 for task in items))
@@ -192,6 +211,44 @@ async def get_project_stats(
         )
     )
 
+    velocity_report: list[TeamVelocitySprintRead] = []
+    if selected_team is not None:
+        sprint_result = await db.execute(
+            select(Sprint)
+            .where(
+                Sprint.fk_teamid_team == selected_team.id_team,
+                Sprint.status == SprintStatus.COMPLETED.value,
+            )
+            .order_by(Sprint.end_date.desc(), Sprint.id_sprint.desc())
+        )
+        completed_sprints = list(reversed(sprint_result.scalars().all()[:7]))
+
+        for sprint in completed_sprints:
+            sprint_task_result = await db.execute(
+                select(Task).where(Task.fk_sprintid_sprint == sprint.id_sprint)
+            )
+            sprint_tasks = sprint_task_result.scalars().all()
+
+            event_result = await db.execute(
+                select(SprintTaskEvent)
+                .where(SprintTaskEvent.fk_sprintid_sprint == sprint.id_sprint)
+                .order_by(SprintTaskEvent.occurred_at.asc(), SprintTaskEvent.id_sprint_task_event.asc())
+            )
+            sprint_events = event_result.scalars().all()
+            if not sprint_events:
+                sprint_events = build_fallback_events(sprint_tasks, sprint.start_date, sprint.end_date)
+
+            summary = summarize_sprint_tasks(sprint_events, sprint_tasks)
+            velocity_report.append(
+                TeamVelocitySprintRead(
+                    sprint_id=sprint.id_sprint,
+                    start_date=sprint.start_date,
+                    end_date=sprint.end_date,
+                    committed_story_points=summary.committed_story_points,
+                    completed_story_points=summary.completed_story_points,
+                )
+            )
+
     return ProjectStatsRead(
         total_tasks=len(tasks),
         active_tasks=len(active_tasks),
@@ -206,6 +263,9 @@ async def get_project_stats(
         in_sprint_story_points=story_points_for(in_sprint_tasks),
         done_story_points=story_points_for(done_tasks),
         story_points_by_team=story_points_by_team,
+        teams=team_options,
+        selected_team_id=selected_team.id_team if selected_team is not None else None,
+        velocity_report=velocity_report,
     )
 
 
@@ -560,10 +620,18 @@ async def get_team_backlog(
         for tm, user in result.all()
     ]
 
+    task_output = []
+    for task in tasks:
+        can_delete, delete_block_reason = await get_task_delete_state(task, db)
+        task_read = TaskRead.model_validate(task).model_dump()
+        task_read["can_delete"] = can_delete
+        task_read["delete_block_reason"] = delete_block_reason
+        task_output.append(task_read)
+
     return {
         "team_id": team.id_team,
         "team_name": team.name,
-        "tasks": tasks,
+        "tasks": task_output,
         "team_members": members,
     }
 

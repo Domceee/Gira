@@ -21,6 +21,7 @@ from app.models.team_member import TeamMember
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.services.news import create_news_for_users
 from app.services.sprint_burndown import snapshot_story_points
+from app.services.task_delete import get_task_delete_state
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -116,7 +117,15 @@ async def get_tasks(
         )
 
     result = await db.execute(query)
-    return result.scalars().all()
+    tasks = result.scalars().all()
+    output: list[TaskRead] = []
+    for task in tasks:
+        can_delete, delete_block_reason = await get_task_delete_state(task, db)
+        task_read = TaskRead.model_validate(task)
+        task_read.can_delete = can_delete
+        task_read.delete_block_reason = delete_block_reason
+        output.append(task_read)
+    return output
 
 
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
@@ -458,6 +467,10 @@ async def delete_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     await get_project_membership_or_404(task.fk_projectid_project, current_user.id_user, db)
+
+    can_delete, delete_block_reason = await get_task_delete_state(task, db)
+    if not can_delete:
+        raise HTTPException(status_code=400, detail=delete_block_reason or "Task cannot be deleted")
 
     await db.delete(task)
     await db.commit()

@@ -19,6 +19,8 @@ type Task = {
   risk: number | null;
   priority: number | null;
   fk_teamid_team: number | null;
+  can_delete: boolean;
+  delete_block_reason: string | null;
 };
 
 type TeamSummary = { id_team: number; name: string | null };
@@ -79,7 +81,7 @@ export default async function BacklogView({ params }: { params: Promise<{ id: st
         </div>
       ) : (
         <>
-          <BacklogDragBoard projectId={id} tasks={tasks} teams={teams} />
+          <BacklogDragBoard tasks={tasks} teams={teams} />
 
           <div className="mt-10">
             <h3 className="mb-4 text-base font-bold text-[#ffffff]">Create New Task</h3>

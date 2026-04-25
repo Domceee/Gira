@@ -122,6 +122,10 @@ function getTeamMemberIdForLane(laneId: string) {
 
 export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
   const router = useRouter();
+  const assignmentMembers = members.map((member) => ({
+    id_team_member: member.team_member_id,
+    name: member.name,
+  }));
   const [boardTasks, setBoardTasks] = useState(tasks);
   const [expandedLanes, setExpandedLanes] = useState<Record<string, boolean>>({ unassigned: true });
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
@@ -316,6 +320,7 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
                               <TaskCard
                                 key={task.id_task}
                                 task={task}
+                                members={assignmentMembers}
                                 onDragStart={(taskId) => {
                                   if (!isSaving) {
                                     setMoveError(null);

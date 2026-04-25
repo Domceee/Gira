@@ -2,7 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from hamcrest import assert_that, equal_to, has_key, contains_string, has_length
+from datetime import datetime, timezone
 from app.models.task_workflow_status import TaskWorkflowStatus
+from app.models.sprint_status import SprintStatus
 
 from tests.conftest import make_execute_result, given, when, then
 
@@ -46,6 +48,21 @@ def _make_mock_task(
     task.workflow_status = status
     task.story_points = story_points
     return task
+
+
+def _make_mock_sprint(
+    sprint_id: int,
+    *,
+    team_id: int,
+    status: str = SprintStatus.COMPLETED.value,
+):
+    sprint = MagicMock()
+    sprint.id_sprint = sprint_id
+    sprint.fk_teamid_team = team_id
+    sprint.status = status
+    sprint.start_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    sprint.end_date = datetime(2026, 1, 14, tzinfo=timezone.utc)
+    return sprint
 
 
 class TestCreateProject:
@@ -263,6 +280,61 @@ class TestGetProjectStats:
             assert_that(body["team_backlog_tasks"], equal_to(1))
             assert_that(body["in_sprint_tasks"], equal_to(1))
             assert_that(body["done_story_points"], equal_to(8.0))
+
+    async def test_get_project_stats_returns_team_velocity_for_selected_team(self, client, mock_db):
+        with given("a team with more than seven completed sprints and no explicit sprint events"):
+            mock_member = _make_mock_member()
+            team = _make_mock_team(team_id=7, name="Alpha")
+            sprints = []
+            execute_results = [
+                make_execute_result(scalar=mock_member),
+                make_execute_result(scalars_list=[]),
+                make_execute_result(scalars_list=[team]),
+            ]
+
+            for sprint_id in range(8, 0, -1):
+                sprint = _make_mock_sprint(sprint_id, team_id=7)
+                sprint.end_date = datetime(2026, 1, sprint_id, tzinfo=timezone.utc)
+                sprints.append(sprint)
+
+            execute_results.append(make_execute_result(scalars_list=sprints))
+
+            for sprint in reversed(sprints[:7]):
+                sprint_tasks = [
+                    _make_mock_task(
+                        sprint.id_sprint * 10 + 1,
+                        team_id=7,
+                        sprint_id=sprint.id_sprint,
+                        status=TaskWorkflowStatus.DONE.value,
+                        story_points=float(sprint.id_sprint),
+                    ),
+                    _make_mock_task(
+                        sprint.id_sprint * 10 + 2,
+                        team_id=7,
+                        sprint_id=sprint.id_sprint,
+                        status=TaskWorkflowStatus.TODO.value,
+                        story_points=1.0,
+                    ),
+                ]
+                execute_results.append(make_execute_result(scalars_list=sprint_tasks))
+                execute_results.append(make_execute_result(scalars_list=[]))
+
+            mock_db.execute.side_effect = execute_results
+
+        with when("project stats are requested for that team"):
+            response = await client.get("/api/projects/1/stats?team_id=7")
+
+        with then("the payload includes a rolling window of the latest seven completed sprints ordered oldest to newest"):
+            assert_that(response.status_code, equal_to(200))
+            body = response.json()
+            assert_that(body["selected_team_id"], equal_to(7))
+            assert_that(body["teams"], has_length(1))
+            assert_that(body["velocity_report"], has_length(7))
+            assert_that([item["sprint_id"] for item in body["velocity_report"]], equal_to([2, 3, 4, 5, 6, 7, 8]))
+            assert_that(body["velocity_report"][0]["committed_story_points"], equal_to(3.0))
+            assert_that(body["velocity_report"][0]["completed_story_points"], equal_to(2.0))
+            assert_that(body["velocity_report"][-1]["committed_story_points"], equal_to(9.0))
+            assert_that(body["velocity_report"][-1]["completed_story_points"], equal_to(8.0))
 
 
 class TestDeleteProject:

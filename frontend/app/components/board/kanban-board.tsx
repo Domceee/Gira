@@ -13,11 +13,18 @@ type Task = {
   story_points: number | null;
   risk: number | null;
   priority: number | null;
+  fk_team_memberid_team_member: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   board_order: number;
 };
 
+type Member = {
+  id_team_member: number;
+  name: string;
+};
+
 type KanbanBoardProps = {
+  members: Member[];
   tasks: Task[];
 };
 
@@ -28,7 +35,7 @@ const COLUMNS = [
   { key: "DONE", label: "DONE" },
 ] as const;
 
-export default function KanbanBoard({ tasks }: KanbanBoardProps) {
+export default function KanbanBoard({ members, tasks }: KanbanBoardProps) {
   const router = useRouter();
   const [boardTasks, setBoardTasks] = useState(tasks);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
@@ -118,6 +125,7 @@ export default function KanbanBoard({ tasks }: KanbanBoardProps) {
             <KanbanColumn
               key={column.key}
               title={column.label}
+              members={members}
               tasks={columnTasks}
               isDropTarget={activeDropColumn === column.key}
               onDragStartTask={(taskId) => {

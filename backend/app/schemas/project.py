@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from datetime import datetime
 
 class ProjectCreate(BaseModel):
     name: str
@@ -24,6 +25,19 @@ class StoryPointsByTeamRead(BaseModel):
     story_points: float
 
 
+class ProjectStatsTeamOptionRead(BaseModel):
+    team_id: int
+    label: str
+
+
+class TeamVelocitySprintRead(BaseModel):
+    sprint_id: int
+    start_date: datetime
+    end_date: datetime
+    committed_story_points: float
+    completed_story_points: float
+
+
 class ProjectStatsRead(BaseModel):
     total_tasks: int
     active_tasks: int
@@ -38,6 +52,9 @@ class ProjectStatsRead(BaseModel):
     in_sprint_story_points: float
     done_story_points: float
     story_points_by_team: list[StoryPointsByTeamRead]
+    teams: list[ProjectStatsTeamOptionRead]
+    selected_team_id: int | None = None
+    velocity_report: list[TeamVelocitySprintRead]
 
 class ProjectUpdate(BaseModel):
     name: str
