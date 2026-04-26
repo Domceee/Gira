@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.email import send_project_invitation_email
 from app.db.session import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -35,6 +36,10 @@ from app.services.task_delete import get_task_delete_state
 from app.api.routes.auth import get_current_user  
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
 
 
 async def get_project_delete_state(project_id: int, db: AsyncSession) -> tuple[bool, str | None]:
@@ -479,6 +484,7 @@ async def delete_project(
 async def add_project_members(
     project_id: int,
     payload: ProjectMembersAddRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -487,61 +493,155 @@ async def add_project_members(
     project_result = await db.execute(select(Project).where(Project.id_project == project_id))
     project = project_result.scalar_one_or_none()
 
-    if not payload.user_ids:
+    normalized_emails = {normalize_email(email) for email in payload.emails}
+    owner_email = normalize_email(current_user.email)
+    normalized_emails.discard(owner_email)
+
+    if not payload.user_ids and not normalized_emails:
         return {"message": "No users to add"}
 
-    result = await db.execute(
-        select(Role).where(Role.fk_projectid_project == project_id)
-    )
-    role = result.scalars().first()
-
-    if not role:
-        role = Role(visibility=1, fk_projectid_project=project_id)
-        db.add(role)
-        await db.flush()
-
-    existing_result = await db.execute(
-        select(ProjectMember.fk_userid_user).where(
-            ProjectMember.fk_projectid_project == project_id,
-            ProjectMember.fk_userid_user.in_(payload.user_ids),
+    requested_users_by_id: dict[int, User] = {}
+    if payload.user_ids:
+        users_result = await db.execute(
+            select(User).where(User.id_user.in_(payload.user_ids))
         )
-    )
-    existing_ids = set(existing_result.scalars().all())
-
-    invitation_result = await db.execute(
-        select(Invitation.fk_userid_user).where(
-            Invitation.fk_projectid_project == project_id,
-            Invitation.is_accepted == False,
-            Invitation.is_declined == False,
-            Invitation.fk_userid_user.in_(payload.user_ids),
+        requested_users_by_id.update(
+            {user.id_user: user for user in users_result.scalars().all()}
         )
-    )
-    existing_invitation_ids = set(invitation_result.scalars().all())
 
-    new_ids = [
-        user_id
-        for user_id in payload.user_ids
-        if user_id not in existing_ids and user_id not in existing_invitation_ids
-    ]
+    if normalized_emails:
+        email_user_result = await db.execute(
+            select(User).where(func.lower(User.email).in_(normalized_emails))
+        )
+        for user in email_user_result.scalars().all():
+            requested_users_by_id[user.id_user] = user
 
-    for user_id in new_ids:
-        db.add(
-            Invitation(
-                fk_userid_user=user_id,
-                fk_projectid_project=project_id,
-                invited_by_user_id=current_user.id_user,
+    candidate_user_ids = list(requested_users_by_id.keys())
+    candidate_emails = set(normalized_emails)
+    candidate_emails.update(normalize_email(user.email) for user in requested_users_by_id.values())
+
+    existing_member_ids: set[int] = set()
+    if candidate_user_ids:
+        existing_result = await db.execute(
+            select(ProjectMember.fk_userid_user).where(
+                ProjectMember.fk_projectid_project == project_id,
+                ProjectMember.fk_userid_user.in_(candidate_user_ids),
             )
         )
+        existing_member_ids = set(existing_result.scalars().all())
 
-    if new_ids and project is not None:
+    existing_member_emails: set[str] = set()
+    if candidate_emails:
+        existing_member_email_result = await db.execute(
+            select(User.email)
+            .join(ProjectMember, ProjectMember.fk_userid_user == User.id_user)
+            .where(
+                ProjectMember.fk_projectid_project == project_id,
+                func.lower(User.email).in_(candidate_emails),
+            )
+        )
+        existing_member_emails = {
+            normalize_email(email) for email in existing_member_email_result.scalars().all()
+        }
+
+    existing_invitation_ids: set[int] = set()
+    if candidate_user_ids:
+        invitation_result = await db.execute(
+            select(Invitation.fk_userid_user).where(
+                Invitation.fk_projectid_project == project_id,
+                Invitation.is_accepted == False,
+                Invitation.is_declined == False,
+                Invitation.fk_userid_user.in_(candidate_user_ids),
+            )
+        )
+        existing_invitation_ids = {
+            user_id
+            for user_id in invitation_result.scalars().all()
+            if user_id is not None
+        }
+
+    existing_invitation_emails: set[str] = set()
+    if candidate_emails:
+        invitation_email_result = await db.execute(
+            select(Invitation.invited_email).where(
+                Invitation.fk_projectid_project == project_id,
+                Invitation.is_accepted == False,
+                Invitation.is_declined == False,
+                func.lower(Invitation.invited_email).in_(candidate_emails),
+            )
+        )
+        existing_invitation_emails = {
+            normalize_email(email)
+            for email in invitation_email_result.scalars().all()
+            if email is not None
+        }
+
+    created_user_ids: list[int] = []
+    created_emails: list[str] = []
+    created_invitation_emails: set[str] = set()
+
+    for user in requested_users_by_id.values():
+        normalized_email = normalize_email(user.email)
+        if normalized_email == owner_email:
+            continue
+        if user.id_user in existing_member_ids:
+            continue
+        if normalized_email in existing_member_emails:
+            continue
+        if user.id_user in existing_invitation_ids:
+            continue
+        if normalized_email in existing_invitation_emails or normalized_email in created_invitation_emails:
+            continue
+
+        db.add(
+            Invitation(
+                fk_userid_user=user.id_user,
+                fk_projectid_project=project_id,
+                invited_by_user_id=current_user.id_user,
+                invited_email=normalized_email,
+            )
+        )
+        created_user_ids.append(user.id_user)
+        created_emails.append(normalized_email)
+        created_invitation_emails.add(normalized_email)
+
+    unresolved_emails = normalized_emails.difference(created_invitation_emails)
+    for email in sorted(unresolved_emails):
+        if email in existing_member_emails:
+            continue
+        if email in existing_invitation_emails:
+            continue
+        db.add(
+            Invitation(
+                fk_userid_user=None,
+                fk_projectid_project=project_id,
+                invited_by_user_id=current_user.id_user,
+                invited_email=email,
+            )
+        )
+        created_emails.append(email)
+        created_invitation_emails.add(email)
+
+    if created_user_ids and project is not None:
         await create_news_for_users(
             db=db,
-            user_ids=new_ids,
+            user_ids=created_user_ids,
             title="Project invitation",
             message=f"You were invited to project {project.name}.",
             news_type="project_invite",
             project_id=project_id,
         )
+
+    if project is not None:
+        invited_by_name = current_user.name or "A Gira user"
+        project_name = project.name or "Project"
+        for email in created_emails:
+            background_tasks.add_task(
+                send_project_invitation_email,
+                email,
+                project_name,
+                invited_by_name,
+            )
 
     await db.commit()
 

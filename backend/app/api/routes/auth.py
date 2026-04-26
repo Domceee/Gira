@@ -5,10 +5,11 @@ import base64
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 import sys
 
 from app.db.session import get_db
+from app.models.invitation import Invitation
 from app.models.user import User
 from app.core.security import (
     hash_password,
@@ -21,6 +22,29 @@ from app.core.email import send_registration_email
 from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+async def claim_pending_invitations(db: AsyncSession, user: User) -> None:
+    normalized_email = user.email.strip().lower()
+    result = await db.execute(
+        select(Invitation).where(
+            Invitation.is_accepted == False,
+            Invitation.is_declined == False,
+            func.lower(Invitation.invited_email) == normalized_email,
+        )
+    )
+
+    changed = False
+    for invitation in result.scalars().all():
+        if invitation.fk_userid_user == user.id_user:
+            continue
+        invitation.fk_userid_user = user.id_user
+        invitation.invited_email = normalized_email
+        db.add(invitation)
+        changed = True
+
+    if changed:
+        await db.commit()
 
 
 def user_to_dict(user: User) -> dict:
@@ -59,6 +83,7 @@ async def register(payload: UserCreate, background_tasks: BackgroundTasks, db: A
     await db.commit()
     await db.refresh(user)
 
+    await claim_pending_invitations(db, user)
     background_tasks.add_task(send_registration_email, user.email, user.name)
     return UserRead(**user_to_dict(user))
 
@@ -75,6 +100,8 @@ async def login(payload: UserLogin, response: Response, db: AsyncSession = Depen
     
     if not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid password")
+
+    await claim_pending_invitations(db, user)
     
     access_token = create_access_token(
         data={"sub": str(user.id_user)},
@@ -172,6 +199,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
         await db.commit()
         await db.refresh(user)
 
+    await claim_pending_invitations(db, user)
     access_token = create_access_token(
         data={"sub": str(user.id_user)},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
