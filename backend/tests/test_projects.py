@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from hamcrest import assert_that, equal_to, has_key, contains_string, has_length
@@ -247,6 +247,38 @@ class TestUpdateProject:
 
         with then("the server refuses with 403 Forbidden"):
             assert_that(response.status_code, equal_to(403))
+
+
+class TestAddProjectMembers:
+
+    async def test_add_project_members_invites_email_not_in_database(self, client, mock_db):
+        with given("the user is the project owner and invites an email with no user account yet"):
+            mock_member = _make_mock_member(is_owner=True)
+            mock_project = _make_mock_project(project_id=1, name="Flagship")
+            mock_db.execute.side_effect = [
+                make_execute_result(scalar=mock_member),
+                make_execute_result(scalar=mock_project),
+                make_execute_result(scalars_list=[]),
+                make_execute_result(scalars_list=[]),
+                make_execute_result(scalars_list=[]),
+            ]
+
+        with when("the owner submits an email-based invitation"):
+            with patch("app.api.routes.projects.send_project_invitation_email", new_callable=AsyncMock):
+                response = await client.post(
+                    "/api/projects/1/members",
+                    json={"emails": ["newperson@example.com"]},
+                )
+
+        with then("a pending invitation is created without requiring a user row"):
+            assert_that(response.status_code, equal_to(200))
+            invitation = next(
+                obj
+                for obj in mock_db.add.call_args_list
+                if getattr(obj.args[0], "__class__", None).__name__ == "Invitation"
+            ).args[0]
+            assert_that(invitation.fk_userid_user, equal_to(None))
+            assert_that(invitation.invited_email, equal_to("newperson@example.com"))
 
 
 class TestGetProjectStats:

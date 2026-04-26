@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.auth import get_current_user
@@ -14,6 +14,14 @@ from app.schemas.invitation import InvitationRead
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 
 
+def invitation_belongs_to_user(user: User):
+    normalized_email = user.email.strip().lower()
+    return or_(
+        Invitation.fk_userid_user == user.id_user,
+        func.lower(Invitation.invited_email) == normalized_email,
+    )
+
+
 @router.get("", response_model=list[InvitationRead])
 async def get_invitations(
     db: AsyncSession = Depends(get_db),
@@ -24,7 +32,7 @@ async def get_invitations(
         .join(Project, Project.id_project == Invitation.fk_projectid_project)
         .join(User, User.id_user == Invitation.invited_by_user_id)
         .where(
-            Invitation.fk_userid_user == current_user.id_user,
+            invitation_belongs_to_user(current_user),
             Invitation.is_accepted == False,
             Invitation.is_declined == False,
         )
@@ -55,7 +63,7 @@ async def accept_invitation(
     result = await db.execute(
         select(Invitation).where(
             Invitation.id_invitation == invitation_id,
-            Invitation.fk_userid_user == current_user.id_user,
+            invitation_belongs_to_user(current_user),
             Invitation.is_accepted == False,
             Invitation.is_declined == False,
         )
@@ -72,6 +80,8 @@ async def accept_invitation(
         )
     )
     if membership_result.scalar_one_or_none() is not None:
+        invitation.fk_userid_user = current_user.id_user
+        invitation.invited_email = current_user.email.strip().lower()
         invitation.is_accepted = True
         db.add(invitation)
         await db.commit()
@@ -95,6 +105,8 @@ async def accept_invitation(
     )
     db.add(membership)
 
+    invitation.fk_userid_user = current_user.id_user
+    invitation.invited_email = current_user.email.strip().lower()
     invitation.is_accepted = True
     db.add(invitation)
     await db.commit()
@@ -111,7 +123,7 @@ async def decline_invitation(
     result = await db.execute(
         select(Invitation).where(
             Invitation.id_invitation == invitation_id,
-            Invitation.fk_userid_user == current_user.id_user,
+            invitation_belongs_to_user(current_user),
             Invitation.is_accepted == False,
             Invitation.is_declined == False,
         )
@@ -121,6 +133,8 @@ async def decline_invitation(
     if invitation is None:
         raise HTTPException(status_code=404, detail="Invitation not found")
 
+    invitation.fk_userid_user = current_user.id_user
+    invitation.invited_email = current_user.email.strip().lower()
     invitation.is_declined = True
     db.add(invitation)
     await db.commit()

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from hamcrest import assert_that, equal_to, has_key, contains_string
 
+from app.models.invitation import Invitation
 from tests.conftest import make_execute_result, given, when, then
 
 
@@ -73,6 +74,37 @@ class TestRegister:
 
         with then("a background email task was enqueued exactly once"):
             assert_that(mock_email.call_count, equal_to(1))
+
+    async def test_register_claims_pending_project_invitations_for_same_email(self, client, mock_db):
+        with given("a pending project invitation exists for the registering email address"):
+            invitation = Invitation(
+                fk_userid_user=None,
+                fk_projectid_project=7,
+                invited_by_user_id=3,
+                invited_email="alice@example.com",
+            )
+            mock_db.execute.side_effect = [
+                make_execute_result(scalar=None),
+                make_execute_result(scalars_list=[invitation]),
+            ]
+
+        with when("registration succeeds"):
+            with patch("app.api.routes.auth.send_registration_email", new_callable=AsyncMock):
+                response = await client.post(
+                    "/auth/register",
+                    json={
+                        "name": "Alice",
+                        "email": "alice@example.com",
+                        "password": "password123",
+                        "country": "Poland",
+                        "city": "Warsaw",
+                    },
+                )
+
+        with then("the invitation is attached to the newly created user"):
+            assert_that(response.status_code, equal_to(201))
+            assert_that(invitation.fk_userid_user, equal_to(1))
+            assert_that(invitation.invited_email, equal_to("alice@example.com"))
 
 
 class TestLogin:

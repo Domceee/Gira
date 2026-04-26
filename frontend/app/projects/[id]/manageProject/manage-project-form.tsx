@@ -14,13 +14,7 @@ type Project = {
   delete_block_reason: string | null;
 };
 
-type UserSearchResult = {
-  id_user: number;
-  name: string;
-  email: string;
-  country: string | null;
-  city: string | null;
-};
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ManageProjectForm({ project }: { project: Project }) {
   const router = useRouter();
@@ -29,30 +23,30 @@ export default function ManageProjectForm({ project }: { project: Project }) {
   const [description, setDescription] = useState(project.description ?? "");
   const [useSwimlaneBoard, setUseSwimlaneBoard] = useState(project.use_swimlane_board);
   const [emailQuery, setEmailQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSearch() {
+  function handleAddEmail() {
     setError("");
-    if (!emailQuery.trim()) { setSearchResults([]); return; }
-    const res = await apiFetch(
-      `/api/user/search?email=${encodeURIComponent(emailQuery.trim())}&project_id=${project.id}`,
-      { method: "GET" }
-    );
-    if (!res.ok) { setError("Failed to search users"); return; }
-    setSearchResults(await res.json());
+    const normalizedEmail = emailQuery.trim().toLowerCase();
+    if (!normalizedEmail) return;
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (selectedEmails.includes(normalizedEmail)) {
+      setError("That email is already queued.");
+      return;
+    }
+
+    setSelectedEmails((prev) => [...prev, normalizedEmail]);
+    setEmailQuery("");
   }
 
-  function addUser(user: UserSearchResult) {
-    if (selectedUsers.some((u) => u.id_user === user.id_user)) return;
-    setSelectedUsers((prev) => [...prev, user]);
-  }
-
-  function removeUser(userId: number) {
-    setSelectedUsers((prev) => prev.filter((u) => u.id_user !== userId));
+  function removeEmail(email: string) {
+    setSelectedEmails((prev) => prev.filter((value) => value !== email));
   }
 
   async function handleSave() {
@@ -74,10 +68,10 @@ export default function ManageProjectForm({ project }: { project: Project }) {
         throw new Error(data?.detail || "Failed to update project");
       }
 
-      if (selectedUsers.length > 0) {
+      if (selectedEmails.length > 0) {
         const addMembersRes = await apiFetch(`/api/projects/${project.id}/members`, {
           method: "POST",
-          body: JSON.stringify({ user_ids: selectedUsers.map((u) => u.id_user) }),
+          body: JSON.stringify({ emails: selectedEmails }),
         });
         if (!addMembersRes.ok) {
           const data = await addMembersRes.json().catch(() => null);
@@ -199,7 +193,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
             <h2 className="mt-2 text-xl font-bold text-[#ffffff]">Invite people to this project</h2>
           </div>
           <div className="rounded-xl border border-[#667386] bg-[#28313d] px-4 py-3 text-sm text-[#c3ceda]">
-            Pending additions: <span className="font-semibold text-[#ffffff]">{selectedUsers.length}</span>
+            Pending additions: <span className="font-semibold text-[#ffffff]">{selectedEmails.length}</span>
           </div>
         </div>
 
@@ -207,47 +201,24 @@ export default function ManageProjectForm({ project }: { project: Project }) {
           <div className="space-y-4 rounded-2xl border border-[#667386] bg-[#28313d] p-5">
             <div className="flex flex-col gap-3 sm:flex-row">
               <input
+                type="email"
                 value={emailQuery}
                 onChange={(e) => setEmailQuery(e.target.value)}
-                placeholder="Search by email"
+                placeholder="name@example.com"
                 className={`flex-1 ${inputClass}`}
               />
               <button
                 type="button"
-                onClick={handleSearch}
+                onClick={handleAddEmail}
                 className="rounded-lg border border-[#7a8798] px-5 py-3 text-sm font-semibold text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
               >
-                Search
+                Add email
               </button>
             </div>
 
-            {searchResults.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[#667386] px-4 py-10 text-center text-sm text-[#c3ceda]">
-                Search for a user by email to invite them.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {searchResults.map((user) => (
-                  <div
-                    key={user.id_user}
-                    className="flex flex-col gap-3 rounded-xl border border-[#7a8798] bg-[#1f2630] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#ffffff]">{user.name}</p>
-                      <p className="truncate text-sm text-[#c3ceda]">{user.email}</p>
-                      <p className="mt-1 text-xs text-[#9eabbc]">{user.country ?? "Unknown country"}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addUser(user)}
-                      className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-4 py-2 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="rounded-xl border border-dashed border-[#667386] px-4 py-10 text-center text-sm text-[#c3ceda]">
+              Enter any email address. Existing users will get an in-app invite and email, and new users can register with that same email to claim the project invitation.
+            </div>
           </div>
 
           <div className="rounded-2xl border border-[#667386] bg-[#28313d] p-5">
@@ -257,28 +228,28 @@ export default function ManageProjectForm({ project }: { project: Project }) {
                 <h3 className="mt-2 text-lg font-bold text-[#ffffff]">Ready to invite</h3>
               </div>
               <span className="rounded-full border border-[#667386] bg-[#1f2630] px-3 py-1 text-xs font-semibold text-[#c3ceda]">
-                {selectedUsers.length}
+                {selectedEmails.length}
               </span>
             </div>
 
-            {selectedUsers.length === 0 ? (
+            {selectedEmails.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#667386] px-4 py-10 text-center text-sm text-[#c3ceda]">
                 Added people will appear here before you save.
               </div>
             ) : (
               <div className="space-y-3">
-                {selectedUsers.map((user) => (
+                {selectedEmails.map((email) => (
                   <div
-                    key={user.id_user}
+                    key={email}
                     className="flex flex-col gap-3 rounded-xl border border-[#7a8798] bg-[#1f2630] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#ffffff]">{user.name}</p>
-                      <p className="truncate text-sm text-[#c3ceda]">{user.email}</p>
+                      <p className="truncate text-sm font-semibold text-[#ffffff]">{email}</p>
+                      <p className="truncate text-sm text-[#c3ceda]">Invitation will be sent to this email address.</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeUser(user.id_user)}
+                      onClick={() => removeEmail(email)}
                       className="rounded-lg border border-[#ff4040]/30 px-4 py-2 text-sm text-[#ff8080] transition hover:bg-[#ff4040]/10"
                     >
                       Remove
