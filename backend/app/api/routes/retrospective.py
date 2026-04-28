@@ -37,7 +37,7 @@ async def get_project_membership_or_404(project_id: int, user_id: int, db: Async
 
 
 # ---------------------------------------------------------
-# GET RETROSPECTIVE
+# GET RETROSPECTIVE (AUTO‑CREATE IF MISSING)
 # ---------------------------------------------------------
 @router.get("/{sprint_id}")
 async def get_retro(
@@ -60,39 +60,36 @@ async def get_retro(
         team.fk_projectid_project, current_user.id_user, db
     )
 
-    # If sprint has no retrospective FK yet → return empty template
-    if sprint.fk_retrospectiveid_retrospective is None:
-        return {
-            "id_retrospective": None,
-            "is_finished": False,
-            "text": json.dumps({
-                "good": [""],
-                "bad": [""],
-                "ideas": [""],
-                "actions": [""],
-            })
-        }
-
-    # Load retrospective using FK
-    result = await db.execute(
-        select(Retrospective).where(
-            Retrospective.id_retrospective == sprint.fk_retrospectiveid_retrospective
+    # Load retrospective if exists
+    retro = None
+    if sprint.fk_retrospectiveid_retrospective is not None:
+        result = await db.execute(
+            select(Retrospective).where(
+                Retrospective.id_retrospective == sprint.fk_retrospectiveid_retrospective
+            )
         )
-    )
-    retro = result.scalar_one_or_none()
+        retro = result.scalar_one_or_none()
 
-    if retro is None or not retro.text:
-        return {
-            "id_retrospective": sprint.fk_retrospectiveid_retrospective,
-            "is_finished": retro.is_finished if retro else False,
-            "text": json.dumps({
-                "good": [""],
-                "bad": [""],
-                "ideas": [""],
-                "actions": [""],
-            })
-        }
+    # -----------------------------------------------------
+    # AUTO‑CREATE RETROSPECTIVE IF MISSING
+    # -----------------------------------------------------
+    if retro is None:
+        retro = Retrospective(
+            text=json.dumps({
+                "good": [],
+                "bad": [],
+                "ideas": [],
+                "actions": [],
+            }),
+            is_finished=False
+        )
+        db.add(retro)
+        await db.flush()
 
+        sprint.fk_retrospectiveid_retrospective = retro.id_retrospective
+        await db.commit()
+
+    # Return existing or newly created retrospective
     return {
         "id_retrospective": retro.id_retrospective,
         "is_finished": retro.is_finished,
@@ -100,15 +97,14 @@ async def get_retro(
     }
 
 
-
 # ---------------------------------------------------------
-# SAVE RETROSPECTIVE
+# SAVE RETROSPECTIVE (UPDATE ONLY)
 # ---------------------------------------------------------
 @router.post("/{sprint_id}")
 async def save_retro(
     sprint_id: int,
     team_id: int,
-    data: dict,  # <-- receives the JSON object directly
+    data: dict,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -128,7 +124,7 @@ async def save_retro(
         team.fk_projectid_project, current_user.id_user, db
     )
 
-    # Load existing retrospective
+    # Load retrospective (must exist because GET auto‑creates)
     result = await db.execute(
         select(Retrospective).where(
             Retrospective.id_retrospective == sprint.fk_retrospectiveid_retrospective
@@ -136,25 +132,19 @@ async def save_retro(
     )
     retro = result.scalar_one_or_none()
 
-    json_text = json.dumps(data)
+    if retro is None:
+        raise HTTPException(status_code=500, detail="Retrospective missing unexpectedly")
 
-    if retro:
-        retro.text = json_text
-    else:
-        retro = Retrospective(
-            text=json_text,
-            is_finished=False
-        )
-        db.add(retro)
-        await db.flush()
-        sprint.fk_retrospectiveid_retrospective = retro.id_retrospective
-
+    # Update text
+    retro.text = json.dumps(data)
     await db.commit()
 
-    return {
-        "status": "ok",
-        "id_retrospective": retro.id_retrospective
-    }
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------
+# TOGGLE FINISHED
+# ---------------------------------------------------------
 @router.post("/{sprint_id}/toggle")
 async def toggle_retro(
     sprint_id: int,
