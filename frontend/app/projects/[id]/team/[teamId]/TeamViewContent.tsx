@@ -5,7 +5,7 @@ import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
-import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
+import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger"
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -296,10 +296,19 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#667386] bg-[#1f2630] p-6 opacity-70">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-base font-semibold text-[#c3ceda]">Sprint {sprint.id_sprint} <span className="text-xs">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
-              <Link href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda] transition hover:text-[#ffffff]">
-                <ChartIcon />Sprint Stats
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda] transition hover:text-[#ffffff]">
+                  <ChartIcon />Sprint Stats
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]">
+                  📝 Retrospective
+                </Link>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className={taskTableClass}>

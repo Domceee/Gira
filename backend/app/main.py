@@ -9,6 +9,7 @@ from app.api.routes.task import router as task_router
 from app.api.routes.news import router as news_router
 from app.api.routes import user
 from app.api.routes import sprint
+from app.api.routes import retrospective
 from app.middleware.body_limit import BodySizeLimitMiddleware
 
 app = FastAPI(title="Gira API")
@@ -36,3 +37,4 @@ app.include_router(task_router, prefix="/api")
 app.include_router(news_router, prefix="/api")
 app.include_router(user.router, prefix="/api")
 app.include_router(sprint.router, prefix="/api")
+app.include_router(retrospective.router, prefix="/api")

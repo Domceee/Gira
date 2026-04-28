@@ -1,12 +1,10 @@
-from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column
-
+from sqlalchemy import Column, Integer, Text, Boolean
 from app.db.base_class import Base
 
 class Retrospective(Base):
-    __tablename__ = "teamMember_retrospective"
+    __tablename__ = "retrospective"
 
-    id_retrospective = Column(Integer, primary_key=True, index=True)
-    description = Column(Text, nullable=True)
-    id_sprint = Column(Integer, ForeignKey("sprint.id_sprint"), nullable=False)
-    fk_teamMember = Column(Integer, ForeignKey("team_member.id_team_member"), nullable=True)
+    id_retrospective = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    text = Column(Text, nullable=True)  # JSON stored as string
+    is_finished = Column(Boolean, nullable=False, default=False)
