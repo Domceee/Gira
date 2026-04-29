@@ -1,7 +1,11 @@
+
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 import DashboardClient from "./DashboardClient";
 import TeamViewWrapper from "./TeamViewWrapper";
+
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 type Team = {
   id_team: number;

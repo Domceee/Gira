@@ -167,4 +167,60 @@ export async function updateTaskStatus(formData: FormData) {
 
 
 }
+export async function updateSprint(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const sprint_id = formData.get("sprint_id");
+  const team_id = formData.get("team_id");
+  const project_id = formData.get("project_id");
+
+  const name = formData.get("name");
+  const start_date = formData.get("start_date");
+  const end_date = formData.get("end_date");
+
+  const res = await fetch(`${API_URL}/api/sprints/${sprint_id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify({
+      name,
+      start_date,
+      end_date,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to update sprint");
+  }
+
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+}
+
+export async function deleteSprintAction(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const sprint_id = formData.get("sprint_id");
+
+  const res = await fetch(`${API_URL}/api/sprints/${sprint_id}`, {
+    method: "DELETE",
+    headers: {
+      Cookie: cookieHeader,  
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to delete sprint");
+  }
+
+  return;
+}
+
 
