@@ -6,6 +6,8 @@ import {
   loadRetrospective,
   saveRetrospective,
   toggleRetrospective,
+  loadMemberRetrospective,
+  saveMemberRetrospective,
 } from "./actions";
 
 type RetroColumn = "good" | "bad" | "ideas" | "actions";
@@ -125,11 +127,80 @@ export default function RetrospectivePage({
   const tdClass = "p-3 text-sm text-[#edf3fb]";
   const columns: RetroColumn[] = ["good", "bad", "ideas", "actions"];
 
+// ---------------------------------------------------------
+// PERSONAL RETROSPECTIVE (TEAM MEMBER ONLY)
+// ---------------------------------------------------------
+
+const [memberOpen, setMemberOpen] = useState(true);
+const [memberDescription, setMemberDescription] = useState("");
+const [isMemberVisible, setIsMemberVisible] = useState(false);
+
+useEffect(() => {
+  (async () => {
+    const existing = await loadMemberRetrospective({
+      projectId,
+      teamId,
+      sprintId,
+    });
+
+    if (!existing) {
+      // User is NOT a team member → hide section
+      setIsMemberVisible(false);
+      return;
+    }
+
+    setIsMemberVisible(true);
+    setMemberDescription(existing.description || "");
+  })();
+}, [projectId, teamId, sprintId]);
+
+
+
+
+
   /* ---------------------------------------------------------
      RENDER
   --------------------------------------------------------- */
   return (
     <div className="space-y-8 p-6">
+         {/* Personal retrospective  */}
+        {isMemberVisible && (
+        <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 mt-10">
+            <button
+            onClick={() => setMemberOpen(!memberOpen)}
+            className="flex items-center gap-2 text-lg font-semibold text-[#edf3fb] mb-4"
+            >
+            {memberOpen ? <ChevronDown /> : <ChevronRight />}
+            Your Personal Retrospective
+            </button>
+
+            {memberOpen && (
+            <>
+                <textarea
+                value={memberDescription}
+                onChange={(e) => setMemberDescription(e.target.value)}
+                className="w-full resize-none rounded bg-[#28313d] p-3 text-sm text-[#edf3fb] outline-none min-h-[120px]"
+                />
+
+                <button
+                onClick={async () => {
+                    const fd = new FormData();
+                    fd.append("sprint_id", sprintId);
+                    fd.append("team_id", teamId);
+                    fd.append("description", memberDescription);
+                    fd.append("project_id", projectId);
+                    await saveMemberRetrospective(fd);
+                }}
+                className="mt-4 w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"
+                >
+                Save Personal Retrospective
+                </button>
+            </>
+            )}
+        </div>
+        )}
+
+        {/* Sprint retrospective  */}
       <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
         <button
           onClick={() => setOpen(!open)}
@@ -188,7 +259,7 @@ export default function RetrospectivePage({
                     fd.append("team_id", teamId);
                     fd.append("project_id", projectId);
                     fd.append("retro", JSON.stringify(cleaned));
-
+                    
                     await saveRetrospective(fd);
                   }}
                   className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"

@@ -21,7 +21,7 @@ export async function loadRetrospective({
   const cookieHeader = cookieStore.toString();
 
   const res = await fetch(
-    `${API_URL}/api/retrospective/${sprintId}?team_id=${teamId}`,
+    `${API_URL}/api/retrospective/${sprintId}?team_id=${teamId}&project_id=${projectId}`,
     {
       method: "GET",
       headers: { Cookie: cookieHeader },
@@ -49,7 +49,7 @@ export async function saveRetrospective(formData: FormData) {
   const retroJson = JSON.parse(retroString);
 
   const res = await fetch(
-    `${API_URL}/api/retrospective/${sprint_id}?team_id=${team_id}`,
+    `${API_URL}/api/retrospective/${sprint_id}?team_id=${team_id}&project_id=${project_id}`,
     {
       method: "POST",
       headers: {
@@ -84,7 +84,7 @@ export async function toggleRetrospective({
   const cookieHeader = cookieStore.toString();
 
   const res = await fetch(
-    `${API_URL}/api/retrospective/${sprintId}/toggle?team_id=${teamId}`,
+    `${API_URL}/api/retrospective/${sprintId}/toggle?team_id=${teamId}&project_id=${projectId}`,
     {
       method: "POST",
       headers: { Cookie: cookieHeader },
@@ -100,4 +100,48 @@ export async function toggleRetrospective({
   revalidatePath(`/projects/${projectId}/teams-dashboard`, "page");
 
   return await res.json(); // returns { is_finished: true/false }
+}
+
+
+export async function loadMemberRetrospective({
+  projectId,
+  teamId,
+  sprintId,
+}: {
+  projectId: string;
+  teamId: string;
+  sprintId: string;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(
+    `${API_URL}/api/retrospective/member/${sprintId}?team_id=${teamId}&project_id=${projectId}`,
+    {
+      method: "GET",
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) return null;
+
+  return await res.json();
+}
+
+
+export async function saveMemberRetrospective(fd: FormData) {
+  const sprintId = fd.get("sprint_id");
+  const teamId = fd.get("team_id");
+  const projectId = fd.get("project_id");
+
+  const res = await fetch(
+    `${API_URL}/api/retrospective/member/${sprintId}?team_id=${teamId}&project_id=${projectId}`,
+    {
+      method: "POST",
+      body: fd,
+    }
+  );
+
+  return await res.json();
 }

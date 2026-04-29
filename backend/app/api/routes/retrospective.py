@@ -10,9 +10,53 @@ from app.models.team import Team
 from app.models.project_member import ProjectMember
 from app.models.user import User
 
+# ⭐ ADD THESE IMPORTS
+from app.models.team_member_retrospective import TeamMemberRetrospective
+from app.models.team_member import TeamMember
+
 import json
 
 router = APIRouter(prefix="/retrospective", tags=["retrospective"])
+
+
+# ---------------------------------------------------------
+# HELPERS
+# ---------------------------------------------------------
+
+async def get_team_member_for_user_or_403(team: Team, user: User, db: AsyncSession):
+    print("DEBUG: Checking membership for user", user.id_user, "team", team.id_team)
+
+    # Check project membership
+    membership_result = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.fk_projectid_project == team.fk_projectid_project,
+            ProjectMember.fk_userid_user == user.id_user,
+        )
+    )
+    membership = membership_result.scalar_one_or_none()
+    print("DEBUG: Project membership:", membership)
+
+    if membership is None:
+        print("DEBUG: FAIL → user not in project")
+        raise HTTPException(status_code=403, detail="You are not a team member")
+
+    # Check team_member table
+    tm_result = await db.execute(
+        select(TeamMember).where(
+            TeamMember.fk_userid_user == user.id_user,
+            TeamMember.fk_teamid_team == team.id_team,
+        )
+    )
+    team_member = tm_result.scalar_one_or_none()
+    print("DEBUG: TeamMember row:", team_member)
+
+    if team_member is None:
+        print("DEBUG: FAIL → user not in team_member table")
+        raise HTTPException(status_code=403, detail="You are not a team member")
+
+    print("DEBUG: SUCCESS → user is team member")
+    return team_member
+
 
 
 async def get_team_or_404(team_id: int, db: AsyncSession):
@@ -70,9 +114,7 @@ async def get_retro(
         )
         retro = result.scalar_one_or_none()
 
-    # -----------------------------------------------------
     # AUTO‑CREATE RETROSPECTIVE IF MISSING
-    # -----------------------------------------------------
     if retro is None:
         retro = Retrospective(
             text=json.dumps({
@@ -89,7 +131,6 @@ async def get_retro(
         sprint.fk_retrospectiveid_retrospective = retro.id_retrospective
         await db.commit()
 
-    # Return existing or newly created retrospective
     return {
         "id_retrospective": retro.id_retrospective,
         "is_finished": retro.is_finished,
@@ -124,7 +165,7 @@ async def save_retro(
         team.fk_projectid_project, current_user.id_user, db
     )
 
-    # Load retrospective (must exist because GET auto‑creates)
+    # Load retrospective
     result = await db.execute(
         select(Retrospective).where(
             Retrospective.id_retrospective == sprint.fk_retrospectiveid_retrospective
@@ -135,7 +176,6 @@ async def save_retro(
     if retro is None:
         raise HTTPException(status_code=500, detail="Retrospective missing unexpectedly")
 
-    # Update text
     retro.text = json.dumps(data)
     await db.commit()
 
@@ -179,11 +219,97 @@ async def toggle_retro(
     if retro is None:
         raise HTTPException(status_code=404, detail="Retrospective not found")
 
-    # Toggle
     retro.is_finished = not retro.is_finished
     await db.commit()
 
+    return {"status": "ok", "is_finished": retro.is_finished}
+
+
+# ---------------------------------------------------------
+# PERSONAL RETROSPECTIVE (TEAM MEMBER ONLY)
+# ---------------------------------------------------------
+@router.get("/member/{sprint_id}")
+async def get_member_retro(
+    sprint_id: int,
+    team_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Validate sprint
+    sprint_result = await db.execute(
+        select(Sprint).where(Sprint.id_sprint == sprint_id)
+    )
+    sprint = sprint_result.scalar_one_or_none()
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    # Validate team
+    team = await get_team_or_404(team_id, db)
+
+    # Ensure user is team member
+    team_member = await get_team_member_for_user_or_403(team, current_user, db)
+
+    # Load personal retrospective
+    result = await db.execute(
+        select(TeamMemberRetrospective).where(
+            TeamMemberRetrospective.id_sprint == sprint_id,
+            TeamMemberRetrospective.fk_teamMember == team_member.id_team_member,
+        )
+    )
+    retro = result.scalar_one_or_none()
+
+    # Auto-create if missing
+    if retro is None:
+        retro = TeamMemberRetrospective(
+            id_sprint=sprint_id,
+            fk_teamMember=team_member.id_team_member,
+            description="",
+        )
+        db.add(retro)
+        await db.commit()
+        await db.refresh(retro)
+
     return {
-        "status": "ok",
-        "is_finished": retro.is_finished
+        "id_retrospective": retro.id_retrospective,
+        "description": retro.description or "",
     }
+
+
+@router.post("/member/{sprint_id}")
+async def save_member_retro(
+    sprint_id: int,
+    team_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Validate sprint
+    sprint_result = await db.execute(
+        select(Sprint).where(Sprint.id_sprint == sprint_id)
+    )
+    sprint = sprint_result.scalar_one_or_none()
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    # Validate team
+    team = await get_team_or_404(team_id, db)
+
+    # Ensure user is team member
+    team_member = await get_team_member_for_user_or_403(team, current_user, db)
+
+    # Load personal retrospective
+    result = await db.execute(
+        select(TeamMemberRetrospective).where(
+            TeamMemberRetrospective.id_sprint == sprint_id,
+            TeamMemberRetrospective.fk_teamMember == team_member.id_team_member,
+        )
+    )
+    retro = result.scalar_one_or_none()
+
+    if retro is None:
+        raise HTTPException(status_code=500, detail="Retrospective missing unexpectedly")
+
+    retro.description = data.get("description", "")
+    await db.commit()
+
+    return {"status": "ok"}
