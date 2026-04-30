@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.email import send_project_invitation_email
@@ -20,7 +20,7 @@ from app.schemas.project import (
     TeamVelocitySprintRead,
 )
 from app.schemas.board import BoardMemberRead, BoardTaskRead, ProjectBoardRead, SprintBoardRead
-from app.schemas.ProjectMember import ProjectMembersAddRequest
+from app.schemas.ProjectMember import ProjectMembersAddRequest, ProjectMemberRead
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.task import Task
@@ -828,6 +828,34 @@ async def get_available_project_members(
     ]
 
 
+@router.get("/{project_id}/members", response_model=list[ProjectMemberRead])
+async def get_project_members(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await require_project_owner(project_id, current_user.id_user, db)
+
+    result = await db.execute(
+        select(User, ProjectMember.is_owner)
+        .join(ProjectMember, ProjectMember.fk_userid_user == User.id_user)
+        .where(ProjectMember.fk_projectid_project == project_id)
+        .order_by(User.name.asc())
+    )
+
+    members = result.all()
+
+    return [
+        ProjectMemberRead(
+            id_user=user.id_user,
+            name=user.name,
+            email=user.email,
+            is_owner=is_owner,
+        )
+        for user, is_owner in members
+    ]
+
+
 @router.get("/{project_id}/teams/{team_id}/members")
 async def get_team_members(
     project_id: int,
@@ -953,6 +981,37 @@ async def remove_team_member(
     await require_project_owner(project_id, current_user.id_user, db)
     await get_team_or_404(project_id, team_id, db)
 
+    # Get the team member to unassign tasks
+    team_member_result = await db.execute(
+        select(TeamMember).where(
+            TeamMember.fk_teamid_team == team_id,
+            TeamMember.fk_userid_user == user_id,
+        )
+    )
+    team_member = team_member_result.scalar_one_or_none()
+    if not team_member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+
+    # Unassign tasks from this team member
+    await db.execute(
+        update(Task).where(Task.fk_team_memberid_team_member == team_member.id_team_member).values(
+            fk_team_memberid_team_member=None
+        )
+    )
+
+    # Move sprint tasks back to backlog
+    await db.execute(
+        update(Task).where(
+            Task.fk_team_memberid_team_member == team_member.id_team_member,
+            Task.fk_sprintid_sprint.isnot(None)
+        ).values(
+            fk_sprintid_sprint=None,
+            workflow_status=TaskWorkflowStatus.TODO.value,
+            board_order=0
+        )
+    )
+
+    # Delete the team member
     await db.execute(
         delete(TeamMember).where(
             TeamMember.fk_teamid_team == team_id,
@@ -962,6 +1021,84 @@ async def remove_team_member(
     await db.commit()
 
     return {"message": "Team member removed"}
+
+
+@router.delete("/{project_id}/members/{user_id}")
+async def remove_project_member(
+    project_id: int,
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await require_project_owner(project_id, current_user.id_user, db)
+
+    # Get the project member
+    membership_result = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.fk_projectid_project == project_id,
+            ProjectMember.fk_userid_user == user_id,
+        )
+    )
+    membership = membership_result.scalar_one_or_none()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Project member not found")
+    
+    if membership.is_owner:
+        raise HTTPException(status_code=400, detail="Cannot remove project owner")
+
+    # Get all team members for this user in the project
+    team_members_result = await db.execute(
+        select(TeamMember).where(
+            TeamMember.fk_userid_user == user_id,
+            TeamMember.fk_teamid_team.in_(
+                select(Team.id_team).where(Team.fk_projectid_project == project_id)
+            )
+        )
+    )
+    team_members = team_members_result.scalars().all()
+
+    # Unassign tasks from all team members of this user in the project
+    team_member_ids = [tm.id_team_member for tm in team_members]
+    if team_member_ids:
+        await db.execute(
+            update(Task).where(Task.fk_team_memberid_team_member.in_(team_member_ids)).values(
+                fk_team_memberid_team_member=None,
+                fk_teamid_team=None
+            )
+        )
+
+        # Move sprint tasks back to backlog
+        await db.execute(
+            update(Task).where(
+                Task.fk_team_memberid_team_member.in_(team_member_ids),
+                Task.fk_sprintid_sprint.isnot(None)
+            ).values(
+                fk_sprintid_sprint=None,
+                workflow_status=TaskWorkflowStatus.TODO.value,
+                board_order=0
+            )
+        )
+
+    # Delete all team members for this user in the project
+    await db.execute(
+        delete(TeamMember).where(
+            TeamMember.fk_userid_user == user_id,
+            TeamMember.fk_teamid_team.in_(
+                select(Team.id_team).where(Team.fk_projectid_project == project_id)
+            )
+        )
+    )
+
+    # Delete the project member
+    await db.execute(
+        delete(ProjectMember).where(
+            ProjectMember.fk_projectid_project == project_id,
+            ProjectMember.fk_userid_user == user_id,
+        )
+    )
+    await db.commit()
+
+    return {"message": "Project member removed"}
 
 async def get_project_membership_or_404(project_id: int, user_id: int, db: AsyncSession):
     result = await db.execute(

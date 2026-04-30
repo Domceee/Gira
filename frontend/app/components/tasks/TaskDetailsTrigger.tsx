@@ -25,12 +25,13 @@ type TaskDetailsTriggerProps = {
   className?: string;
   children: ReactNode;
   draggable?: boolean;
-  onClick?: MouseEventHandler<HTMLTableRowElement>;
-  onDragStart?: DragEventHandler<HTMLTableRowElement>;
-  onDragEnd?: DragEventHandler<HTMLTableRowElement>;
+  as?: "tr" | "div";
+  onClick?: MouseEventHandler<HTMLElement>;
+  onDragStart?: DragEventHandler<HTMLElement>;
+  onDragEnd?: DragEventHandler<HTMLElement>;
 };
 
-function isInteractiveClick(event: MouseEvent<HTMLTableRowElement>) {
+function isInteractiveClick(event: MouseEvent<HTMLElement>) {
   return Boolean(
     (event.target as HTMLElement).closest(
       "a,button,input,select,textarea,form,[data-task-modal-ignore]"
@@ -44,13 +45,14 @@ export default function TaskDetailsTrigger({
   className,
   children,
   draggable,
+  as: Tag = "tr",
   onClick,
   onDragStart,
   onDragEnd,
 }: TaskDetailsTriggerProps) {
   const [open, setOpen] = useState(false);
 
-  function handleClick(event: MouseEvent<HTMLTableRowElement>) {
+  function handleClick(event: MouseEvent<HTMLElement>) {
     onClick?.(event);
 
     if (event.defaultPrevented || isInteractiveClick(event)) {
@@ -62,7 +64,7 @@ export default function TaskDetailsTrigger({
 
   return (
     <>
-      <tr
+      <Tag
         draggable={draggable}
         onClick={handleClick}
         onDragStart={onDragStart}
@@ -70,7 +72,7 @@ export default function TaskDetailsTrigger({
         className={className}
       >
         {children}
-      </tr>
+      </Tag>
       {open && createPortal(
         <TaskDetailsModal task={task} members={members} onClose={() => setOpen(false)} />,
         document.body
