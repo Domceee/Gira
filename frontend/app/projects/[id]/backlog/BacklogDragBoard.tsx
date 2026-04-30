@@ -77,7 +77,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
     finally { setIsSaving(false); }
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, taskId: number) => {
+  const handleDragStart = (e: React.DragEvent<HTMLElement>, taskId: number) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(taskId));
     suppressNextRowClickRef.current = true;
@@ -93,7 +93,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
     }, 0);
   };
 
-  const handleRowClick = (event: React.MouseEvent<HTMLTableRowElement>) => {
+  const handleRowClick = (event: React.MouseEvent<HTMLElement>) => {
     if (!suppressNextRowClickRef.current) return;
     event.preventDefault();
     suppressNextRowClickRef.current = false;
@@ -113,12 +113,6 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
 
   const sectionClass = (targetKey: string) =>
     `rounded-xl border p-4 transition ${activeDropTarget === targetKey ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]" : "border-[#7a8798] bg-[#1f2630]"}`;
-
-  const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider text-[#c3ceda]";
-  const tdClass = "p-3 text-sm text-[#edf3fb]";
-  const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
-  const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
-  const tableClass = "w-full table-fixed border-collapse";
 
   return (
     <>
@@ -146,7 +140,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
                 <div className={`${sectionClass("unassigned")} p-6 rounded-xl space-y-2`} onDragOver={(e) => handleDragOverTarget(e, "unassigned")} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, null)}>
                   {tasks.length === 0 && <p className="p-4 text-center text-xs text-[#93a0b1]">No unassigned tasks.</p>}
                   {tasks.map((task) => (
-                    <TaskDetailsTrigger key={task.id_task} task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
+                    <TaskDetailsTrigger key={task.id_task} as="div" task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-[#ffffff]">{task.name ?? "—"}</div>
                         <div className="text-xs text-[#c3ceda]">{task.description?.trim() || "—"}</div>
@@ -233,7 +227,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
                 <div className={`${sectionClass(targetKey)} p-6 rounded-xl space-y-2`} onDragOver={(e) => handleDragOverTarget(e, targetKey)} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, team.team_id)}>
                   {team.tasks.length === 0 && <p className="p-4 text-center text-xs text-[#93a0b1]">No tasks assigned.</p>}
                   {team.tasks.map((task) => (
-                    <TaskDetailsTrigger key={task.id_task} task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
+                    <TaskDetailsTrigger key={task.id_task} as="div" task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-[#ffffff]">{task.name ?? "—"}</div>
                         <div className="text-xs text-[#c3ceda]">{task.description?.trim() || "—"}</div>
