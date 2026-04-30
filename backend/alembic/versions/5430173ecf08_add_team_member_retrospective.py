@@ -22,6 +22,7 @@ def upgrade() -> None:
         "team_member_retrospective",
         sa.Column("id_retrospective", sa.Integer(), primary_key=True, index=True),
         sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("is_submitted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("id_sprint", sa.Integer(), sa.ForeignKey("sprint.id_sprint"), nullable=False),
         sa.Column("fk_teamMember", sa.Integer(), sa.ForeignKey("team_member.id_team_member"), nullable=True),
     )

@@ -130,18 +130,117 @@ export async function loadMemberRetrospective({
 }
 
 
-export async function saveMemberRetrospective(fd: FormData) {
-  const sprintId = fd.get("sprint_id");
-  const teamId = fd.get("team_id");
-  const projectId = fd.get("project_id");
+export async function saveMemberRetrospective({
+  projectId,
+  teamId,
+  sprintId,
+  retro,
+}: {
+  projectId: string;
+  teamId: string;
+  sprintId: string;
+  retro: any;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
 
   const res = await fetch(
     `${API_URL}/api/retrospective/member/${sprintId}?team_id=${teamId}&project_id=${projectId}`,
     {
       method: "POST",
-      body: fd,
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookieHeader,
+      },
+      body: JSON.stringify(retro),
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to save member retrospective");
+  }
+
+  return await res.json();
+}
+
+/* -------------------------------------------------------
+   LOAD ALL MEMBER RETROSPECsTIVES
+------------------------------------------------------- */
+export async function loadAllMemberRetrospectives({
+  projectId,
+  teamId,
+  sprintId,
+}: {
+  projectId: string;
+  teamId: string;
+  sprintId: string;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(
+    `${API_URL}/api/retrospective/member/${sprintId}/all?team_id=${teamId}&project_id=${projectId}`,
+    {
+      method: "GET",
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) return [];
+
+  return await res.json();
+}
+
+export async function submitMemberRetrospective({
+  projectId,
+  teamId,
+  sprintId,
+}: {
+  projectId: string;
+  teamId: string;
+  sprintId: string;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(
+    `${API_URL}/api/retrospective/member/${sprintId}/submit?team_id=${teamId}&project_id=${projectId}`,
+    {
+      method: "POST",
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
     }
   );
 
   return await res.json();
+}
+/* -------------------------------------------------------
+   CHECK TEAM MEMBERSHIP
+------------------------------------------------------- */
+export async function checkTeamMembership({
+  teamId,
+}: {
+  teamId: string;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(
+    `${API_URL}/api/retrospective/team/${teamId}/is-member`,
+    {
+      method: "GET",
+      headers: { Cookie: cookieHeader },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) {
+    console.log("Membership check failed:", res.status);
+    return { is_member: false };
+  }
+
+  return await res.json(); // { is_member: true/false }
 }
