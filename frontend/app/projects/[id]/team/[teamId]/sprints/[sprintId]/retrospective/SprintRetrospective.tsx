@@ -16,6 +16,7 @@ interface RetroData {
 export default function SprintRetrospective({ projectId, teamId, sprintId }: any) {
   const [open, setOpen] = useState(true);
   const [isFinished, setIsFinished] = useState(false);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
 
   const [retro, setRetro] = useState<RetroData>({
     good: [""],
@@ -57,7 +58,7 @@ export default function SprintRetrospective({ projectId, teamId, sprintId }: any
   }, [projectId, teamId, sprintId]);
 
   const updateCell = (column: RetroColumn, index: number, value: string) => {
-    if (isFinished) return;
+    if (isFinished || isLoadingAI) return;
 
     setRetro((prev) => {
       const next = { ...prev };
@@ -83,70 +84,96 @@ export default function SprintRetrospective({ projectId, teamId, sprintId }: any
 
       {open && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="overflow-x-auto">
+          <div className="grid grid-cols-4 gap-4 min-w-full">
             {columns.map((col) => (
-              <div key={col}>
+              <div key={col} className="min-w-[200px]">
                 <div className={thClass}>{col.toUpperCase()}</div>
 
                 {retro[col].map((value, index) => (
-                  <div key={index} className={tdClass}>
-                    <textarea
-                      disabled={isFinished}
-                      value={value}
-                      onChange={(e) => updateCell(col, index, e.target.value)}
-                      className={`w-full resize-none rounded bg-[#28313d] p-2 text-xs text-[#edf3fb] outline-none ${
-                        isFinished ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                      rows={1}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = "auto";
-                        target.style.height = `${target.scrollHeight}px`;
-                      }}
-                    />
+                  <div
+                    key={index}
+                    contentEditable={!isFinished && !isLoadingAI}
+                    suppressContentEditableWarning
+                    onBlur={(e) => updateCell(col, index, (e.target as HTMLDivElement).textContent || "")}
+                    className={`p-3 text-xs text-[#edf3fb] bg-[#1f2630] border-b border-[#3a4552] whitespace-pre-wrap break-words min-h-[40px] rounded ${
+                      isFinished || isLoadingAI ? "opacity-50 cursor-not-allowed" : "cursor-text hover:bg-[#252e39]"
+                    }`}
+                  >
+                    {value}
                   </div>
                 ))}
               </div>
             ))}
+          </div>
           </div>
 
           
           <div className="mt-8 space-y-4">
              {!isFinished && (
                 <button
+                  disabled={isLoadingAI}
                   onClick={async () => {
-                    const res = await fetch(`${API_URL}/api/retrospective/summarize`, {
-                      method: "POST",
-                      credentials: "include",   // <-- THIS IS THE FIX
-                      body: JSON.stringify({ projectId, teamId, sprintId }),
-                      headers: { "Content-Type": "application/json" },
-                    });
+                    setIsLoadingAI(true);
+                    try {
+                      const res = await fetch(`${API_URL}/api/retrospective/summarize`, {
+                        method: "POST",
+                        credentials: "include",
+                        body: JSON.stringify({ projectId, teamId, sprintId }),
+                        headers: { "Content-Type": "application/json" },
+                      });
 
-                    const summary = await res.json();
-                    console.log("AI SUMMARY RAW:", summary);
+                      const summary = await res.json();
+                      console.log("AI SUMMARY RAW:", summary);
 
-                    // Normalize to guarantee arrays
-                    const safe = {
-                      good: Array.isArray(summary.good) ? summary.good : [],
-                      bad: Array.isArray(summary.bad) ? summary.bad : [],
-                      ideas: Array.isArray(summary.ideas) ? summary.ideas : [],
-                      actions: Array.isArray(summary.actions) ? summary.actions : [],
-                    };
+                      // Normalize to guarantee arrays
+                      const safe = {
+                        good: Array.isArray(summary.good) ? summary.good : [],
+                        bad: Array.isArray(summary.bad) ? summary.bad : [],
+                        ideas: Array.isArray(summary.ideas) ? summary.ideas : [],
+                        actions: Array.isArray(summary.actions) ? summary.actions : [],
+                      };
 
-                    setRetro({
-                      good: [...safe.good, ""],
-                      bad: [...safe.bad, ""],
-                      ideas: [...safe.ideas, ""],
-                      actions: [...safe.actions, ""],
-                    });
+                      const newRetro = {
+                        good: [...safe.good, ""],
+                        bad: [...safe.bad, ""],
+                        ideas: [...safe.ideas, ""],
+                        actions: [...safe.actions, ""],
+                      };
+
+                      setRetro(newRetro);
+
+                      // Auto-save the AI summary
+                      const cleaned = {
+                        good: newRetro.good.filter((x) => x.trim() !== ""),
+                        bad: newRetro.bad.filter((x) => x.trim() !== ""),
+                        ideas: newRetro.ideas.filter((x) => x.trim() !== ""),
+                        actions: newRetro.actions.filter((x) => x.trim() !== ""),
+                      };
+
+                      const fd = new FormData();
+                      fd.append("sprint_id", sprintId);
+                      fd.append("team_id", teamId);
+                      fd.append("project_id", projectId);
+                      fd.append("retro", JSON.stringify(cleaned));
+
+                      await saveRetrospective(fd);
+                    } finally {
+                      setIsLoadingAI(false);
+                    }
                   }}
-                  className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"
+                  className={`w-full rounded-lg border border-[#7a8798] px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    isLoadingAI
+                      ? "bg-[#323d4b] text-[#888] cursor-not-allowed"
+                      : "bg-[#28313d] text-[#edf3fb] hover:bg-[#323d4b]"
+                  }`}
                 >
-                  Summarize with AI
+                  {isLoadingAI ? "Summarizing..." : "Summarize with AI"}
                 </button>
               )}
             {!isFinished && (
               <button
+                disabled={isLoadingAI}
                 onClick={async () => {
                   const cleaned = {
                     good: retro.good.filter((x) => x.trim() !== ""),
@@ -163,13 +190,18 @@ export default function SprintRetrospective({ projectId, teamId, sprintId }: any
 
                   await saveRetrospective(fd);
                 }}
-                className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"
+                className={`w-full rounded-lg border border-[#7a8798] px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  isLoadingAI
+                    ? "bg-[#323d4b] text-[#888] cursor-not-allowed"
+                    : "bg-[#28313d] text-[#edf3fb] hover:bg-[#323d4b]"
+                }`}
               >
                 Save Retrospective
               </button>
             )}
 
             <button
+              disabled={isLoadingAI}
               onClick={async () => {
                 const message = isFinished
                   ? "Reopen this retrospective?"
@@ -179,7 +211,11 @@ export default function SprintRetrospective({ projectId, teamId, sprintId }: any
                 const result = await toggleRetrospective({ sprintId, teamId, projectId });
                 setIsFinished(result.is_finished);
               }}
-              className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"
+              className={`w-full rounded-lg border border-[#7a8798] px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+                isLoadingAI
+                  ? "bg-[#323d4b] text-[#888] cursor-not-allowed"
+                  : "bg-[#28313d] text-[#edf3fb] hover:bg-[#323d4b]"
+              }`}
             >
               {isFinished ? "Reopen Retrospective" : "Finish Retrospective"}
             </button>

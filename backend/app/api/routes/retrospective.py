@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.api.routes.auth import get_current_user
+from pydantic import BaseModel
 
 
 from app.models.retrospective import Retrospective
@@ -135,6 +136,75 @@ async def get_retro(
         "is_finished": retro.is_finished,
         "text": retro.text
     }
+
+
+class SummarizeRequest(BaseModel):
+    projectId: int | str
+    teamId: int | str
+    sprintId: int | str
+
+
+# ---------------------------------------------------------
+# SUMMARIZE RETRO WITH AI
+@router.post("/summarize")
+async def summarize_retro(
+    payload: SummarizeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project_id = int(payload.projectId)
+    team_id = int(payload.teamId)
+    sprint_id = int(payload.sprintId)
+
+    team = await get_team_or_404(team_id, db)
+    await get_project_membership_or_404(project_id, current_user.id_user, db)
+
+    result = await db.execute(
+        select(TeamMemberRetrospective)
+        .where(TeamMemberRetrospective.id_sprint == sprint_id)
+    )
+    retros = result.scalars().all()
+
+    texts = []
+    for r in retros:
+        try:
+            parsed = json.loads(r.description)
+            texts.append(parsed)
+        except:
+            pass
+
+    print("LOADED RETROSPECTIVE TEXTS:", texts)
+
+    prompt = f"""
+You are a experienced scrum master with 20 years of experience, 
+you want to summarize the retrospectivess. add in your insights, and make the final summary concise. Return ONLY valid JSON.
+
+Format:
+{{
+  "good": [],
+  "bad": [],
+  "ideas": [],
+  "actions": []
+}}
+
+Rules:
+- No explanation
+- No markdown
+- No code fences
+- No text before or after the JSON
+- Output must start with '{{' and end with '}}'
+
+Retrospectives:
+{json.dumps(texts, indent=2)}
+"""
+
+    ai_raw = await summarize_with_gemini(prompt)
+    print("AI RAW RESPONSE:", ai_raw)
+
+    cleaned = extract_json(ai_raw)
+    summary = json.loads(cleaned)
+
+    return summary
 
 
 # ---------------------------------------------------------
@@ -450,65 +520,4 @@ async def check_team_membership(
         return {"is_member": True}
     except HTTPException:
         return {"is_member": False}
-    
-from pydantic import BaseModel
-class SummarizeRequest(BaseModel):
-    projectId: int | str
-    teamId: int | str
-    sprintId: int | str
-
-
-@router.post("/summarize")
-async def summarize_retro(payload: SummarizeRequest, db: AsyncSession = Depends(get_db)):
-    project_id = payload.projectId
-    team_id = payload.teamId
-    sprint_id = payload.sprintId
-
-    # Load all member retrospectives
-    result = await db.execute(
-        select(TeamMemberRetrospective)
-        .where(TeamMemberRetrospective.fk_sprintid_sprint == sprint_id)
-    )
-    retros = result.scalars().all()
-
-    texts = []
-    for r in retros:
-        try:
-            parsed = json.loads(r.description)
-            texts.append(parsed)
-        except:
-            pass
-
-    print("LOADED RETROSPECTIVE TEXTS:", texts)
-
-
-    prompt = f"""
-You are a summarization engine. Return ONLY valid JSON.
-
-Format:
-{{
-  "good": [],
-  "bad": [],
-  "ideas": [],
-  "actions": []
-}}
-
-Rules:
-- No explanation
-- No markdown
-- No code fences
-- No text before or after the JSON
-- Output must start with '{{' and end with '}}'
-
-Retrospectives:
-{json.dumps(texts, indent=2)}
-"""
-
-    ai_raw = await summarize_with_gemini(prompt)
-    print("AI RAW RESPONSE:", ai_raw)
-
-    cleaned = extract_json(ai_raw)
-    summary = json.loads(cleaned)
-
-    return summary
 

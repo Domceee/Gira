@@ -30,6 +30,7 @@ export default function MemberRetrospective({
 }) {
   const [open, setOpen] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [retro, setRetro] = useState<RetroData>({
     good: [""],
@@ -45,8 +46,8 @@ export default function MemberRetrospective({
     return [...cleaned, ""];
   };
 
-  // 🔥 Unified lock: sprint finished OR user submitted
-  const editingLocked = isSubmitted || sprintFinished;
+  // 🔥 Unified lock: sprint finished OR user submitted OR loading
+  const editingLocked = isSubmitted || sprintFinished || isLoading;
 
   /* ---------------------------------------------------------
      LOAD EXISTING PERSONAL RETRO
@@ -123,33 +124,28 @@ export default function MemberRetrospective({
 
       {open && (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="overflow-x-auto">
+          <div className="grid grid-cols-4 gap-4 min-w-full">
             {columns.map((col) => (
-              <div key={col}>
+              <div key={col} className="min-w-[200px]">
                 <div className={thClass}>{col.toUpperCase()}</div>
 
                 {retro[col].map((value, index) => (
-                  <div key={index} className={tdClass}>
-                    <textarea
-                      disabled={editingLocked}
-                      value={value}
-                      onChange={(e) =>
-                        updateCell(col, index, e.target.value)
-                      }
-                      className={`w-full resize-none rounded bg-[#28313d] p-2 text-xs text-[#edf3fb] outline-none ${
-                        editingLocked ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                      rows={1}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = "auto";
-                        target.style.height = `${target.scrollHeight}px`;
-                      }}
-                    />
+                  <div
+                    key={index}
+                    contentEditable={!editingLocked}
+                    suppressContentEditableWarning
+                    onBlur={(e) => updateCell(col, index, (e.target as HTMLDivElement).textContent || "")}
+                    className={`p-3 text-xs text-[#edf3fb] bg-[#1f2630] border-b border-[#3a4552] whitespace-pre-wrap break-words min-h-[40px] rounded ${
+                      editingLocked ? "opacity-50 cursor-not-allowed" : "cursor-text hover:bg-[#252e39]"
+                    }`}
+                  >
+                    {value}
                   </div>
                 ))}
               </div>
             ))}
+          </div>
           </div>
 
           {/* BUTTONS */}

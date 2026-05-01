@@ -43,7 +43,7 @@ function MemberRow({ member }: { member: any }) {
               {(parsed[col] || []).map((item: string, idx: number) => (
                 <div
                   key={idx}
-                  className="p-2 text-xs text-[#edf3fb] bg-[#1f2630] border-b border-[#3a4552]"
+                  className="p-3 text-xs text-[#edf3fb] bg-[#1f2630] border-b border-[#3a4552] whitespace-pre-wrap break-words min-h-fit"
                 >
                   {item}
                 </div>
