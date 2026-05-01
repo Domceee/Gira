@@ -694,6 +694,7 @@ async def get_team_backlog(
     result = await db.execute(
         select(Task)
         .where(Task.fk_teamid_team == team_id)
+        .where(Task.fk_sprintid_sprint.is_(None))
         .order_by(Task.id_task.asc())
     )
     tasks = result.scalars().all()
@@ -797,15 +798,14 @@ async def get_available_project_members(
 ):
     await require_project_owner(project_id, current_user.id_user, db)
 
+    # Base query: all project members
     query = (
-        select(User)
+        select(User, ProjectMember)
         .join(ProjectMember, ProjectMember.fk_userid_user == User.id_user)
-        .where(
-            ProjectMember.fk_projectid_project == project_id,
-            User.id_user != current_user.id_user,
-        )
+        .where(ProjectMember.fk_projectid_project == project_id)
     )
 
+    # Exclude users already in the team
     if team_id is not None:
         subquery = (
             select(TeamMember.fk_userid_user)
@@ -814,7 +814,7 @@ async def get_available_project_members(
         query = query.where(User.id_user.not_in(subquery))
 
     result = await db.execute(query.order_by(User.name.asc()))
-    users = result.scalars().all()
+    rows = result.all()
 
     return [
         {
@@ -823,9 +823,11 @@ async def get_available_project_members(
             "email": user.email,
             "country": user.country,
             "city": user.city,
+            "Owner": (pm.role == "Owner"),
         }
-        for user in users
+        for user, pm in rows
     ]
+
 
 
 @router.get("/{project_id}/teams/{team_id}/members")
@@ -838,11 +840,16 @@ async def get_team_members(
     await get_project_membership_or_404(project_id, current_user.id_user, db)
     await get_team_or_404(project_id, team_id, db)
 
+    # ⭐ FIX: join ProjectMember so we can detect owner
     result = await db.execute(
-        select(User, TeamMember)
+        select(User, TeamMember, ProjectMember)
         .join(TeamMember, TeamMember.fk_userid_user == User.id_user)
+        .join(ProjectMember, ProjectMember.fk_userid_user == User.id_user)
         .where(TeamMember.fk_teamid_team == team_id)
+        .where(ProjectMember.fk_projectid_project == project_id)
+        .order_by(User.name.asc())
     )
+
     rows = result.all()
 
     return [
@@ -854,8 +861,10 @@ async def get_team_members(
             "city": user.city,
             "role_in_team": team_member.role_in_team,
             "effectiveness": team_member.effectiveness,
+            "Owner": (pm.role == "Owner"),
+ 
         }
-        for user, team_member in rows
+        for user, team_member, pm in rows
     ]
 
 

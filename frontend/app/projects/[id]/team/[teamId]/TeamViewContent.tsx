@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+
 import { CalendarX } from "lucide-react";
 import { createSprint, assignTaskToSprint, closeSprint } from "./actions";
 import TaskStatusForm from "./TaskStatusForm";
@@ -68,6 +72,45 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   plannedSprints: Sprint[];
   endedSprints: Sprint[];
 }) {
+
+  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, taskId: number) => {
+    e.dataTransfer.setData("text/plain", String(taskId));
+    setDraggedTaskId(taskId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setActiveDropTarget(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, sprintId: number | null) => {
+    e.preventDefault();
+    const taskId = Number(e.dataTransfer.getData("text/plain"));
+    if (!taskId) return;
+
+    const fd = new FormData();
+    fd.append("task_id", String(taskId));
+    fd.append("sprint_id", sprintId === null ? "null" : String(sprintId));
+    fd.append("team_id", String(teamId));
+    fd.append("project_id", String(projectId));
+
+    await assignTaskToSprint(fd);
+
+
+    setDraggedTaskId(null);
+    setActiveDropTarget(null);
+  };
+
+
+
+
+
+  
+
+
   const backlogTasks = team.tasks.filter((t) => t.fk_sprintid_sprint === null);
   const taskModalMembers = team.team_members.map((member) => ({
     id_team_member: member.id_team_member,
@@ -111,7 +154,19 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   return (
     <div className="space-y-8">
       {/* Backlog */}
-      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+      <div
+        className={`rounded-xl p-6 transition ${
+          activeDropTarget === "backlog"
+            ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+            : "border-[#7a8798] bg-[#1f2630]"
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setActiveDropTarget("backlog");
+        }}
+        onDragLeave={() => setActiveDropTarget(null)}
+        onDrop={(e) => handleDrop(e, null)}
+      >
         <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Team Backlog</h2>
         <div className="overflow-x-auto">
           <table className={taskTableClass}>
@@ -126,7 +181,15 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               {backlogTasks.length === 0
                 ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in backlog.</td></tr>
                 : backlogTasks.map((task) => (
-                  <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                  <TaskDetailsTrigger
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task.id_task)}
+                    onDragEnd={handleDragEnd} 
+                    key={task.id_task} 
+                    task={task} 
+                    members={taskModalMembers} 
+                    className={trClass}
+                  >
                     <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
                     <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                     <td className={tdClass}>{task.story_points ?? "—"}</td>
@@ -161,7 +224,25 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No active sprints yet.</div>
         )}
         {activeSprints.map((sprint) => (
-          <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+          <div
+            key={sprint.id_sprint}
+            className={`mb-6 rounded-xl p-6 transition ${
+              activeDropTarget === `sprint-${sprint.id_sprint}`
+                ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+                : "border-[#7a8798] bg-[#1f2630]"
+            }`}
+            onDragOver={(e) => {
+              if (sprint.status === "COMPLETED") return; // ❌ no drop
+              e.preventDefault();
+              setActiveDropTarget(`sprint-${sprint.id_sprint}`);
+            }}
+            onDragLeave={() => setActiveDropTarget(null)}
+            onDrop={(e) => {
+              if (sprint.status === "COMPLETED") return;
+              handleDrop(e, sprint.id_sprint);
+            }}
+          >
+
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-base font-semibold text-[#ffffff]">Sprint {sprint.id_sprint} <span className="text-[#c3ceda] text-sm">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
               <div className="flex flex-wrap gap-2">
@@ -192,7 +273,15 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                   {sprint.tasks.length === 0
                     ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
                     : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                      <TaskDetailsTrigger
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task.id_task)}
+                        onDragEnd={handleDragEnd} 
+                        key={task.id_task} 
+                        task={task} 
+                        members={taskModalMembers} 
+                        className={trClass}
+                      >
                         <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
                         <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                         <td className={tdClass}>{task.story_points ?? "—"}</td>
@@ -229,7 +318,24 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No planned sprints yet.</div>
         )}
         {plannedSprints.map((sprint) => (
-          <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+          <div
+            key={sprint.id_sprint}
+            className={`mb-6 rounded-xl p-6 transition ${
+              activeDropTarget === `sprint-${sprint.id_sprint}`
+                ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+                : "border-[#7a8798] bg-[#1f2630]"
+            }`}
+            onDragOver={(e) => {
+              if (sprint.status === "COMPLETED") return; // ❌ no drop
+              e.preventDefault();
+              setActiveDropTarget(`sprint-${sprint.id_sprint}`);
+            }}
+            onDragLeave={() => setActiveDropTarget(null)}
+            onDrop={(e) => {
+              if (sprint.status === "COMPLETED") return;
+              handleDrop(e, sprint.id_sprint);
+            }}
+          >
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-base font-semibold text-[#edf3fb]">Sprint {sprint.id_sprint} <span className="text-[#c3ceda] text-sm">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
               <Link href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
@@ -250,7 +356,15 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                   {sprint.tasks.length === 0
                     ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
                     : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
+                      <TaskDetailsTrigger
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task.id_task)}
+                        onDragEnd={handleDragEnd} 
+                        key={task.id_task} 
+                        task={task} 
+                        members={taskModalMembers} 
+                        className={trClass}
+                      >
                         <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
                         <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
                         <td className={tdClass}>{task.story_points ?? "—"}</td>

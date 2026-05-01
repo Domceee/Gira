@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, Boolean
 from app.db.base_class import Base
 from app.models.task_workflow_status import TaskWorkflowStatus
 
@@ -12,6 +12,7 @@ class Task(Base):
     acceptance_criteria_description = Column(Text, nullable=True)
     risk = Column(Integer, nullable=True)
     priority = Column(Integer, nullable=True)
+    multiplePeople = Column(Boolean, nullable=True, server_default="0")
 
     # Legacy role enum link; latest migration allows this to be null.
     fk_role_enumid_role_enum = Column(
