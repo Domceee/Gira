@@ -1,8 +1,10 @@
+from app.services.ai import summarize_with_gemini
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.api.routes.auth import get_current_user
+
 
 from app.models.retrospective import Retrospective
 from app.models.sprint import Sprint
@@ -15,6 +17,21 @@ from app.models.team_member_retrospective import TeamMemberRetrospective
 from app.models.team_member import TeamMember
 
 import json
+
+
+
+import re
+
+def extract_json(text: str) -> str:
+    # Remove markdown code fences like ```json ... ```
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+
+    # Extract the first JSON object
+    match = re.search(r"\{[\s\S]*\}", text)
+    if match:
+        return match.group(0)
+
+    raise ValueError("No JSON object found in AI response")
 
 router = APIRouter(prefix="/retrospective", tags=["retrospective"])
 
@@ -433,3 +450,65 @@ async def check_team_membership(
         return {"is_member": True}
     except HTTPException:
         return {"is_member": False}
+    
+from pydantic import BaseModel
+class SummarizeRequest(BaseModel):
+    projectId: int | str
+    teamId: int | str
+    sprintId: int | str
+
+
+@router.post("/summarize")
+async def summarize_retro(payload: SummarizeRequest, db: AsyncSession = Depends(get_db)):
+    project_id = payload.projectId
+    team_id = payload.teamId
+    sprint_id = payload.sprintId
+
+    # Load all member retrospectives
+    result = await db.execute(
+        select(TeamMemberRetrospective)
+        .where(TeamMemberRetrospective.fk_sprintid_sprint == sprint_id)
+    )
+    retros = result.scalars().all()
+
+    texts = []
+    for r in retros:
+        try:
+            parsed = json.loads(r.description)
+            texts.append(parsed)
+        except:
+            pass
+
+    print("LOADED RETROSPECTIVE TEXTS:", texts)
+
+
+    prompt = f"""
+You are a summarization engine. Return ONLY valid JSON.
+
+Format:
+{{
+  "good": [],
+  "bad": [],
+  "ideas": [],
+  "actions": []
+}}
+
+Rules:
+- No explanation
+- No markdown
+- No code fences
+- No text before or after the JSON
+- Output must start with '{{' and end with '}}'
+
+Retrospectives:
+{json.dumps(texts, indent=2)}
+"""
+
+    ai_raw = await summarize_with_gemini(prompt)
+    print("AI RAW RESPONSE:", ai_raw)
+
+    cleaned = extract_json(ai_raw)
+    summary = json.loads(cleaned)
+
+    return summary
+

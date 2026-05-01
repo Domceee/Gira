@@ -21,6 +21,7 @@ async def get_news(
         "task_assigned",
         "sprint_started",
         "team_assignment",
+        "project",  
     ]
     result = await db.execute(
         select(News)

@@ -14,3 +14,4 @@ from app.models.news import News
 from app.models.invitation import Invitation
 from app.models.retrospective import Retrospective
 from app.models.task_multiple_assignees import task_multiple_assignees
+from app.models.password_reset import PasswordResetToken

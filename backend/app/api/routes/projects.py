@@ -1,5 +1,7 @@
+from app.schemas.user import UserRead
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.email import send_project_invitation_email
@@ -19,6 +21,7 @@ from app.schemas.project import (
     StoryPointsByTeamRead,
     TeamVelocitySprintRead,
 )
+from app.models.news import News
 from app.schemas.board import BoardMemberRead, BoardTaskRead, ProjectBoardRead, SprintBoardRead
 from app.schemas.ProjectMember import ProjectMembersAddRequest
 from app.models.team import Team
@@ -28,6 +31,7 @@ from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
 from app.models.sprint_task_event import SprintTaskEvent
 from app.models.task_multiple_assignees import task_multiple_assignees
+from app.models.team_member_retrospective import TeamMemberRetrospective
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
 from app.schemas.task import TaskRead
 from app.models.task_workflow_status import TaskWorkflowStatus
@@ -721,19 +725,15 @@ async def get_team_backlog(
     )
 
     members = [
-        {
-            "id_team_member": tm.id_team_member,
-            "role_in_team": tm.role_in_team,
-            "effectiveness": tm.effectiveness,
-            "user": {
-                "id_user": user.id_user,
-                "name": user.name,
-                "email": user.email,
-                "picture": user.picture,
-            }
-        }
-        for tm, user in result.all()
-    ]
+    {
+        "id_team_member": tm.id_team_member,
+        "role_in_team": tm.role_in_team,
+        "effectiveness": tm.effectiveness,
+        "user": UserRead.model_validate(user).model_dump(),
+    }
+    for tm, user in result.all()
+]
+
 
     from app.models.task_multiple_assignees import task_multiple_assignees
 
@@ -1030,6 +1030,98 @@ async def get_team_or_404(project_id: int, team_id: int, db: AsyncSession):
     team = result.scalar_one_or_none()
 
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise HTTPException(status_code=404, detail="Team snot found")
 
     return team
+
+@router.post("/{project_id}/leave", status_code=status.HTTP_200_OK)
+async def leave_project(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    membership = await db.execute(
+        select(ProjectMember)
+        .where(ProjectMember.fk_projectid_project == project_id)
+        .where(ProjectMember.fk_userid_user == current_user.id_user)
+    )
+    membership = membership.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="You are not a member of this project")
+
+    result = await db.execute(
+        select(TeamMember)
+        .join(Team, Team.id_team == TeamMember.fk_teamid_team)
+        .where(Team.fk_projectid_project == project_id)
+        .where(TeamMember.fk_userid_user == current_user.id_user)
+    )
+    team_members = result.scalars().all()
+    if not team_members:
+        raise HTTPException(status_code=404, detail="No team membership found")
+
+    team_member_ids = [tm.id_team_member for tm in team_members]
+
+    try:
+        # no db.begin()
+
+        await db.execute(
+            update(Task)
+            .where(Task.fk_team_memberid_team_member.in_(team_member_ids))
+            .values(fk_team_memberid_team_member=None)
+        )
+
+        await db.execute(
+            delete(task_multiple_assignees)
+            .where(task_multiple_assignees.fk_team_memberid_team_member.in_(team_member_ids))
+        )
+
+        await db.execute(
+            delete(Invitation)
+            .where(Invitation.fk_projectid_project == project_id)
+            .where(Invitation.fk_userid_user == current_user.id_user)
+        )
+
+        await db.execute(
+            delete(TeamMemberRetrospective)
+            .where(TeamMemberRetrospective.fk_teamMember.in_(team_member_ids))
+        )
+
+
+        owner_id = (
+            await db.execute(
+                select(ProjectMember.fk_userid_user)
+                .where(ProjectMember.fk_projectid_project == project_id)
+                .where(ProjectMember.is_owner == True)
+            )
+        ).scalar_one()
+        
+        project_name = (
+            await db.execute(
+                select(Project.name).where(Project.id_project == project_id)
+            )
+        ).scalar_one()
+
+
+        owner_news = News(
+            fk_userid_user=owner_id,
+            fk_projectid_project=project_id,
+            news_type="project",
+            title="Member Left",
+            message=f"{current_user.name} left your project '{project_name}'",
+        )
+
+
+        db.add(owner_news)
+
+        
+
+
+        await db.commit()   # <-- THIS IS THE IMPORTANT PART
+
+        return {"status": "success", "message": "You have left the project"}
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+

@@ -39,3 +39,8 @@ app.include_router(user.router, prefix="/api")
 app.include_router(sprint.router, prefix="/api")
 app.include_router(retrospective.router, prefix="/api")
 
+#print("\n=== REGISTERED ROUTES ===")
+#for route in app.routes:
+#    methods = ",".join(route.methods or [])
+    #print(f"{methods:10s}  {route.path}")
+#print("==========================\n")

@@ -286,6 +286,7 @@ function updateTask(patch: Partial<typeof localTask>) {
               </select>
             </label>
           </div>
+          {canAssignMember && (
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -294,7 +295,9 @@ function updateTask(patch: Partial<typeof localTask>) {
             />
             Allow multiple assignees
           </label>
+          )}
           {canAssignMember && localTask.multiplePeople && (
+            
             <div className="mt-3">
               <label className="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
                 Assignees

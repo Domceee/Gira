@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { loadRetrospective, saveRetrospective, toggleRetrospective } from "./actions";
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 type RetroColumn = "good" | "bad" | "ideas" | "actions";
 
 interface RetroData {
@@ -110,7 +110,41 @@ export default function SprintRetrospective({ projectId, teamId, sprintId }: any
             ))}
           </div>
 
+          
           <div className="mt-8 space-y-4">
+             {!isFinished && (
+                <button
+                  onClick={async () => {
+                    const res = await fetch(`${API_URL}/api/retrospective/summarize`, {
+                      method: "POST",
+                      credentials: "include",   // <-- THIS IS THE FIX
+                      body: JSON.stringify({ projectId, teamId, sprintId }),
+                      headers: { "Content-Type": "application/json" },
+                    });
+
+                    const summary = await res.json();
+                    console.log("AI SUMMARY RAW:", summary);
+
+                    // Normalize to guarantee arrays
+                    const safe = {
+                      good: Array.isArray(summary.good) ? summary.good : [],
+                      bad: Array.isArray(summary.bad) ? summary.bad : [],
+                      ideas: Array.isArray(summary.ideas) ? summary.ideas : [],
+                      actions: Array.isArray(summary.actions) ? summary.actions : [],
+                    };
+
+                    setRetro({
+                      good: [...safe.good, ""],
+                      bad: [...safe.bad, ""],
+                      ideas: [...safe.ideas, ""],
+                      actions: [...safe.actions, ""],
+                    });
+                  }}
+                  className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#edf3fb] hover:bg-[#323d4b]"
+                >
+                  Summarize with AI
+                </button>
+              )}
             {!isFinished && (
               <button
                 onClick={async () => {
