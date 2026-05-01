@@ -7,8 +7,13 @@ import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
 import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import MemberSelector from "./MemberSelector";
+
+
+
 
 
 export const dynamic = "force-dynamic";
@@ -90,8 +95,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   function closeSprintModal() {
   setEditingSprint(null);
   setSprintError(null);   // clear error when closing
-} 
-async function handleSprintUpdate(formData: FormData) {
+} async function handleSprintUpdate(formData: FormData) {
     setSprintError(null); // clear previous errors
 
     try {
@@ -119,6 +123,19 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
 }
 
 
+const [openMember, setOpenMember] = useState<number | null>(null);
+const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+const avatarRef = useRef<HTMLButtonElement | null>(null);
+
+useEffect(() => {
+  function handleClick(e: MouseEvent) {
+    if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+      setOpenMember(null);
+    }
+  }
+  document.addEventListener("mousedown", handleClick);
+  return () => document.removeEventListener("mousedown", handleClick);
+}, []);
 
 
 
@@ -155,7 +172,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
     </colgroup>
   );
 
-  return (
+   return (
     <div className="space-y-8">
       {/* Backlog */}
       <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
@@ -173,11 +190,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
               {backlogTasks.length === 0
                 ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in backlog.</td></tr>
                 : backlogTasks.map((task) => (
-                  <TaskDetailsTrigger 
-                      key={`${task.id_task}-${task.fk_team_memberid_team_member}`} 
-                      task={task} 
-                      members={taskModalMembers} 
-                      className={trClass}
+                  <TaskDetailsTrigger                       key={`${task.id_task}-${task.fk_team_memberid_team_member}`}                       task={task}                       members={taskModalMembers}                       className={trClass}
                     >
 
                     <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
@@ -234,8 +247,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
         </h3>
 
         <div className="flex flex-wrap gap-2">
-   
-          <button
+             <button
             type="button"
             onClick={() => setEditingSprint(sprint)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
@@ -371,46 +383,39 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
                       </form>
                     </td>
 
-                    {/* Member Selector */}
-                    <td className={tdClass}>
-                      <select
-                        defaultValue={
-                          task.fk_team_memberid_team_member ?? ""
-                        }
-                        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff]"
-                        onChange={async (e) => {
-                          const memberId = e.target.value
-                            ? Number(e.target.value)
-                            : null;
+<td className={tdClass}>
+  {(() => {
+    const assigned = team.team_members.find(
+      (m) => m.id_team_member === task.fk_team_memberid_team_member
+    );
 
-                          const res = await fetch(
-                            `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/${task.id_task}/assign_member`,
-                            {
-                              method: "PATCH",
-                              credentials: "include",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                team_member_id: memberId,
-                              }),
-                            }
-                          );
+    if (!assigned) {
+      return (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+          ?
+        </div>
+      );
+    }
 
-                          router.refresh();
-                        }}
-                      >
-                        <option value="">Unassigned</option>
-                        {team.team_members.map((m) => (
-                          <option
-                            key={m.id_team_member}
-                            value={m.id_team_member}
-                          >
-                            {m.user.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+    return assigned.user.picture ? (
+      <img
+        src={`data:image/jpeg;base64,${assigned.user.picture}`}
+        className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+      />
+    ) : (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+        {assigned.user.name[0].toUpperCase()}
+      </div>
+    );
+  })()}
+</td>
+
+
+
+
+
+
+
                   </TaskDetailsTrigger>
                 ))
             )}
@@ -422,8 +427,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
 
   {/*  EDIT SPRINT MODAL */}
   {editingSprint && (
-    
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-bold text-white">
           Edit Sprint {editingSprint.id_sprint}
@@ -526,11 +530,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
                   {sprint.tasks.length === 0
                     ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
                     : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <TaskDetailsTrigger 
-                          key={`${task.id_task}-${task.fk_team_memberid_team_member}`} 
-                          task={task} 
-                          members={taskModalMembers} 
-                          className={trClass}
+                      <TaskDetailsTrigger                           key={`${task.id_task}-${task.fk_team_memberid_team_member}`}                           task={task}                           members={taskModalMembers}                           className={trClass}
                         >
 
                         <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
@@ -553,40 +553,31 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
                           </form>
                         </td>
                         <td className={tdClass}>
-                          <select
-                            defaultValue={task.fk_team_memberid_team_member ?? ""}
-                            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff]"
-                            onChange={async (e) => {
-                                const memberId = e.target.value ? Number(e.target.value) : null;
+  {(() => {
+    const assigned = team.team_members.find(
+      (m) => m.id_team_member === task.fk_team_memberid_team_member
+    );
 
-                                const res = await fetch(
-                                  `${process.env.NEXT_PUBLIC_API_URL}/api/tasks/${task.id_task}/assign_member`,
-                                  {
-                                    method: "PATCH",
-                                    credentials: "include",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({ team_member_id: memberId }),
-                                  }
-                                );
+    if (!assigned) {
+      return (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+          ?
+        </div>
+      );
+    }
 
-                                console.log("STATUS:", res.status);
-                                console.log("BODY:", await res.text());
-                                
-                                router.refresh();
-                                //window.location.reload();
-                              }}
-
-                          >
-                            <option value="">Unassigned</option>
-                            {team.team_members.map((m) => (
-                              <option key={m.id_team_member} value={m.id_team_member}>
-                                {m.user.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
+    return assigned.user.picture ? (
+      <img
+        src={`data:image/jpeg;base64,${assigned.user.picture}`}
+        className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+      />
+    ) : (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+        {assigned.user.name[0].toUpperCase()}
+      </div>
+    );
+  })()}
+</td>
 
 
                       </TaskDetailsTrigger>
@@ -708,11 +699,7 @@ async function handleDeleteSprint(formData: FormData): Promise<void> {
                     : sprint.tasks.map((task) => {
                       const member = team.team_members.find((m) => m.id_team_member === task.fk_team_memberid_team_member);
                       return (
-                        <TaskDetailsTrigger 
-                            key={`${task.id_task}-${task.fk_team_memberid_team_member}`} 
-                            task={task} 
-                            members={taskModalMembers} 
-                            className={trClass}
+                        <TaskDetailsTrigger                             key={`${task.id_task}-${task.fk_team_memberid_team_member}`}                             task={task}                             members={taskModalMembers}                             className={trClass}
                           >
 
                           <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>

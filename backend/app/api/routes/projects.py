@@ -684,6 +684,13 @@ async def get_team_backlog(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    import base64
+
+    def encode_picture(picture_bytes):
+        if picture_bytes:
+            return base64.b64encode(picture_bytes).decode("utf-8")
+        return None
+
     # Ensure user belongs to the project
     await get_project_membership_or_404(project_id, current_user.id_user, db)
 
@@ -714,16 +721,53 @@ async def get_team_backlog(
                 "id_user": user.id_user,
                 "name": user.name,
                 "email": user.email,
-                "picture": user.picture,
+                "picture": encode_picture(user.picture),
             }
         }
         for tm, user in result.all()
     ]
 
+    def fix_user(u):
+        if not u:
+            return None
+
+        # ORM model → dict
+        if hasattr(u, "__dict__"):
+            return {
+                "id_user": u.id_user,
+                "name": u.name,
+                "email": u.email,
+                "picture": encode_picture(u.picture),
+            }
+
+        # dict → encode picture if present
+        if isinstance(u, dict):
+            if "picture" in u:
+                u["picture"] = encode_picture(u["picture"])
+            return u
+
+        return None
+
     task_output = []
     for task in tasks:
         can_delete, delete_block_reason = await get_task_delete_state(task, db)
         task_read = TaskRead.model_validate(task).model_dump()
+
+        # sanitize all nested users
+        task_read["assigned_user"] = fix_user(task_read.get("assigned_user"))
+        task_read["created_by_user"] = fix_user(task_read.get("created_by_user"))
+        task_read["updated_by_user"] = fix_user(task_read.get("updated_by_user"))
+
+        comments = task_read.get("comments")
+        if comments:
+            for c in comments:
+                c["user"] = fix_user(c.get("user"))
+
+        events = task_read.get("events")
+        if events:
+            for e in events:
+                e["user"] = fix_user(e.get("user"))
+
         task_read["can_delete"] = can_delete
         task_read["delete_block_reason"] = delete_block_reason
         task_output.append(task_read)
@@ -734,6 +778,7 @@ async def get_team_backlog(
         "tasks": task_output,
         "team_members": members,
     }
+
 
 
 @router.post("/{project_id}/teams", response_model=TeamRead, status_code=201)

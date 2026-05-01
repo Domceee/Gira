@@ -24,8 +24,16 @@ async def get_project_teams(project_id: int, db: AsyncSession = Depends(get_db))
         for team in teams
     ]
 
+
 @router.get("/{project_id}/teams/{team_id}")
 async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Depends(get_db)):
+    import base64
+
+    def encode_picture(picture_bytes):
+        if picture_bytes:
+            return base64.b64encode(picture_bytes).decode("utf-8")
+        return None
+
     # Validate team exists
     result = await db.execute(
         select(Team).where(
@@ -46,7 +54,7 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
     )
     tasks = result.scalars().all()
 
-    # get team members + user info
+    # ⭐ get team members + user info (SAFE)
     from app.models.team_member import TeamMember
     from app.models.user import User
 
@@ -56,8 +64,11 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
         .where(TeamMember.fk_teamid_team == team_id)
     )
 
-    members = [
-        {
+    rows = result.all()
+
+    members = []
+    for tm, user in rows:
+        members.append({
             "id_team_member": tm.id_team_member,
             "role_in_team": tm.role_in_team,
             "effectiveness": tm.effectiveness,
@@ -65,19 +76,61 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
                 "id_user": user.id_user,
                 "name": user.name,
                 "email": user.email,
-                "picture": user.picture,
+                "picture": encode_picture(user.picture),
             }
-        }
-        for tm, user in result.all()
-    ]
+        })
 
-return {
-    "team_id": team.id_team,
-    "team_name": team.name,
-    "tasks": [
-        TaskRead.model_validate(t).model_dump()
-        for t in tasks
-    ],
-    "team_members": members
-}
+    # ⭐ CRITICAL: remove ORM objects so FastAPI cannot see them
+    del rows
+    del tm
+    del user
 
+    # ⭐ FIX: encode picture inside tasks too
+    task_dicts = []
+    for t in tasks:
+        td = TaskRead.model_validate(t).model_dump()
+
+        # ⭐ NEW FIX_USER — handles SQLAlchemy models AND dicts
+        def fix_user(u):
+            if not u:
+                return None
+
+            # SQLAlchemy model → convert to dict
+            if hasattr(u, "__dict__"):
+                return {
+                    "id_user": u.id_user,
+                    "name": u.name,
+                    "email": u.email,
+                    "picture": encode_picture(u.picture),
+                }
+
+            # Already a dict
+            if isinstance(u, dict):
+                if "picture" in u:
+                    u["picture"] = encode_picture(u["picture"])
+                return u
+
+            return None
+
+        # Apply fix_user to all nested user fields
+        td["assigned_user"] = fix_user(td.get("assigned_user"))
+        td["created_by_user"] = fix_user(td.get("created_by_user"))
+        td["updated_by_user"] = fix_user(td.get("updated_by_user"))
+
+        comments = td.get("comments")
+        if comments:
+            for c in comments:
+                c["user"] = fix_user(c.get("user"))
+
+        events = td.get("events")
+        if events:
+            for e in events:
+                e["user"] = fix_user(e.get("user"))
+
+        task_dicts.append(td)
+
+    # ⭐ FINAL RETURN
+    return {
+        "members": members,
+        "tasks": task_dicts,
+    }

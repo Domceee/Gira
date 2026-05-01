@@ -11,6 +11,7 @@ interface User {
   email: string;
   country: string;
   city: string;
+  picture?: string | null; 
 }
 
 export default function Navbar() {
@@ -80,9 +81,18 @@ export default function Navbar() {
             onClick={() => setOpen(!open)}
             className="flex items-center gap-2 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 transition hover:border-[#7b8798] hover:bg-[#323d4b]"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-xs font-semibold text-[#39e7ac] border border-[#7b8798]">
-              {getInitials(user?.name)}
-            </div>
+              {user?.picture ? (
+                <img
+                  src={`data:image/jpeg;base64,${user.picture}`}
+                  alt="Profile"
+                  className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+                />
+              ) : (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-xs font-semibold text-[#39e7ac] border border-[#7b8798]">
+                  {getInitials(user?.name)}
+                </div>
+              )}
+
             <svg className={`h-3.5 w-3.5 text-[#c3ceda] transition ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
