@@ -19,6 +19,7 @@ from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.user import User
+from app.models.task_multiple_assignees import task_multiple_assignees
 from app.services.news import create_news_for_users
 from app.schemas.sprint import BurndownPoint, SprintCreate, SprintRead, SprintStatsRead
 from app.services.sprint_burndown import (
@@ -63,11 +64,22 @@ async def get_sprints(
 
         task_reads = []
         for task in tasks:
+            # Load multi‑assignees
+            assignees_result = await db.execute(
+                select(task_multiple_assignees.fk_team_memberid_team_member)
+                .where(task_multiple_assignees.fk_taskid_task == task.id_task)
+            )
+            assignees = [row[0] for row in assignees_result.fetchall()]
+
+            # Build TaskRead
             can_delete, delete_block_reason = await get_task_delete_state(task, db)
             task_read = TaskRead.model_validate(task)
             task_read.can_delete = can_delete
             task_read.delete_block_reason = delete_block_reason
+            task_read.assignees = assignees
+
             task_reads.append(task_read.model_dump())
+
 
         output.append(
             {

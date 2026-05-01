@@ -25,6 +25,9 @@ type Task = {
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   can_delete?: boolean;
   delete_block_reason?: string | null;
+
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];           // NEW
 };
 
 type TeamMember = {
@@ -103,13 +106,6 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     setDraggedTaskId(null);
     setActiveDropTarget(null);
   };
-
-
-
-
-
-  
-
 
   const backlogTasks = team.tasks.filter((t) => t.fk_sprintid_sprint === null);
   const taskModalMembers = team.team_members.map((member) => ({
@@ -272,39 +268,45 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 <tbody>
                   {sprint.tasks.length === 0
                     ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
-                    : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <TaskDetailsTrigger
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task.id_task)}
-                        onDragEnd={handleDragEnd} 
-                        key={task.id_task} 
-                        task={task} 
-                        members={taskModalMembers} 
-                        className={trClass}
-                      >
-                        <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                        <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
-                        <td className={tdClass}>{task.story_points ?? "—"}</td>
-                        <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                        <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                        <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
-                        <td className={tdClass}>
-                          <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                            <input type="hidden" name="task_id" value={task.id_task} />
-                            <input type="hidden" name="team_id" value={teamId} />
-                            <input type="hidden" name="project_id" value={projectId} />
-                            <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                              className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
-                              <option value="null">Move to Backlog</option>
-                              {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
-                              {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
-                            </select>
-                            <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
-                          </form>
-                        </td>
-                      </TaskDetailsTrigger>
-                    ))}
+                    : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => {
+
+                        //console.log("TASK ROW", task.id_task, task.assignees);
+
+                        return (
+                          <TaskDetailsTrigger
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id_task)}
+                            onDragEnd={handleDragEnd} 
+                            key={task.id_task} 
+                            task={task} 
+                            members={taskModalMembers} 
+                            className={trClass}
+                          >
+                            <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                            <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
+                            <td className={tdClass}>{task.story_points ?? "—"}</td>
+                            <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
+                            <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
+                            <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
+                            <td className={tdClass}>
+                              <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                <input type="hidden" name="task_id" value={task.id_task} />
+                                <input type="hidden" name="team_id" value={teamId} />
+                                <input type="hidden" name="project_id" value={projectId} />
+                                <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
+                                  <option value="null">Move to Backlog</option>
+                                  {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
+                                  {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
+                                </select>
+                                <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
+                              </form>
+                            </td>
+                          </TaskDetailsTrigger>
+                        );
+                      })}
                 </tbody>
+
               </table>
             </div>
           </div>
@@ -355,39 +357,45 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 <tbody>
                   {sprint.tasks.length === 0
                     ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
-                    : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                      <TaskDetailsTrigger
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task.id_task)}
-                        onDragEnd={handleDragEnd} 
-                        key={task.id_task} 
-                        task={task} 
-                        members={taskModalMembers} 
-                        className={trClass}
-                      >
-                        <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                        <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
-                        <td className={tdClass}>{task.story_points ?? "—"}</td>
-                        <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                        <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                        <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
-                        <td className={tdClass}>
-                          <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                            <input type="hidden" name="task_id" value={task.id_task} />
-                            <input type="hidden" name="team_id" value={teamId} />
-                            <input type="hidden" name="project_id" value={projectId} />
-                            <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                              className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
-                              <option value="null">Move to Backlog</option>
-                              {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
-                              {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
-                            </select>
-                            <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
-                          </form>
-                        </td>
-                      </TaskDetailsTrigger>
-                    ))}
+                    : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => {
+
+                        //console.log("TASK ROW", task.id_task, task.assignees);
+
+                        return (
+                          <TaskDetailsTrigger
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id_task)}
+                            onDragEnd={handleDragEnd} 
+                            key={task.id_task} 
+                            task={task} 
+                            members={taskModalMembers} 
+                            className={trClass}
+                          >
+                            <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
+                            <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
+                            <td className={tdClass}>{task.story_points ?? "—"}</td>
+                            <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
+                            <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
+                            <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
+                            <td className={tdClass}>
+                              <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                <input type="hidden" name="task_id" value={task.id_task} />
+                                <input type="hidden" name="team_id" value={teamId} />
+                                <input type="hidden" name="project_id" value={projectId} />
+                                <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
+                                  <option value="null">Move to Backlog</option>
+                                  {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
+                                  {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
+                                </select>
+                                <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
+                              </form>
+                            </td>
+                          </TaskDetailsTrigger>
+                        );
+                      })}
                 </tbody>
+
               </table>
             </div>
           </div>

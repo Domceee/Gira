@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.auth import get_current_user
@@ -17,11 +18,12 @@ from app.models.task_workflow_status import TaskWorkflowStatus
 from app.models.team import Team
 from app.models.team_member import TeamMember
 from app.models.user import User
-from app.models.team_member import TeamMember
+from app.models.task_multiple_assignees import task_multiple_assignees
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.services.news import create_news_for_users
 from app.services.sprint_burndown import snapshot_story_points
 from app.services.task_delete import get_task_delete_state
+
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -118,14 +120,32 @@ async def get_tasks(
 
     result = await db.execute(query)
     tasks = result.scalars().all()
+
     output: list[TaskRead] = []
+
     for task in tasks:
+        # Load multi-assignees for this task
+        assignees_result = await db.execute(
+            select(task_multiple_assignees.fk_team_memberid_team_member)
+            .where(task_multiple_assignees.fk_taskid_task == task.id_task)
+        )
+        assignees = [row[0] for row in assignees_result.fetchall()]
+
+        # Build TaskRead
         can_delete, delete_block_reason = await get_task_delete_state(task, db)
         task_read = TaskRead.model_validate(task)
+
+        # Inject multi-assignee data
+        task_read.assignees = assignees
+
+        # Inject delete info
         task_read.can_delete = can_delete
         task_read.delete_block_reason = delete_block_reason
+
         output.append(task_read)
+
     return output
+
 
 
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
@@ -173,12 +193,26 @@ async def update_task(
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Task name is required")
 
+
+    print("PAYLOAD:", payload)
+
     task.name = payload.name.strip()
     task.description = payload.description
     task.story_points = payload.story_points
     task.risk = payload.risk
     task.priority = payload.priority
-    
+    task.multiplePeople = payload.multiplePeople
+
+    # If switching to multi-assign mode → clear single assignee
+    if payload.multiplePeople:
+        task.fk_team_memberid_team_member = None
+    else:
+        task.fk_team_memberid_team_member = payload.fk_team_memberid_team_member
+
+
+
+
+
     db.add(task)
     await db.commit()
     await db.refresh(task)
@@ -220,6 +254,15 @@ async def assign_team(
 
     previous_team_id = task.fk_teamid_team
     task.fk_teamid_team = parsed_team_id
+
+
+    await db.execute(
+        delete(task_multiple_assignees).where(
+            task_multiple_assignees.fk_taskid_task == task_id
+        )
+    )
+
+
 
     if parsed_team_id is not None and parsed_team_id != previous_team_id:
         member_result = await db.execute(
@@ -472,10 +515,21 @@ async def delete_task(
     if not can_delete:
         raise HTTPException(status_code=400, detail=delete_block_reason or "Task cannot be deleted")
 
+
+
+    # Clear multi‑assignees when team changes or becomes None
+    await db.execute(
+        delete(task_multiple_assignees).where(
+            task_multiple_assignees.fk_taskid_task == task_id
+        )
+    )
+
+
     await db.delete(task)
     await db.commit()
 
     return {"status": "ok", "task_id": task_id}
+
 
 @router.patch("/{task_id}/assign_member")
 async def assign_member(task_id: int, payload: dict, db: AsyncSession = Depends(get_db)):
@@ -499,10 +553,108 @@ async def assign_member(task_id: int, payload: dict, db: AsyncSession = Depends(
         if not tm:
             raise HTTPException(400, "Team member not in this team")
 
-    # Update assignment
+    # ⭐ ALWAYS clear multi‑assignees when switching to single assignment
+    await db.execute(
+        delete(task_multiple_assignees).where(
+            task_multiple_assignees.fk_taskid_task == task_id
+        )
+    )
+
+    # ⭐ Disable multi‑people mode
+    task.multiplePeople = False
+
+    # ⭐ Set single assignee (or None)
     task.fk_team_memberid_team_member = team_member_id
+
     await db.commit()
     await db.refresh(task)
 
     return {"success": True}
 
+
+@router.get("/task/{task_id}/assignees")
+async def get_task_assignees(task_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(task_multiple_assignees).where(
+            task_multiple_assignees.fk_taskid_task == task_id
+        )
+    )
+    rows = result.scalars().all()
+
+    return [{"id_team_member": r.fk_team_memberid_team_member} for r in rows]
+
+
+
+@router.post("/task/{task_id}/assignees")
+async def set_task_assignees(task_id: int, team_member_ids: list[int], db: AsyncSession = Depends(get_db)):
+    # Delete old rows
+    await db.execute(
+        delete(task_multiple_assignees).where(
+            task_multiple_assignees.fk_taskid_task == task_id
+        )
+    )
+
+    # Insert new rows
+    for tm_id in team_member_ids:
+        db.add(task_multiple_assignees(
+            fk_taskid_task=task_id,
+            fk_team_memberid_team_member=tm_id,
+        ))
+
+    # ⭐ Mark task as multi‑assignee mode
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one()
+    task.multiplePeople = True
+    task.fk_team_memberid_team_member = None  # clear single assignment
+
+    await db.commit()
+    return {"status": "ok"}
+
+
+@router.patch("/{task_id}/multi")
+async def set_multi_assign(task_id: int, payload: dict, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(404, "Task not found")
+
+    multiple = payload.get("multiplePeople")
+    if multiple is None:
+        raise HTTPException(400, "multiplePeople is required")
+
+    task.multiplePeople = multiple
+
+    if multiple:
+        task.fk_team_memberid_team_member = None
+
+    await db.commit()
+    await db.refresh(task)
+    return task
+
+@router.patch("/{task_id}/board-position-multi")
+async def update_board_position_multi(
+    task_id: int,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Task).where(Task.id_task == task_id))
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(404, "Task not found")
+
+    await get_project_membership_or_404(task.fk_projectid_project, current_user.id_user, db)
+
+    # Only update workflow + board order
+    task.workflow_status = payload.get("workflow_status", task.workflow_status)
+    task.board_order = payload.get("board_order", task.board_order)
+
+    # ⭐ DO NOT touch fk_team_memberid_team_member
+    # ⭐ DO NOT touch multiplePeople
+    # ⭐ DO NOT touch assignees
+
+    await db.commit()
+    await db.refresh(task)
+    return task

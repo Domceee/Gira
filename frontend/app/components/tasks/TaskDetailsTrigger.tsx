@@ -12,6 +12,9 @@ type TaskDetailsTask = {
   risk: number | null;
   priority: number | null;
   fk_team_memberid_team_member?: number | null;
+
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];           // NEW
 };
 
 type AssignmentMember = {
@@ -59,7 +62,6 @@ export default function TaskDetailsTrigger({
 
     setOpen(true);
   }
-
   return (
     <>
       <tr

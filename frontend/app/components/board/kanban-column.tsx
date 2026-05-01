@@ -10,6 +10,8 @@ type Task = {
   fk_team_memberid_team_member: number | null;
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   board_order: number;
+  multiplePeople: boolean;        
+  assignees?: number[];      
 };
 
 type Member = {

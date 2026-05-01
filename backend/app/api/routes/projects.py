@@ -27,6 +27,7 @@ from app.models.task import Task
 from app.models.sprint import Sprint
 from app.models.sprint_status import SprintStatus
 from app.models.sprint_task_event import SprintTaskEvent
+from app.models.task_multiple_assignees import task_multiple_assignees
 from app.schemas.team import TeamCreate, TeamRead, TeamMembersAddRequest
 from app.schemas.task import TaskRead
 from app.models.task_workflow_status import TaskWorkflowStatus
@@ -334,7 +335,15 @@ async def get_project_board(
         task_rows = task_result.all()
 
         tasks: list[BoardTaskRead] = []
+
         for task, team_member, assignee in task_rows:
+            # ⭐ Load multi‑assignees for THIS task
+            assignees_result = await db.execute(
+                select(task_multiple_assignees.fk_team_memberid_team_member)
+                .where(task_multiple_assignees.fk_taskid_task == task.id_task)
+            )
+            assignees = [row[0] for row in assignees_result.fetchall()]
+
             tasks.append(
                 BoardTaskRead(
                     id_task=task.id_task,
@@ -350,8 +359,13 @@ async def get_project_board(
                     fk_team_memberid_team_member=task.fk_team_memberid_team_member,
                     assignee_user_id=assignee.id_user if assignee is not None else None,
                     assignee_name=assignee.name if assignee is not None else None,
+
+                    # ⭐ NEW FIELDS
+                    multiplePeople=task.multiplePeople,
+                    assignees=assignees,
                 )
             )
+
 
         boards.append(
             SprintBoardRead(
@@ -721,13 +735,24 @@ async def get_team_backlog(
         for tm, user in result.all()
     ]
 
+    from app.models.task_multiple_assignees import task_multiple_assignees
+
     task_output = []
     for task in tasks:
+        assignees_result = await db.execute(
+            select(task_multiple_assignees.fk_team_memberid_team_member)
+            .where(task_multiple_assignees.fk_taskid_task == task.id_task)
+        )
+        assignees = [row[0] for row in assignees_result.fetchall()]
+
         can_delete, delete_block_reason = await get_task_delete_state(task, db)
         task_read = TaskRead.model_validate(task).model_dump()
         task_read["can_delete"] = can_delete
         task_read["delete_block_reason"] = delete_block_reason
+        task_read["assignees"] = assignees
+
         task_output.append(task_read)
+
 
     return {
         "team_id": team.id_team,

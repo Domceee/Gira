@@ -18,6 +18,9 @@ type Task = {
   fk_team_memberid_team_member: number | null;
   assignee_user_id: number | null;
   assignee_name: string | null;
+
+  multiplePeople: boolean;        
+  assignees?: number[];           
 };
 
 type Member = {
@@ -54,8 +57,12 @@ const EMPTY_COUNTS: Record<StatusKey, number> = {
 };
 
 function getLaneId(task: Task) {
-  return task.fk_team_memberid_team_member === null ? "unassigned" : `member-${task.fk_team_memberid_team_member}`;
+  if (task.multiplePeople) return "multi";   // ⭐ NEW LANE
+  return task.fk_team_memberid_team_member === null
+    ? "unassigned"
+    : `member-${task.fk_team_memberid_team_member}`;
 }
+
 
 function buildLanes(tasks: Task[], members: Member[]): Lane[] {
   const grouped = new Map<string, Lane>();
@@ -63,6 +70,12 @@ function buildLanes(tasks: Task[], members: Member[]): Lane[] {
   grouped.set("unassigned", {
     id: "unassigned",
     label: "Unassigned",
+    tasks: [],
+  });
+
+  grouped.set("multi", {
+    id: "multi",
+    label: "Multi‑Assignee Tasks",
     tasks: [],
   });
 
@@ -74,6 +87,7 @@ function buildLanes(tasks: Task[], members: Member[]): Lane[] {
     });
   }
 
+  // existing grouping logic stays the same
   for (const task of tasks) {
     const laneId = getLaneId(task);
     const existing = grouped.get(laneId);
@@ -90,10 +104,11 @@ function buildLanes(tasks: Task[], members: Member[]): Lane[] {
     });
   }
 
-  const [unassignedLane, ...memberLanes] = Array.from(grouped.values());
+  const [unassignedLane, multiLane, ...memberLanes] = Array.from(grouped.values());
   memberLanes.sort((a, b) => a.label.localeCompare(b.label));
-  return [unassignedLane, ...memberLanes];
+  return [unassignedLane, multiLane, ...memberLanes];
 }
+
 
 function getCounts(tasks: Task[]) {
   return tasks.reduce<Record<StatusKey, number>>((counts, task) => {
@@ -152,16 +167,20 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
   function toggleLane(laneId: string) {
     setExpandedLanes((current) => ({ ...current, [laneId]: !current[laneId] }));
   }
-
+  
   async function moveTask(nextStatus: StatusKey, laneId: string) {
     if (draggedTaskId === null || draggedTask === null || isSaving) return;
+
+    const previousSingleAssignee = draggedTask.fk_team_memberid_team_member;
     const nextTeamMemberId = getTeamMemberIdForLane(laneId);
     const targetLane = lanes.find((lane) => lane.id === laneId);
     const targetLaneExampleTask = boardTasks.find(
       (task) => task.id_task !== draggedTaskId && getLaneId(task) === laneId
     );
 
+    // ⭐ FIXED: do NOT early-return for multi-assignee tasks
     if (
+      !draggedTask.multiplePeople &&
       draggedTask.workflow_status === nextStatus &&
       draggedTask.fk_team_memberid_team_member === nextTeamMemberId
     ) {
@@ -170,26 +189,92 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
       return;
     }
 
+    // ⭐ Entering multi lane → enable multi mode
+    if (laneId === "multi" && !draggedTask.multiplePeople) {
+      try {
+        await apiFetch(`/api/tasks/${draggedTask.id_task}/multi`, {
+          method: "PATCH",
+          body: JSON.stringify({ multiplePeople: true }),
+        });
+
+        draggedTask.multiplePeople = true;
+
+        if (previousSingleAssignee !== null) {
+          draggedTask.assignees = [previousSingleAssignee];
+
+          await apiFetch(`/api/tasks/task/${draggedTask.id_task}/assignees`, {
+            method: "POST",
+            body: JSON.stringify([previousSingleAssignee]),
+          });
+        } else {
+          draggedTask.assignees = [];
+        }
+
+        draggedTask.fk_team_memberid_team_member = null;
+      } catch (err) {
+        console.error("Failed to enable multi‑assign:", err);
+        setMoveError("Could not enable multi‑assignee mode.");
+        return;
+      }
+    }
+
+    const isMultiLane = laneId === "multi";
+
+    // ⭐ Leaving multi lane → collapse to single/unassigned
+    if (draggedTask.multiplePeople && !isMultiLane) {
+      try {
+        await apiFetch(`/api/tasks/${draggedTask.id_task}/assign_member`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            team_member_id: nextTeamMemberId, // null = unassigned
+          }),
+        });
+
+        draggedTask.multiplePeople = false;
+        draggedTask.assignees = [];
+        draggedTask.fk_team_memberid_team_member = nextTeamMemberId;
+      } catch (err) {
+        console.error("Failed to collapse multi‑assignees:", err);
+        setMoveError("Could not update multi‑assignee state.");
+        return;
+      }
+    }
+
     const targetTasks = boardTasks.filter(
       (task) =>
         getLaneId(task) === laneId &&
         task.workflow_status === nextStatus &&
         task.id_task !== draggedTaskId
     );
+
     const nextBoardOrder = targetTasks.length;
 
-    const optimisticTasks = boardTasks.map((task) =>
-      task.id_task === draggedTaskId
-        ? {
-            ...task,
-            workflow_status: nextStatus,
-            board_order: nextBoardOrder,
-            fk_team_memberid_team_member: nextTeamMemberId,
-            assignee_name: nextTeamMemberId === null ? null : targetLane?.label ?? task.assignee_name,
-            assignee_user_id: nextTeamMemberId === null ? null : targetLaneExampleTask?.assignee_user_id ?? task.assignee_user_id,
-          }
-        : task
-    );
+    const optimisticTasks = boardTasks.map((task) => {
+      if (task.id_task !== draggedTaskId) return task;
+
+      const base = {
+        ...task,
+        workflow_status: nextStatus,
+        board_order: nextBoardOrder,
+      };
+
+      // ⭐ Multi tasks keep assignment fields untouched
+      if (draggedTask.multiplePeople || isMultiLane) {
+        return base;
+      }
+
+      // ⭐ Normal single‑assignee update
+      return {
+        ...base,
+        fk_team_memberid_team_member: nextTeamMemberId,
+        assignee_name:
+          nextTeamMemberId === null ? null : targetLane?.label ?? task.assignee_name,
+        assignee_user_id:
+          nextTeamMemberId === null
+            ? null
+            : targetLaneExampleTask?.assignee_user_id ?? task.assignee_user_id,
+      };
+    });
 
     setBoardTasks(optimisticTasks);
     setMoveError(null);
@@ -198,13 +283,19 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
     setIsSaving(true);
 
     try {
-      const response = await apiFetch(`/api/tasks/${draggedTaskId}/board-position`, {
+      const useMultiEndpoint = draggedTask.multiplePeople || isMultiLane;
+
+      const endpoint = useMultiEndpoint
+        ? `/api/tasks/${draggedTaskId}/board-position-multi`
+        : `/api/tasks/${draggedTaskId}/board-position`;
+
+      const body = useMultiEndpoint
+        ? { workflow_status: nextStatus, board_order: nextBoardOrder }
+        : { workflow_status: nextStatus, board_order: nextBoardOrder, team_member_id: nextTeamMemberId };
+
+      const response = await apiFetch(endpoint, {
         method: "PATCH",
-        body: JSON.stringify({
-          workflow_status: nextStatus,
-          board_order: nextBoardOrder,
-          team_member_id: nextTeamMemberId,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -224,7 +315,16 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
     }
   }
 
+
+  console.log("BOARD TASKS:", tasks.map(t => ({
+  id: t.id_task,
+  multiplePeople: t.multiplePeople,
+  assignees: t.assignees
+})));
+
+
   return (
+    
     <div className="space-y-4">
       {moveError && (
         <div className="rounded-xl border border-[#d4b08a] bg-[#fff7ef] px-4 py-3 text-sm text-[#7a3d2b]">
