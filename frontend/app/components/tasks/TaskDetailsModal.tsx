@@ -205,10 +205,10 @@ function updateTask(patch: Partial<typeof localTask>) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-2xl"
+        className="w-full max-w-xl max-h-[90vh] rounded-xl border border-[#7a8798] bg-[#1f2630] shadow-2xl flex flex-col"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="p-6 border-b border-[#7a8798] flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Task Details</p>
             <h3 className="mt-1.5 text-xl font-bold text-[#ffffff]">{initialForm.name || "Untitled task"}</h3>
@@ -216,13 +216,13 @@ function updateTask(patch: Partial<typeof localTask>) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
+            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] flex-shrink-0"
           >
             Close
           </button>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-0 space-y-4 overflow-y-auto flex-1 px-6 py-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</span>
             <input

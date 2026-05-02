@@ -2,13 +2,15 @@ import ResetPasswordForm from "./ResetPasswordForm";
 import Navbar from "@/app/components/navbar";
 
 interface ResetPasswordPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     token?: string | string[];
-  };
+  }>;
 }
 
-export default function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
-  const rawToken = searchParams?.token;
+export default async function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
+  const params = await searchParams; // ← FIX
+  const rawToken = params?.token;
+
   const token = Array.isArray(rawToken)
     ? rawToken[0] ?? null
     : rawToken ?? null;
