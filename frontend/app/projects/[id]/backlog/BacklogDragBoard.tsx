@@ -144,7 +144,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
                 <div className={`${sectionClass("unassigned")} p-6 rounded-xl space-y-2`} onDragOver={(e) => handleDragOverTarget(e, "unassigned")} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, null)}>
                   {tasks.length === 0 && <p className="p-4 text-center text-xs text-[#93a0b1]">No unassigned tasks.</p>}
                   {tasks.map((task) => (
-                    <TaskDetailsTrigger key={task.id_task} as="div" task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
+                    <TaskDetailsTrigger key={task.id_task} task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-[#ffffff]">{task.name ?? "—"}</div>
                         <div className="text-xs text-[#c3ceda]">{task.description?.trim() || "—"}</div>
@@ -231,7 +231,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
                 <div className={`${sectionClass(targetKey)} p-6 rounded-xl space-y-2`} onDragOver={(e) => handleDragOverTarget(e, targetKey)} onDragLeave={() => setActiveDropTarget(null)} onDrop={(e) => handleDropTarget(e, team.team_id)}>
                   {team.tasks.length === 0 && <p className="p-4 text-center text-xs text-[#93a0b1]">No tasks assigned.</p>}
                   {team.tasks.map((task) => (
-                    <TaskDetailsTrigger key={task.id_task} as="div" task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
+                    <TaskDetailsTrigger key={task.id_task} task={task} draggable={true} onClick={handleRowClick} onDragStart={(e) => handleDragStart(e, task.id_task)} onDragEnd={handleDragEnd} className="flex items-center justify-between rounded px-3 py-2 hover:bg-[#28313d] cursor-pointer">
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-[#ffffff]">{task.name ?? "—"}</div>
                         <div className="text-xs text-[#c3ceda]">{task.description?.trim() || "—"}</div>
