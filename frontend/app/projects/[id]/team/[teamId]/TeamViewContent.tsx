@@ -78,6 +78,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
 
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleDragStart = (e: React.DragEvent, taskId: number) => {
     e.dataTransfer.setData("text/plain", String(taskId));
@@ -166,6 +167,18 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     <div className="space-y-8">
   <h1 className="text-lg font-semibold text-[#edf3fb]">Team View</h1>
 
+  {/* Task Details Modal */}
+  {selectedTask && (
+    <TaskDetailsTrigger 
+      task={selectedTask} 
+      members={taskModalMembers}
+      open={!!selectedTask} 
+      onOpenChange={(open) => !open && setSelectedTask(null)} // Logical AND instead of if
+    >
+      <span className="hidden" /> 
+    </TaskDetailsTrigger>
+  )}
+
   {/* Sections */}
   {["backlog", "active-sprints", "planned-sprints", "create-sprint", "ended-sprints"].map((sectionKey) => {
     if (sectionKey === "backlog") {
@@ -227,15 +240,14 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                         </tr>
                       ) : (
                         backlogTasks.map((task) => (
-                          <TaskDetailsTrigger
+                          <tr
+                            key={task.id_task}
                             draggable
                             onDragStart={(e) =>
                               handleDragStart(e, task.id_task)
                             }
                             onDragEnd={handleDragEnd}
-                            key={task.id_task}
-                            task={task}
-                            members={taskModalMembers}
+                            onClick={() => setSelectedTask(task)}
                             className={trClass}
                           >
                             <td className={tdClass}>
@@ -329,7 +341,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                                 canDelete={task.can_delete}
                               />
                             </td>
-                          </TaskDetailsTrigger>
+                          </tr>
                         ))
                       )}
                     </tbody>
@@ -368,7 +380,17 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
             {activeSprints.map((sprint) => (
               <div
                 key={sprint.id_sprint}
-                className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6"
+                className={`mb-6 rounded-xl p-6 transition ${
+                  activeDropTarget === `active-sprint-${sprint.id_sprint}`
+                    ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+                    : "border-[#7a8798] bg-[#1f2630]"
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setActiveDropTarget(`active-sprint-${sprint.id_sprint}`);
+                }}
+                onDragLeave={() => setActiveDropTarget(null)}
+                onDrop={(e) => handleDrop(e, sprint.id_sprint)}
               >
                 {/* Sprint Header */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -426,86 +448,90 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                             colSpan={7}
                             className="p-4 text-center text-xs text-[#93a0b1]"
                           >
-                            No tasks in this sprint.
+                            No tasks in sprint.
                           </td>
                         </tr>
                       ) : (
-                        [...sprint.tasks]
-                          .sort((a, b) => a.id_task - b.id_task)
-                          .map((task) => (
-                            <TaskDetailsTrigger
-                              key={task.id_task}
-                              task={task}
-                              members={taskModalMembers}
-                              className={trClass}
-                            >
-                              <td className={tdClass}>
-                                <div className={taskNameClass}>{task.name ?? "—"}</div>
-                              </td>
+                        sprint.tasks.map((task) => (
+                          <tr
+                            key={task.id_task}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id_task)}
+                            onDragEnd={handleDragEnd}
+                            onClick={() => setSelectedTask(task)}
+                            className={trClass}
+                          >
+                            <td className={tdClass}>
+                              <div className={taskNameClass}>
+                                {task.name ?? "—"}
+                              </div>
+                            </td>
 
-                              <td className={tdClass}>
-                                <div
-                                  className={descriptionClass}
-                                  title={task.description?.trim() || undefined}
+                            <td className={tdClass}>
+                              <div
+                                className={descriptionClass}
+                                title={task.description?.trim() || undefined}
+                              >
+                                {task.description?.trim() || "—"}
+                              </div>
+                            </td>
+
+                            <td className={tdClass}>
+                              {task.story_points ?? "—"}
+                            </td>
+
+                            <td className={tdClass}>
+                              {getRiskOrPriorityName(task.risk)}
+                            </td>
+
+                            <td className={tdClass}>
+                              {getRiskOrPriorityName(task.priority)}
+                            </td>
+
+                            <td className={tdClass}>
+                              <TaskStatusForm
+                                key={task.id_task + "-" + task.workflow_status}
+                                taskId={task.id_task}
+                                teamId={String(teamId)}
+                                projectId={projectId}
+                                defaultValue={task.workflow_status}
+                              />
+                            </td>
+
+                            <td className={tdClass}>
+                              <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                <input type="hidden" name="task_id" value={task.id_task} />
+                                <input type="hidden" name="team_id" value={teamId} />
+                                <input type="hidden" name="project_id" value={projectId} />
+
+                                <select
+                                  name="sprint_id"
+                                  defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
                                 >
-                                  {task.description?.trim() || "—"}
-                                </div>
-                              </td>
+                                  <option value="null">Move to Backlog</option>
+                                  {plannedSprints.map((s) => (
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      Planned Sprint {s.id_sprint}
+                                    </option>
+                                  ))}
+                                  {activeSprints.map((s) => (
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      Active Sprint {s.id_sprint}
+                                    </option>
+                                  ))}
+                                </select>
 
-                              <td className={tdClass}>{task.story_points ?? "—"}</td>
-
-                              <td className={tdClass}>
-                                {getRiskOrPriorityName(task.risk)}
-                              </td>
-
-                              <td className={tdClass}>
-                                {getRiskOrPriorityName(task.priority)}
-                              </td>
-
-                              <td className={tdClass}>
-                                <TaskStatusForm
-                                  key={task.id_task + "-" + task.workflow_status}
-                                  taskId={task.id_task}
-                                  teamId={String(teamId)}
-                                  projectId={projectId}
-                                  defaultValue={task.workflow_status}
-                                />
-                              </td>
-
-                              <td className={tdClass}>
-                                <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                                  <input type="hidden" name="task_id" value={task.id_task} />
-                                  <input type="hidden" name="team_id" value={teamId} />
-                                  <input type="hidden" name="project_id" value={projectId} />
-
-                                  <select
-                                    name="sprint_id"
-                                    defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                    className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                  >
-                                    <option value="null">Move to Backlog</option>
-                                    {plannedSprints.map((s) => (
-                                      <option key={s.id_sprint} value={s.id_sprint}>
-                                        Planned Sprint {s.id_sprint}
-                                      </option>
-                                    ))}
-                                    {activeSprints.map((s) => (
-                                      <option key={s.id_sprint} value={s.id_sprint}>
-                                        Active Sprint {s.id_sprint}
-                                      </option>
-                                    ))}
-                                  </select>
-
-                                  <button
-                                    type="submit"
-                                    className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                  >
-                                    Save
-                                  </button>
-                                </form>
-                              </td>
-                            </TaskDetailsTrigger>
-                          ))
+                                <button
+                                  type="submit"
+                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+                                >
+                                  Save
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
@@ -518,168 +544,182 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     </div>
   );
     }else if (sectionKey === "planned-sprints") {
-      return (
-        <div key={sectionKey} className="space-y-8">
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
-                Planned Sprints
-              </h2>
+    return (
+      <div key={sectionKey} className="space-y-8">
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
+              Planned Sprints
+            </h2>
 
-              <button
-                onClick={() => toggleCollapse(sectionKey)}
-                className="text-[#c3ceda] hover:text-[#edf3fb]"
-              >
-                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
-              </button>
-            </div>
-
-            {!collapsedSections.has(sectionKey) && (
-              <>
-                {plannedSprints.length === 0 && (
-                  <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">
-                    No planned sprints yet.
-                  </div>
-                )}
-
-                {plannedSprints.map((sprint) => (
-                  <div
-                    key={sprint.id_sprint}
-                    className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6"
-                  >
-                    {/* Sprint Header */}
-                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-base font-semibold text-[#edf3fb]">
-                        Sprint {sprint.id_sprint}{" "}
-                        <span className="text-[#c3ceda] text-sm">
-                          ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
-                        </span>
-                      </h3>
-
-                      <Link
-                        href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
-                      >
-                        <ChartIcon /> Sprint Stats
-                      </Link>
-                    </div>
-
-                    {/* Sprint Tasks Table */}
-                    <div className="overflow-x-auto">
-                      <table className={taskTableClass}>
-                        {sprintColumnGroup}
-
-                        <thead>
-                          <tr>
-                            <th className={thClass}>Name</th>
-                            <th className={thClass}>Desc</th>
-                            <th className={thClass}>Pts</th>
-                            <th className={thClass}>Risk</th>
-                            <th className={thClass}>Priority</th>
-                            <th className={thClass}>Status</th>
-                            <th className={thClass}>Sprint</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {sprint.tasks.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={7}
-                                className="p-4 text-center text-xs text-[#93a0b1]"
-                              >
-                                No tasks in this sprint.
-                              </td>
-                            </tr>
-                          ) : (
-                            [...sprint.tasks]
-                              .sort((a, b) => a.id_task - b.id_task)
-                              .map((task) => (
-                                <TaskDetailsTrigger
-                                  key={task.id_task}
-                                  task={task}
-                                  members={taskModalMembers}
-                                  className={trClass}
-                                >
-                                  <td className={tdClass}>
-                                    <div className={taskNameClass}>{task.name ?? "—"}</div>
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    <div
-                                      className={descriptionClass}
-                                      title={task.description?.trim() || undefined}
-                                    >
-                                      {task.description?.trim() || "—"}
-                                    </div>
-                                  </td>
-
-                                  <td className={tdClass}>{task.story_points ?? "—"}</td>
-
-                                  <td className={tdClass}>
-                                    {getRiskOrPriorityName(task.risk)}
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    {getRiskOrPriorityName(task.priority)}
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    <TaskStatusForm
-                                      key={task.id_task + "-" + task.workflow_status}
-                                      taskId={task.id_task}
-                                      teamId={String(teamId)}
-                                      projectId={projectId}
-                                      defaultValue={task.workflow_status}
-                                    />
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                                      <input type="hidden" name="task_id" value={task.id_task} />
-                                      <input type="hidden" name="team_id" value={teamId} />
-                                      <input type="hidden" name="project_id" value={projectId} />
-
-                                      <select
-                                        name="sprint_id"
-                                        defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                      >
-                                        <option value="null">Move to Backlog</option>
-                                        {plannedSprints.map((s) => (
-                                          <option key={s.id_sprint} value={s.id_sprint}>
-                                            Planned Sprint {s.id_sprint}
-                                          </option>
-                                        ))}
-                                        {activeSprints.map((s) => (
-                                          <option key={s.id_sprint} value={s.id_sprint}>
-                                            Active Sprint {s.id_sprint}
-                                          </option>
-                                        ))}
-                                      </select>
-
-                                      <button
-                                        type="submit"
-                                        className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                      >
-                                        Save
-                                      </button>
-                                    </form>
-                                  </td>
-                                </TaskDetailsTrigger>
-                              ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
+            <button
+              onClick={() => toggleCollapse(sectionKey)}
+              className="text-[#c3ceda] hover:text-[#edf3fb]"
+            >
+              {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+            </button>
           </div>
+
+          {!collapsedSections.has(sectionKey) && (
+            <>
+              {plannedSprints.length === 0 && (
+                <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">
+                  No planned sprints yet.
+                </div>
+              )}
+
+              {plannedSprints.map((sprint) => (
+                <div
+                  key={sprint.id_sprint}
+                  className={`mb-6 rounded-xl p-6 transition ${
+                    activeDropTarget === `planned-sprint-${sprint.id_sprint}`
+                      ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+                      : "border-[#7a8798] bg-[#1f2630]"
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setActiveDropTarget(`planned-sprint-${sprint.id_sprint}`);
+                  }}
+                  onDragLeave={() => setActiveDropTarget(null)}
+                  onDrop={(e) => handleDrop(e, sprint.id_sprint)}
+                >
+                  {/* Sprint Header */}
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-base font-semibold text-[#edf3fb]">
+                      Sprint {sprint.id_sprint}{" "}
+                      <span className="text-[#c3ceda] text-sm">
+                        ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
+                      </span>
+                    </h3>
+
+                    <Link
+                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+                    >
+                      <ChartIcon /> Sprint Stats
+                    </Link>
+                  </div>
+
+                  {/* Sprint Tasks Table */}
+                  <div className="overflow-x-auto">
+                    <table className={taskTableClass}>
+                      {sprintColumnGroup}
+
+                      <thead>
+                        <tr>
+                          <th className={thClass}>Name</th>
+                          <th className={thClass}>Desc</th>
+                          <th className={thClass}>Pts</th>
+                          <th className={thClass}>Risk</th>
+                          <th className={thClass}>Priority</th>
+                          <th className={thClass}>Status</th>
+                          <th className={thClass}>Sprint</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {sprint.tasks.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={7}
+                              className="p-4 text-center text-xs text-[#93a0b1]"
+                            >
+                              No tasks in this sprint.
+                            </td>
+                          </tr>
+                        ) : (
+                          [...sprint.tasks]
+                            .sort((a, b) => a.id_task - b.id_task)
+                            .map((task) => (
+                              <tr
+                                key={task.id_task}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, task.id_task)}
+                                onDragEnd={handleDragEnd}
+                                onClick={() => setSelectedTask(task)}
+                                className={trClass}
+                              >
+                                <td className={tdClass}>
+                                  <div className={taskNameClass}>
+                                    {task.name ?? "—"}
+                                  </div>
+                                </td>
+
+                                <td className={tdClass}>
+                                  <div
+                                    className={descriptionClass}
+                                    title={task.description?.trim() || undefined}
+                                  >
+                                    {task.description?.trim() || "—"}
+                                  </div>
+                                </td>
+
+                                <td className={tdClass}>{task.story_points ?? "—"}</td>
+
+                                <td className={tdClass}>
+                                  {getRiskOrPriorityName(task.risk)}
+                                </td>
+
+                                <td className={tdClass}>
+                                  {getRiskOrPriorityName(task.priority)}
+                                </td>
+
+                                <td className={tdClass}>
+                                  <TaskStatusForm
+                                    key={task.id_task + "-" + task.workflow_status}
+                                    taskId={task.id_task}
+                                    teamId={String(teamId)}
+                                    projectId={projectId}
+                                    defaultValue={task.workflow_status}
+                                  />
+                                </td>
+
+                                <td className={tdClass}>
+                                  <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                    <input type="hidden" name="task_id" value={task.id_task} />
+                                    <input type="hidden" name="team_id" value={teamId} />
+                                    <input type="hidden" name="project_id" value={projectId} />
+
+                                    <select
+                                      name="sprint_id"
+                                      defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                      className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                    >
+                                      <option value="null">Move to Backlog</option>
+                                      {plannedSprints.map((s) => (
+                                        <option key={s.id_sprint} value={s.id_sprint}>
+                                          Planned Sprint {s.id_sprint}
+                                        </option>
+                                      ))}
+                                      {activeSprints.map((s) => (
+                                        <option key={s.id_sprint} value={s.id_sprint}>
+                                          Active Sprint {s.id_sprint}
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+                                    >
+                                      Save
+                                    </button>
+                                  </form>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
-      );
-    }else if (sectionKey === "create-sprint") {
+      </div>
+    );
+  }else if (sectionKey === "create-sprint") {
       return (
         <div key={sectionKey} className="space-y-8">
           <div>
@@ -711,7 +751,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           </div>
         </div>
       );
-    }else if (sectionKey === "ended-sprints") {
+    } else if (sectionKey === "ended-sprints") {
       return (
         <div key={sectionKey} className="space-y-8">
           <div>
@@ -719,7 +759,6 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
               <h2 className="text-sm font-bold uppercase tracking-widest text-[#c3ceda]">
                 Ended Sprints
               </h2>
-
               <button
                 onClick={() => toggleCollapse(sectionKey)}
                 className="text-[#c3ceda] hover:text-[#edf3fb]"
@@ -739,37 +778,27 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 {endedSprints.map((sprint) => (
                   <div
                     key={sprint.id_sprint}
-                    className="mb-6 rounded-xl border border-[#667386] bg-[#1f2630] p-6 opacity-70"
+                    /* Notice: No onDragOver or onDrop here -> Cannot drop INTO ended sprints */
+                    className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 opacity-80"
                   >
-                    {/* Sprint Header */}
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-base font-semibold text-[#c3ceda]">
                         Sprint {sprint.id_sprint}{" "}
-                        <span className="text-xs">
+                        <span className="text-sm font-normal">
                           ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                         </span>
                       </h3>
-
-                      <div className="flex items-center gap-3">
-                        <Link
-                          href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda] transition hover:text-[#ffffff]">
-                          <ChartIcon /> Sprint Stats
-                        </Link>
-
-                        <Link
-                          href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]">
-                          📝 Retrospective
-                        </Link>
-                      </div>
+                      <Link
+                        href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+                      >
+                        <ChartIcon /> View Report
+                      </Link>
                     </div>
 
-                    {/* Sprint Tasks Table */}
                     <div className="overflow-x-auto">
                       <table className={taskTableClass}>
                         {endedSprintColumnGroup}
-
                         <thead>
                           <tr>
                             <th className={thClass}>Name</th>
@@ -777,66 +806,42 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                             <th className={thClass}>Pts</th>
                             <th className={thClass}>Risk</th>
                             <th className={thClass}>Priority</th>
-                            <th className={thClass}>Member</th>
+                            <th className={thClass}>Status</th>
                           </tr>
                         </thead>
-
                         <tbody>
                           {sprint.tasks.length === 0 ? (
                             <tr>
-                              <td
-                                colSpan={6}
-                                className="p-4 text-center text-xs text-[#93a0b1]"
-                              >
-                                No tasks.
+                              <td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">
+                                No tasks were in this sprint.
                               </td>
                             </tr>
                           ) : (
-                            sprint.tasks.map((task) => {
-                              const member = team.team_members.find(
-                                (m) =>
-                                  m.id_team_member ===
-                                  task.fk_team_memberid_team_member
-                              );
-
-                              return (
-                                <TaskDetailsTrigger
-                                  key={task.id_task}
-                                  task={task}
-                                  members={taskModalMembers}
-                                  className={trClass}
-                                >
-                                  <td className={tdClass}>
-                                    <div className={taskNameClass}>
-                                      {task.name ?? "—"}
-                                    </div>
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    <div
-                                      className={descriptionClass}
-                                      title={task.description?.trim() || undefined}
-                                    >
-                                      {task.description?.trim() || "—"}
-                                    </div>
-                                  </td>
-
-                                  <td className={tdClass}>{task.story_points ?? "—"}</td>
-
-                                  <td className={tdClass}>
-                                    {getRiskOrPriorityName(task.risk)}
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    {getRiskOrPriorityName(task.priority)}
-                                  </td>
-
-                                  <td className={tdClass}>
-                                    {member ? member.user.name : "Unassigned"}
-                                  </td>
-                                </TaskDetailsTrigger>
-                              );
-                            })
+                            sprint.tasks.map((task) => (
+                              <tr
+                                key={task.id_task}
+                                /* Notice: No draggable or onDragStart here -> Cannot drag OUT of ended sprints */
+                                onClick={() => setSelectedTask(task)}
+                                className={trClass}
+                              >
+                                <td className={tdClass}>
+                                  <div className={taskNameClass}>{task.name ?? "—"}</div>
+                                </td>
+                                <td className={tdClass}>
+                                  <div className={descriptionClass} title={task.description?.trim() || undefined}>
+                                    {task.description?.trim() || "—"}
+                                  </div>
+                                </td>
+                                <td className={tdClass}>{task.story_points ?? "—"}</td>
+                                <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
+                                <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
+                                <td className={tdClass}>
+                                  <span className="rounded bg-[#28313d] px-2 py-1 text-[10px] font-bold text-[#c3ceda]">
+                                    {task.workflow_status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
                           )}
                         </tbody>
                       </table>

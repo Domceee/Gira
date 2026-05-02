@@ -108,81 +108,70 @@ function updateTask(patch: Partial<typeof localTask>) {
 
 
   async function handleSave() {
-  if (!canSave) return;
+    if (!canSave) return;
 
-  setError(null);
-  setIsSaving(true);
+    setError(null);
+    setIsSaving(true);
 
-  try {
-    //
-    // 1. Save task field changes
-    //
-    if (hasTaskChanges || hasMultiPeopleToggleChange) {
+    try {
+      // 1. Prepare the payload for the main task update
+      const taskBody = {
+        name: form.name,
+        description: form.description.trim() === "" ? null : form.description,
+        story_points: optionalNumber(form.storyPoints),
+        risk: optionalNumber(form.risk),
+        priority: optionalNumber(form.priority),
+        multiplePeople: localTask.multiplePeople,
+        // CRITICAL: If we just turned OFF multiplePeople, 
+        // we must send the current form.teamMemberId immediately.
+        fk_team_memberid_team_member: localTask.multiplePeople
+          ? null
+          : form.teamMemberId === "null"
+            ? null
+            : Number(form.teamMemberId),
+      };
+
       const response = await apiFetch(`/api/tasks/${task.id_task}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          name: form.name,
-          description: form.description.trim() === "" ? null : form.description,
-          story_points: optionalNumber(form.storyPoints),
-          risk: optionalNumber(form.risk),
-          priority: optionalNumber(form.priority),
-          multiplePeople: localTask.multiplePeople,
-          fk_team_memberid_team_member: localTask.multiplePeople
-            ? null
-            : form.teamMemberId === "null"
-              ? null
-              : Number(form.teamMemberId),
-        }),
+        body: JSON.stringify(taskBody),
       });
 
       if (!response.ok) {
         setError("Task changes could not be saved.");
         return;
       }
-    }
 
-    //
-    // 2. Save single-assignee changes (only when multiPeople = false)
-    //
-    if (!localTask.multiplePeople && hasAssignmentChanges) {
-      const response = await apiFetch(`/api/tasks/${task.id_task}/assign_member`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          team_member_id:
-            form.teamMemberId === "null" ? null : Number(form.teamMemberId),
-        }),
-      });
-
-      if (!response.ok) {
-        setError("Assignment changes could not be saved.");
-        return;
+      // 2. Handle Multi-Assignee List Logic
+      if (localTask.multiplePeople) {
+        // If Multi is ON, sync the list
+        if (hasMultiAssigneeChanges) {
+          await saveTaskAssignees(task.id_task, localTask.assignees);
+        }
+      } else {
+        // If Multi is OFF, but it WAS on, clear the multi-assignee list in DB
+        if (task.multiplePeople) {
+          await saveTaskAssignees(task.id_task, []);
+        }
+        
+        // Also sync the single assignment endpoint if that specifically changed
+        if (hasAssignmentChanges) {
+           await apiFetch(`/api/tasks/${task.id_task}/assign_member`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              team_member_id: form.teamMemberId === "null" ? null : Number(form.teamMemberId),
+            }),
+          });
+        }
       }
-    }
 
-    //
-    
-    //
-    // 4. Save multi-assignee list (only when enabled)
-    //
-    if (localTask.multiplePeople && hasMultiAssigneeChanges) {
-      await saveTaskAssignees(task.id_task, localTask.assignees);
+      onClose();
+      router.refresh();
+    } catch {
+      setError("Task could not be saved. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-
-    //
-    // 5. If switching OFF multiPeople, clear multi-assignees
-    //
-    if (!localTask.multiplePeople && task.multiplePeople) {
-      await saveTaskAssignees(task.id_task, []);
-    }
-
-    onClose();
-    router.refresh();
-  } catch {
-    setError("Task could not be saved. Please try again.");
-  } finally {
-    setIsSaving(false);
   }
-}
 
 
   async function saveTaskAssignees(taskId: number, assignees: number[]) {
@@ -205,10 +194,10 @@ function updateTask(patch: Partial<typeof localTask>) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-2xl"
+        className="w-full max-w-xl max-h-[90vh] rounded-xl border border-[#7a8798] bg-[#1f2630] shadow-2xl flex flex-col"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="p-6 border-b border-[#7a8798] flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Task Details</p>
             <h3 className="mt-1.5 text-xl font-bold text-[#ffffff]">{initialForm.name || "Untitled task"}</h3>
@@ -216,13 +205,13 @@ function updateTask(patch: Partial<typeof localTask>) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
+            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] flex-shrink-0"
           >
             Close
           </button>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-0 space-y-4 overflow-y-auto flex-1 px-6 py-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</span>
             <input
