@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, date as date_type
 import io
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -269,55 +269,198 @@ async def export_sprint(
             detail="Sprint export is only available for completed sprints",
         )
 
+    # Get sprint tasks
     task_result = await db.execute(
         select(Task).where(Task.fk_sprintid_sprint == sprint.id_sprint)
     )
     tasks = task_result.scalars().all()
 
-    workbook = Workbook()
-    summary_sheet = workbook.active
-    summary_sheet.title = "Sprint Summary"
+    # Get burndown data
+    event_result = await db.execute(
+        select(SprintTaskEvent).where(SprintTaskEvent.fk_taskid_task.in_([t.id_task for t in tasks]))
+    )
+    events = event_result.scalars().all()
+    
+    if not events:
+        events = build_fallback_events(tasks, sprint.start_date, sprint.end_date)
+    
+    burndown_points = build_burndown_points(sprint.start_date, sprint.end_date, events)
 
-    summary_sheet.append(["Field", "Value"])
-    summary_sheet.append(["Sprint ID", sprint.id_sprint])
-    summary_sheet.append(["Team ID", sprint.fk_teamid_team])
-    summary_sheet.append(["Start Date", sprint.start_date.isoformat()])
-    summary_sheet.append(["End Date", sprint.end_date.isoformat()])
-    summary_sheet.append(["Status", sprint.status])
-    summary_sheet.append(["Total Tasks", len(tasks)])
-    summary_sheet.append(["Completed Tasks", sum(1 for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
-    summary_sheet.append(["Committed Story Points", sum((task.story_points or 0) for task in tasks)])
-    summary_sheet.append(["Completed Story Points", sum((task.story_points or 0) for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
+    # Debug: Check if we have data
+    print(f"Debug: Found {len(tasks)} tasks, {len(events)} events, {len(burndown_points)} burndown points")
+    print(f"Debug: Burndown points sample: {burndown_points[:2] if burndown_points else 'None'}")
 
-    task_sheet = workbook.create_sheet("Sprint Tasks")
-    task_sheet.append([
-        "Task ID",
-        "Name",
-        "Status",
-        "Story Points",
-        "Completed At",
-        "Board Order",
-        "Description",
-    ])
+    # Get project teams and their members
+    project_result = await db.execute(
+        select(Team).where(Team.fk_projectid_project == team.fk_projectid_project)
+    )
+    project_teams = project_result.scalars().all()
 
-    for task in tasks:
+    # Get team members for all teams in the project
+    team_ids = [t.id_team for t in project_teams]
+    team_member_result = await db.execute(
+        select(TeamMember, User, Team).where(
+            TeamMember.fk_teamid_team.in_(team_ids)
+        ).join(User, TeamMember.fk_userid_user == User.id_user).join(Team, TeamMember.fk_teamid_team == Team.id_team)
+    )
+    team_members_data = team_member_result.all()
+
+    # Get all tasks in the project for team statistics
+    project_task_result = await db.execute(
+        select(Task).where(
+            Task.fk_projectid_project == team.fk_projectid_project,
+            Task.fk_sprintid_sprint == sprint.id_sprint
+        )
+    )
+    project_tasks = project_task_result.scalars().all()
+
+    # Get team members with their teams and users
+    team_member_result = await db.execute(
+        select(TeamMember, User, Team).where(
+            TeamMember.fk_teamid_team.in_(team_ids)
+        ).join(User, TeamMember.fk_userid_user == User.id_user).join(Team, TeamMember.fk_teamid_team == Team.id_team)
+    )
+    team_members_data = team_member_result.all()
+
+    # Create lookup dictionaries
+    team_member_lookup = {tm.id_team_member: (tm, user, team) for tm, user, team in team_members_data}
+    team_lookup = {t.id_team: t for t in project_teams}
+
+    try:
+        workbook = Workbook()
+        summary_sheet = workbook.active
+        summary_sheet.title = "Sprint Summary"
+
+        # Sprint Summary Sheet
+        summary_sheet.append(["Field", "Value"])
+        summary_sheet.append(["Sprint ID", sprint.id_sprint])
+        summary_sheet.append(["Team ID", sprint.fk_teamid_team])
+        summary_sheet.append(["Start Date", sprint.start_date.isoformat()])
+        summary_sheet.append(["End Date", sprint.end_date.isoformat()])
+        summary_sheet.append(["Status", sprint.status])
+        summary_sheet.append(["Total Tasks", len(tasks)])
+        summary_sheet.append(["Completed Tasks", sum(1 for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
+        summary_sheet.append(["Committed Story Points", sum((task.story_points or 0) for task in tasks)])
+        summary_sheet.append(["Completed Story Points", sum((task.story_points or 0) for task in tasks if task.workflow_status == TaskWorkflowStatus.DONE.value)])
+
+        # Team Statistics Sheet
+        team_stats_sheet = workbook.create_sheet("Team Statistics")
+        team_stats_sheet.append(["Team Name", "Total Story Points", "Completed Story Points", "Completion Rate (%)"])
+
+        team_stats = {}
+        for task in project_tasks:
+            team_name = "Unassigned"
+            if task.fk_teamid_team and task.fk_teamid_team in team_lookup:
+                team_name = team_lookup[task.fk_teamid_team].name or f"Team {task.fk_teamid_team}"
+            
+            if team_name not in team_stats:
+                team_stats[team_name] = {"total": 0, "completed": 0}
+            
+            story_points = task.story_points or 0
+            team_stats[team_name]["total"] += story_points
+            if task.workflow_status == TaskWorkflowStatus.DONE.value:
+                team_stats[team_name]["completed"] += story_points
+
+        for team_name, stats in team_stats.items():
+            completion_rate = (stats["completed"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            team_stats_sheet.append([
+                team_name,
+                stats["total"],
+                stats["completed"],
+                round(completion_rate, 2)
+            ])
+
+        # Team Member Statistics Sheet
+        member_stats_sheet = workbook.create_sheet("Team Member Statistics")
+        member_stats_sheet.append(["Team Name", "Member Name", "Email", "Assigned Story Points", "Completed Story Points", "Completion Rate (%)"])
+
+        member_stats = {}
+        for task in project_tasks:
+            if not task.fk_team_memberid_team_member or task.fk_team_memberid_team_member not in team_member_lookup:
+                continue
+            
+            team_member, user, team = team_member_lookup[task.fk_team_memberid_team_member]
+            team_name = team.name or f"Team {team.id_team}"
+            member_key = f"{team_name}_{user.id_user}"
+            
+            if member_key not in member_stats:
+                member_stats[member_key] = {
+                    "team_name": team_name,
+                    "name": user.name or "Unknown",
+                    "email": user.email,
+                    "total": 0,
+                    "completed": 0
+                }
+            
+            story_points = task.story_points or 0
+            member_stats[member_key]["total"] += story_points
+            if task.workflow_status == TaskWorkflowStatus.DONE.value:
+                member_stats[member_key]["completed"] += story_points
+
+        for stats in member_stats.values():
+            completion_rate = (stats["completed"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            member_stats_sheet.append([
+                stats["team_name"],
+                stats["name"],
+                stats["email"],
+                stats["total"],
+                stats["completed"],
+                round(completion_rate, 2)
+            ])
+
+        # Sprint Tasks Sheet
+        task_sheet = workbook.create_sheet("Sprint Tasks")
         task_sheet.append([
-            task.id_task,
-            task.name or "",
-            task.workflow_status,
-            task.story_points or 0,
-            task.completed_at.isoformat() if task.completed_at else "",
-            task.board_order,
-            task.description or "",
+            "Task ID",
+            "Name",
+            "Status",
+            "Story Points",
+            "Completed At",
+            "Board Order",
+            "Description",
+            "Assigned Team",
+            "Assigned Member",
         ])
 
-    buffer = io.BytesIO()
-    workbook.save(buffer)
-    buffer.seek(0)
+        for task in tasks:
+            # Find team and member info for this task
+            team_name = "Unassigned"
+            member_name = "Unassigned"
+            
+            if task.fk_teamid_team and task.fk_teamid_team in team_lookup:
+                team_name = team_lookup[task.fk_teamid_team].name or f"Team {task.fk_teamid_team}"
+            
+            if task.fk_team_memberid_team_member and task.fk_team_memberid_team_member in team_member_lookup:
+                team_member, user, _ = team_member_lookup[task.fk_team_memberid_team_member]
+                member_name = user.name or "Unknown"
+            
+            task_sheet.append([
+                task.id_task,
+                task.name or "",
+                task.workflow_status,
+                task.story_points or 0,
+                task.completed_at.isoformat() if task.completed_at else "",
+                task.board_order,
+                task.description or "",
+                team_name,
+                member_name,
+            ])
+
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        
+        print(f"Debug: Excel file created successfully, size: {len(buffer.getvalue())} bytes")
+        
+        excel_data = buffer.getvalue()
+
+    except Exception as e:
+        print(f"Debug: Error creating Excel file: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating Excel file: {str(e)}")
 
     filename = f"sprint-{sprint.id_sprint}-report.xlsx"
-    return StreamingResponse(
-        buffer,
+    return Response(
+        content=excel_data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": f"attachment; filename={filename}",
