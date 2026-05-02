@@ -16,6 +16,10 @@ type Task = {
   fk_teamid_team: number | null;
   can_delete?: boolean;
   delete_block_reason?: string | null;
+
+  //jei situ neturiu skundziasi, nors jie useless cia
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];   
 };
 
 type TeamBacklog = { team_id: number; team_name: string | null; tasks: Task[] };

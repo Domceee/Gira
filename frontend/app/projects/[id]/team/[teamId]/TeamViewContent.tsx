@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { CalendarX } from "lucide-react";
 import { useState } from "react";
 import { createSprint, assignTaskToSprint, closeSprint } from "./actions";
@@ -8,7 +9,7 @@ import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
-import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
+import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger"
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -24,6 +25,9 @@ type Task = {
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   can_delete?: boolean;
   delete_block_reason?: string | null;
+
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];           // NEW
 };
 
 type TeamMember = {
@@ -71,6 +75,39 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   plannedSprints: Sprint[];
   endedSprints: Sprint[];
 }) {
+
+  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, taskId: number) => {
+    e.dataTransfer.setData("text/plain", String(taskId));
+    setDraggedTaskId(taskId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setActiveDropTarget(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, sprintId: number | null) => {
+    e.preventDefault();
+    const taskId = Number(e.dataTransfer.getData("text/plain"));
+    if (!taskId) return;
+
+    const fd = new FormData();
+    fd.append("task_id", String(taskId));
+    fd.append("sprint_id", sprintId === null ? "null" : String(sprintId));
+    fd.append("team_id", String(teamId));
+    fd.append("project_id", String(projectId));
+
+    await assignTaskToSprint(fd);
+
+
+    setDraggedTaskId(null);
+    setActiveDropTarget(null);
+  };
+
+
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   const toggleCollapse = (sectionKey: string) => {
@@ -84,6 +121,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
       return newSet;
     });
   };
+
   const backlogTasks = team.tasks.filter((t) => t.fk_sprintid_sprint === null);
   const taskModalMembers = team.team_members.map((member) => ({
     id_team_member: member.id_team_member,
@@ -126,308 +164,693 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
 
   return (
     <div className="space-y-8">
-      <h1 className="text-lg font-semibold text-[#edf3fb]">Team View</h1>
+  <h1 className="text-lg font-semibold text-[#edf3fb]">Team View</h1>
 
-      {/* Sections */}
-      {["backlog", "active-sprints", "planned-sprints", "create-sprint", "ended-sprints"].map((sectionKey) => {
-        if (sectionKey === "backlog") {
-          return (
-            <div key={sectionKey} className="space-y-8">
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Team Backlog</h2>
-                  <button
-                    onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
-                  >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
-                  </button>
-                </div>
-                {!collapsedSections.has(sectionKey) && (
-                  <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
-                    <div className="overflow-x-auto">
-                    <table className={taskTableClass}>
-                      {backlogColumnGroup}
-                      <thead><tr>
-                        <th className={thClass}>Name</th><th className={thClass}>Desc</th>
-                        <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                        <th className={thClass}>Priority</th><th className={thClass}>Sprint</th>
+  {/* Sections */}
+  {["backlog", "active-sprints", "planned-sprints", "create-sprint", "ended-sprints"].map((sectionKey) => {
+    if (sectionKey === "backlog") {
+      return (
+        <div key={sectionKey} className="space-y-8">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
+                Team Backlog
+              </h2>
+
+              <button
+                onClick={() => toggleCollapse(sectionKey)}
+                className="text-[#c3ceda] hover:text-[#edf3fb]"
+              >
+                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+              </button>
+            </div>
+
+            {!collapsedSections.has(sectionKey) && (
+              <div
+                className={`rounded-xl p-6 transition ${
+                  activeDropTarget === "backlog"
+                    ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]"
+                    : "border-[#7a8798] bg-[#1f2630]"
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setActiveDropTarget("backlog");
+                }}
+                onDragLeave={() => setActiveDropTarget(null)}
+                onDrop={(e) => handleDrop(e, null)}
+              >
+                <div className="overflow-x-auto">
+                  <table className={taskTableClass}>
+                    {backlogColumnGroup}
+
+                    <thead>
+                      <tr>
+                        <th className={thClass}>Name</th>
+                        <th className={thClass}>Desc</th>
+                        <th className={thClass}>Pts</th>
+                        <th className={thClass}>Risk</th>
+                        <th className={thClass}>Priority</th>
+                        <th className={thClass}>Sprint</th>
                         <th className={`${thClass} text-right`}></th>
-                      </tr></thead>
-                      <tbody>
-                        {backlogTasks.length === 0
-                          ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in backlog.</td></tr>
-                          : backlogTasks.map((task) => (
-                            <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
-                              <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                              <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {backlogTasks.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="p-4 text-center text-xs text-[#93a0b1]"
+                          >
+                            No tasks in backlog.
+                          </td>
+                        </tr>
+                      ) : (
+                        backlogTasks.map((task) => (
+                          <TaskDetailsTrigger
+                            draggable
+                            onDragStart={(e) =>
+                              handleDragStart(e, task.id_task)
+                            }
+                            onDragEnd={handleDragEnd}
+                            key={task.id_task}
+                            task={task}
+                            members={taskModalMembers}
+                            className={trClass}
+                          >
+                            <td className={tdClass}>
+                              <div className={taskNameClass}>
+                                {task.name ?? "—"}
+                              </div>
+                            </td>
+
+                            <td className={tdClass}>
+                              <div
+                                className={descriptionClass}
+                                title={
+                                  task.description?.trim() || undefined
+                                }
+                              >
+                                {task.description?.trim() || "—"}
+                              </div>
+                            </td>
+
+                            <td className={tdClass}>
+                              {task.story_points ?? "—"}
+                            </td>
+
+                            <td className={tdClass}>
+                              {getRiskOrPriorityName(task.risk)}
+                            </td>
+
+                            <td className={tdClass}>
+                              {getRiskOrPriorityName(task.priority)}
+                            </td>
+
+                            <td className={tdClass}>
+                              <form
+                                action={assignTaskToSprint}
+                                className="flex gap-2 items-center"
+                              >
+                                <input
+                                  type="hidden"
+                                  name="task_id"
+                                  value={task.id_task}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="team_id"
+                                  value={teamId}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="project_id"
+                                  value={projectId}
+                                />
+
+                                <select
+                                  name="sprint_id"
+                                  defaultValue={
+                                    task.fk_sprintid_sprint ?? "null"
+                                  }
+                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                >
+                                  <option value="null">Backlog</option>
+                                  {plannedSprints.map((s) => (
+                                    <option
+                                      key={s.id_sprint}
+                                      value={s.id_sprint}
+                                    >
+                                      Planned Sprint {s.id_sprint}
+                                    </option>
+                                  ))}
+                                  {activeSprints.map((s) => (
+                                    <option
+                                      key={s.id_sprint}
+                                      value={s.id_sprint}
+                                    >
+                                      Active Sprint {s.id_sprint}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <button
+                                  type="submit"
+                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+                                >
+                                  Save
+                                </button>
+                              </form>
+                            </td>
+
+                            <td className={`${tdClass} text-right`}>
+                              <TaskActions
+                                taskId={task.id_task}
+                                canDelete={task.can_delete}
+                              />
+                            </td>
+                          </TaskDetailsTrigger>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }else if (sectionKey === "active-sprints") {
+  return (
+    <div key={sectionKey} className="space-y-8">
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-[#39e7ac]">
+            Active Sprints
+          </h2>
+
+          <button
+            onClick={() => toggleCollapse(sectionKey)}
+            className="text-[#c3ceda] hover:text-[#edf3fb]"
+          >
+            {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+          </button>
+        </div>
+
+        {!collapsedSections.has(sectionKey) && (
+          <>
+            {activeSprints.length === 0 && (
+              <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">
+                No active sprints yet.
+              </div>
+            )}
+
+            {activeSprints.map((sprint) => (
+              <div
+                key={sprint.id_sprint}
+                className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6"
+              >
+                {/* Sprint Header */}
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-base font-semibold text-[#ffffff]">
+                    Sprint {sprint.id_sprint}{" "}
+                    <span className="text-[#c3ceda] text-sm">
+                      ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
+                    </span>
+                  </h3>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
+                    >
+                      <ChartIcon /> Sprint Stats
+                    </Link>
+
+                    <form action={closeSprint}>
+                      <input type="hidden" name="sprint_id" value={sprint.id_sprint} />
+                      <input type="hidden" name="team_id" value={teamId} />
+                      <input type="hidden" name="project_id" value={projectId} />
+
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-3 py-2 text-xs font-semibold text-[#ff8080] transition hover:bg-[#ff4040]/10"
+                      >
+                        <CalendarX className="h-3.5 w-3.5" /> Close Sprint
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Sprint Tasks Table */}
+                <div className="overflow-x-auto">
+                  <table className={taskTableClass}>
+                    {sprintColumnGroup}
+
+                    <thead>
+                      <tr>
+                        <th className={thClass}>Name</th>
+                        <th className={thClass}>Desc</th>
+                        <th className={thClass}>Pts</th>
+                        <th className={thClass}>Risk</th>
+                        <th className={thClass}>Priority</th>
+                        <th className={thClass}>Status</th>
+                        <th className={thClass}>Sprint</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {sprint.tasks.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="p-4 text-center text-xs text-[#93a0b1]"
+                          >
+                            No tasks in this sprint.
+                          </td>
+                        </tr>
+                      ) : (
+                        [...sprint.tasks]
+                          .sort((a, b) => a.id_task - b.id_task)
+                          .map((task) => (
+                            <TaskDetailsTrigger
+                              key={task.id_task}
+                              task={task}
+                              members={taskModalMembers}
+                              className={trClass}
+                            >
+                              <td className={tdClass}>
+                                <div className={taskNameClass}>{task.name ?? "—"}</div>
+                              </td>
+
+                              <td className={tdClass}>
+                                <div
+                                  className={descriptionClass}
+                                  title={task.description?.trim() || undefined}
+                                >
+                                  {task.description?.trim() || "—"}
+                                </div>
+                              </td>
+
                               <td className={tdClass}>{task.story_points ?? "—"}</td>
-                              <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                              <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
+
+                              <td className={tdClass}>
+                                {getRiskOrPriorityName(task.risk)}
+                              </td>
+
+                              <td className={tdClass}>
+                                {getRiskOrPriorityName(task.priority)}
+                              </td>
+
+                              <td className={tdClass}>
+                                <TaskStatusForm
+                                  key={task.id_task + "-" + task.workflow_status}
+                                  taskId={task.id_task}
+                                  teamId={String(teamId)}
+                                  projectId={projectId}
+                                  defaultValue={task.workflow_status}
+                                />
+                              </td>
+
                               <td className={tdClass}>
                                 <form action={assignTaskToSprint} className="flex gap-2 items-center">
                                   <input type="hidden" name="task_id" value={task.id_task} />
                                   <input type="hidden" name="team_id" value={teamId} />
                                   <input type="hidden" name="project_id" value={projectId} />
-                                  <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? "null"}
-                                    className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
-                                    <option value="null">Backlog</option>
-                                    {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
-                                    {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
+
+                                  <select
+                                    name="sprint_id"
+                                    defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                    className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                  >
+                                    <option value="null">Move to Backlog</option>
+                                    {plannedSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        Planned Sprint {s.id_sprint}
+                                      </option>
+                                    ))}
+                                    {activeSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        Active Sprint {s.id_sprint}
+                                      </option>
+                                    ))}
                                   </select>
-                                  <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
+
+                                  <button
+                                    type="submit"
+                                    className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+                                  >
+                                    Save
+                                  </button>
                                 </form>
                               </td>
-                              <td className={`${tdClass} text-right`}><TaskActions taskId={task.id_task} canDelete={task.can_delete} /></td>
                             </TaskDetailsTrigger>
-                          ))}
-                      </tbody>
-                    </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        } else if (sectionKey === "active-sprints") {
-          return (
-            <div key={sectionKey} className="space-y-8">
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-[#39e7ac]">Active Sprints</h2>
-                  <button
-                    onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
-                  >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
-                  </button>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-                {!collapsedSections.has(sectionKey) && (
-                  <>
-                    {activeSprints.length === 0 && (
-                      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No active sprints yet.</div>
-                    )}
-                    {activeSprints.map((sprint) => (
-                      <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
-                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <h3 className="text-base font-semibold text-[#ffffff]">Sprint {sprint.id_sprint} <span className="text-[#c3ceda] text-sm">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
-                          <div className="flex flex-wrap gap-2">
-                            <Link href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]">
-                              <ChartIcon />Sprint Stats
-                            </Link>
-                            <form action={closeSprint}>
-                              <input type="hidden" name="sprint_id" value={sprint.id_sprint} />
-                              <input type="hidden" name="team_id" value={teamId} />
-                              <input type="hidden" name="project_id" value={projectId} />
-                              <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-3 py-2 text-xs font-semibold text-[#ff8080] transition hover:bg-[#ff4040]/10">
-                                <CalendarX className="h-3.5 w-3.5" />Close Sprint
-                              </button>
-                            </form>
-                          </div>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className={taskTableClass}>
-                            {sprintColumnGroup}
-                            <thead><tr>
-                              <th className={thClass}>Name</th><th className={thClass}>Desc</th>
-                              <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                              <th className={thClass}>Priority</th><th className={thClass}>Status</th>
-                              <th className={thClass}>Sprint</th>
-                            </tr></thead>
-                            <tbody>
-                              {sprint.tasks.length === 0
-                                ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
-                                : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                                  <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
-                                    <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                                    <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
-                                    <td className={tdClass}>{task.story_points ?? "—"}</td>
-                                    <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                                    <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                                    <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
-                                    <td className={tdClass}>
-                                      <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                                        <input type="hidden" name="task_id" value={task.id_task} />
-                                        <input type="hidden" name="team_id" value={teamId} />
-                                        <input type="hidden" name="project_id" value={projectId} />
-                                        <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                          className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
-                                          <option value="null">Move to Backlog</option>
-                                          {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
-                                          {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
-                                        </select>
-                                        <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
-                                      </form>
-                                    </td>
-                                  </TaskDetailsTrigger>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
               </div>
-            </div>
-          );
-        } else if (sectionKey === "planned-sprints") {
-          return (
-            <div key={sectionKey} className="space-y-8">
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Planned Sprints</h2>
-                  <button
-                    onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
-                  >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
-                  </button>
-                </div>
-                {!collapsedSections.has(sectionKey) && (
-                  <>
-                    {plannedSprints.length === 0 && (
-                      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No planned sprints yet.</div>
-                    )}
-                    {plannedSprints.map((sprint) => (
-                      <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
-                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <h3 className="text-base font-semibold text-[#edf3fb]">Sprint {sprint.id_sprint} <span className="text-[#c3ceda] text-sm">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
-                          <Link href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]">
-                            <ChartIcon />Sprint Stats
-                          </Link>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className={taskTableClass}>
-                            {sprintColumnGroup}
-                            <thead><tr>
-                              <th className={thClass}>Name</th><th className={thClass}>Desc</th>
-                              <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                              <th className={thClass}>Priority</th><th className={thClass}>Status</th>
-                              <th className={thClass}>Sprint</th>
-                            </tr></thead>
-                            <tbody>
-                              {sprint.tasks.length === 0
-                                ? <tr><td colSpan={7} className="p-4 text-center text-xs text-[#93a0b1]">No tasks in this sprint.</td></tr>
-                                : [...sprint.tasks].sort((a, b) => a.id_task - b.id_task).map((task) => (
-                                  <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
-                                    <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                                    <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
-                                    <td className={tdClass}>{task.story_points ?? "—"}</td>
-                                    <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                                    <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                                    <td className={tdClass}><TaskStatusForm key={task.id_task + "-" + task.workflow_status} taskId={task.id_task} teamId={String(teamId)} projectId={projectId} defaultValue={task.workflow_status} /></td>
-                                    <td className={tdClass}>
-                                      <form action={assignTaskToSprint} className="flex gap-2 items-center">
-                                        <input type="hidden" name="task_id" value={task.id_task} />
-                                        <input type="hidden" name="team_id" value={teamId} />
-                                        <input type="hidden" name="project_id" value={projectId} />
-                                        <select name="sprint_id" defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                          className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none">
-                                          <option value="null">Move to Backlog</option>
-                                          {plannedSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Planned Sprint {s.id_sprint}</option>)}
-                                          {activeSprints.map((s) => <option key={s.id_sprint} value={s.id_sprint}>Active Sprint {s.id_sprint}</option>)}
-                                        </select>
-                                        <button type="submit" className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]">Save</button>
-                                      </form>
-                                    </td>
-                                  </TaskDetailsTrigger>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        } else if (sectionKey === "create-sprint") {
-          return (
-            <div key={sectionKey} className="space-y-8">
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Create New Sprint</h3>
-                  <button
-                    onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
-                  >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
-                  </button>
-                </div>
-                {!collapsedSections.has(sectionKey) && (
-                  <CreateSprintForm action={createSprint} teamId={String(teamId)} projectId={String(projectId)} existingSprints={[...activeSprints, ...plannedSprints, ...endedSprints]} />
-                )}
-              </div>
-            </div>
-          );
-        } else if (sectionKey === "ended-sprints") {
-          return (
-            <div key={sectionKey} className="space-y-8">
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-[#c3ceda]">Ended Sprints</h2>
-                  <button
-                    onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
-                  >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
-                  </button>
-                </div>
-                {!collapsedSections.has(sectionKey) && (
-                  <>
-                    {endedSprints.length === 0 && (
-                      <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No completed sprints yet.</div>
-                    )}
-                    {endedSprints.map((sprint) => (
-                      <div key={sprint.id_sprint} className="mb-6 rounded-xl border border-[#667386] bg-[#1f2630] p-6 opacity-70">
-                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <h3 className="text-base font-semibold text-[#c3ceda]">Sprint {sprint.id_sprint} <span className="text-xs">({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})</span></h3>
-                          <Link href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda] transition hover:text-[#ffffff]">
-                            <ChartIcon />Sprint Stats
-                          </Link>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className={taskTableClass}>
-                            {endedSprintColumnGroup}
-                            <thead><tr>
-                              <th className={thClass}>Name</th><th className={thClass}>Desc</th>
-                              <th className={thClass}>Pts</th><th className={thClass}>Risk</th>
-                              <th className={thClass}>Priority</th><th className={thClass}>Member</th>
-                            </tr></thead>
-                            <tbody>
-                              {sprint.tasks.length === 0
-                                ? <tr><td colSpan={6} className="p-4 text-center text-xs text-[#93a0b1]">No tasks.</td></tr>
-                                : sprint.tasks.map((task) => {
-                                  const member = team.team_members.find((m) => m.id_team_member === task.fk_team_memberid_team_member);
-                                  return (
-                                    <TaskDetailsTrigger key={task.id_task} task={task} members={taskModalMembers} className={trClass}>
-                                      <td className={tdClass}><div className={taskNameClass}>{task.name ?? "—"}</div></td>
-                                      <td className={tdClass}><div className={descriptionClass} title={task.description?.trim() || undefined}>{task.description?.trim() || "—"}</div></td>
-                                      <td className={tdClass}>{task.story_points ?? "—"}</td>
-                                      <td className={tdClass}>{getRiskOrPriorityName(task.risk)}</td>
-                                      <td className={tdClass}>{getRiskOrPriorityName(task.priority)}</td>
-                                      <td className={tdClass}>{member ? member.user.name : "Unassigned"}</td>
-                                    </TaskDetailsTrigger>
-                                  );
-                                })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        }
-        return null;
-      })}
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
-}
+    }else if (sectionKey === "planned-sprints") {
+      return (
+        <div key={sectionKey} className="space-y-8">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
+                Planned Sprints
+              </h2>
+
+              <button
+                onClick={() => toggleCollapse(sectionKey)}
+                className="text-[#c3ceda] hover:text-[#edf3fb]"
+              >
+                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+              </button>
+            </div>
+
+            {!collapsedSections.has(sectionKey) && (
+              <>
+                {plannedSprints.length === 0 && (
+                  <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">
+                    No planned sprints yet.
+                  </div>
+                )}
+
+                {plannedSprints.map((sprint) => (
+                  <div
+                    key={sprint.id_sprint}
+                    className="mb-6 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6"
+                  >
+                    {/* Sprint Header */}
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-base font-semibold text-[#edf3fb]">
+                        Sprint {sprint.id_sprint}{" "}
+                        <span className="text-[#c3ceda] text-sm">
+                          ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
+                        </span>
+                      </h3>
+
+                      <Link
+                        href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+                      >
+                        <ChartIcon /> Sprint Stats
+                      </Link>
+                    </div>
+
+                    {/* Sprint Tasks Table */}
+                    <div className="overflow-x-auto">
+                      <table className={taskTableClass}>
+                        {sprintColumnGroup}
+
+                        <thead>
+                          <tr>
+                            <th className={thClass}>Name</th>
+                            <th className={thClass}>Desc</th>
+                            <th className={thClass}>Pts</th>
+                            <th className={thClass}>Risk</th>
+                            <th className={thClass}>Priority</th>
+                            <th className={thClass}>Status</th>
+                            <th className={thClass}>Sprint</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {sprint.tasks.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={7}
+                                className="p-4 text-center text-xs text-[#93a0b1]"
+                              >
+                                No tasks in this sprint.
+                              </td>
+                            </tr>
+                          ) : (
+                            [...sprint.tasks]
+                              .sort((a, b) => a.id_task - b.id_task)
+                              .map((task) => (
+                                <TaskDetailsTrigger
+                                  key={task.id_task}
+                                  task={task}
+                                  members={taskModalMembers}
+                                  className={trClass}
+                                >
+                                  <td className={tdClass}>
+                                    <div className={taskNameClass}>{task.name ?? "—"}</div>
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    <div
+                                      className={descriptionClass}
+                                      title={task.description?.trim() || undefined}
+                                    >
+                                      {task.description?.trim() || "—"}
+                                    </div>
+                                  </td>
+
+                                  <td className={tdClass}>{task.story_points ?? "—"}</td>
+
+                                  <td className={tdClass}>
+                                    {getRiskOrPriorityName(task.risk)}
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    {getRiskOrPriorityName(task.priority)}
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    <TaskStatusForm
+                                      key={task.id_task + "-" + task.workflow_status}
+                                      taskId={task.id_task}
+                                      teamId={String(teamId)}
+                                      projectId={projectId}
+                                      defaultValue={task.workflow_status}
+                                    />
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                      <input type="hidden" name="task_id" value={task.id_task} />
+                                      <input type="hidden" name="team_id" value={teamId} />
+                                      <input type="hidden" name="project_id" value={projectId} />
+
+                                      <select
+                                        name="sprint_id"
+                                        defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
+                                        className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                      >
+                                        <option value="null">Move to Backlog</option>
+                                        {plannedSprints.map((s) => (
+                                          <option key={s.id_sprint} value={s.id_sprint}>
+                                            Planned Sprint {s.id_sprint}
+                                          </option>
+                                        ))}
+                                        {activeSprints.map((s) => (
+                                          <option key={s.id_sprint} value={s.id_sprint}>
+                                            Active Sprint {s.id_sprint}
+                                          </option>
+                                        ))}
+                                      </select>
+
+                                      <button
+                                        type="submit"
+                                        className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+                                      >
+                                        Save
+                                      </button>
+                                    </form>
+                                  </td>
+                                </TaskDetailsTrigger>
+                              ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }else if (sectionKey === "create-sprint") {
+      return (
+        <div key={sectionKey} className="space-y-8">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
+                Create New Sprint
+              </h3>
+
+              <button
+                onClick={() => toggleCollapse(sectionKey)}
+                className="text-[#c3ceda] hover:text-[#edf3fb]"
+              >
+                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+              </button>
+            </div>
+
+            {!collapsedSections.has(sectionKey) && (
+              <CreateSprintForm
+                action={createSprint}
+                teamId={String(teamId)}
+                projectId={String(projectId)}
+                existingSprints={[
+                  ...activeSprints,
+                  ...plannedSprints,
+                  ...endedSprints,
+                ]}
+              />
+            )}
+          </div>
+        </div>
+      );
+    }else if (sectionKey === "ended-sprints") {
+      return (
+        <div key={sectionKey} className="space-y-8">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[#c3ceda]">
+                Ended Sprints
+              </h2>
+
+              <button
+                onClick={() => toggleCollapse(sectionKey)}
+                className="text-[#c3ceda] hover:text-[#edf3fb]"
+              >
+                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+              </button>
+            </div>
+
+            {!collapsedSections.has(sectionKey) && (
+              <>
+                {endedSprints.length === 0 && (
+                  <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">
+                    No completed sprints yet.
+                  </div>
+                )}
+
+                {endedSprints.map((sprint) => (
+                  <div
+                    key={sprint.id_sprint}
+                    className="mb-6 rounded-xl border border-[#667386] bg-[#1f2630] p-6 opacity-70"
+                  >
+                    {/* Sprint Header */}
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-base font-semibold text-[#c3ceda]">
+                        Sprint {sprint.id_sprint}{" "}
+                        <span className="text-xs">
+                          ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
+                        </span>
+                      </h3>
+
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda] transition hover:text-[#ffffff]">
+                          <ChartIcon /> Sprint Stats
+                        </Link>
+
+                        <Link
+                          href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]">
+                          📝 Retrospective
+                        </Link>
+                      </div>
+                    </div>
+
+                    {/* Sprint Tasks Table */}
+                    <div className="overflow-x-auto">
+                      <table className={taskTableClass}>
+                        {endedSprintColumnGroup}
+
+                        <thead>
+                          <tr>
+                            <th className={thClass}>Name</th>
+                            <th className={thClass}>Desc</th>
+                            <th className={thClass}>Pts</th>
+                            <th className={thClass}>Risk</th>
+                            <th className={thClass}>Priority</th>
+                            <th className={thClass}>Member</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {sprint.tasks.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={6}
+                                className="p-4 text-center text-xs text-[#93a0b1]"
+                              >
+                                No tasks.
+                              </td>
+                            </tr>
+                          ) : (
+                            sprint.tasks.map((task) => {
+                              const member = team.team_members.find(
+                                (m) =>
+                                  m.id_team_member ===
+                                  task.fk_team_memberid_team_member
+                              );
+
+                              return (
+                                <TaskDetailsTrigger
+                                  key={task.id_task}
+                                  task={task}
+                                  members={taskModalMembers}
+                                  className={trClass}
+                                >
+                                  <td className={tdClass}>
+                                    <div className={taskNameClass}>
+                                      {task.name ?? "—"}
+                                    </div>
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    <div
+                                      className={descriptionClass}
+                                      title={task.description?.trim() || undefined}
+                                    >
+                                      {task.description?.trim() || "—"}
+                                    </div>
+                                  </td>
+
+                                  <td className={tdClass}>{task.story_points ?? "—"}</td>
+
+                                  <td className={tdClass}>
+                                    {getRiskOrPriorityName(task.risk)}
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    {getRiskOrPriorityName(task.priority)}
+                                  </td>
+
+                                  <td className={tdClass}>
+                                    {member ? member.user.name : "Unassigned"}
+                                  </td>
+                                </TaskDetailsTrigger>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+  })}
+</div>
+  );
+} 
+

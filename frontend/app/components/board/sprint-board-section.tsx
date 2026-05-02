@@ -13,6 +13,9 @@ type BoardTask = {
   fk_team_memberid_team_member: number | null;
   assignee_user_id: number | null;
   assignee_name: string | null;
+  // ⭐ REQUIRED FOR MULTI‑ASSIGNEE SWIMLANE
+  multiplePeople: boolean;
+  assignees: number[];
 };
 
 type BoardMember = {

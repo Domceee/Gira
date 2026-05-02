@@ -71,13 +71,13 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
         for tm, user in result.all()
     ]
 
-return {
-    "team_id": team.id_team,
-    "team_name": team.name,
-    "tasks": [
-        TaskRead.model_validate(t).model_dump()
-        for t in tasks
-    ],
-    "team_members": members
-}
+    return {
+        "team_id": team.id_team,
+        "team_name": team.name,
+        "tasks": [
+            TaskRead.model_validate(t).model_dump()
+            for t in tasks
+        ],
+        "team_members": members
+    }
 

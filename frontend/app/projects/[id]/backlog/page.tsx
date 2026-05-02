@@ -21,6 +21,10 @@ type Task = {
   fk_teamid_team: number | null;
   can_delete: boolean;
   delete_block_reason: string | null;
+
+  //jei situ neturiu skundziasi, nors jie useless cia
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];   
 };
 
 type TeamSummary = { id_team: number; name: string | null };

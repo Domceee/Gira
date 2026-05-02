@@ -20,3 +20,9 @@ class Sprint(Base):
         ForeignKey("team.id_team"),
         nullable=False
     )
+
+    fk_retrospectiveid_retrospective = Column(
+        Integer,
+        ForeignKey("retrospective.id_retrospective"),
+        nullable=True
+    )

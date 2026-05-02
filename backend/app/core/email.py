@@ -53,3 +53,29 @@ async def send_project_invitation_email(
     )
 
     await _send_email(message)
+
+    
+async def send_password_reset_email(to_email: str, reset_link: str) -> None:
+    message = EmailMessage()
+    message["From"] = settings.SMTP_FROM
+    message["To"] = to_email
+    message["Subject"] = "Reset your Gira password"
+
+    message.set_content(
+        "\n".join(
+            [
+                "Hello,",
+                "",
+                "We received a request to reset your Gira password.",
+                "Click the link below to choose a new password:",
+                "",
+                reset_link,
+                "",
+                "If you did not request this, you can safely ignore this email.",
+                "",
+                "-Gira Team",
+            ]
+        )
+    )
+
+    await _send_email(message)

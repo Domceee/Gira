@@ -17,6 +17,7 @@ type UserInfo = {
   email: string;
   country: string | null;
   city: string | null;
+  Owner: boolean;
 };
 
 type TeamMember = {
@@ -27,6 +28,7 @@ type TeamMember = {
   city: string | null;
   role_in_team: string | null;
   effectiveness: number | null;
+  Owner: boolean;
 };
 
 type Props = {
@@ -258,7 +260,16 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
                   {selectedTeamMembers.map((member) => (
                     <div key={member.id_user} className="flex items-center justify-between rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+
+                            {member.Owner && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide 
+                                              bg-green-600 text-white rounded-md">
+                                Owner
+                              </span>
+                            )}
+                        </div>
                         <p className="text-xs text-[#c3ceda]">{member.email}</p>
                         <p className="text-xs text-[#c3ceda]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
                       </div>
@@ -307,10 +318,24 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
                           className="mt-1 h-4 w-4 accent-[#39e7ac]"
                         />
                         <div>
-                          <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-[#ffffff]">{member.name}</p>
+
+                            {member.Owner && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide 
+                                              bg-green-600 text-white rounded-md">
+                                Owner
+                              </span>
+                            )}
+                          </div>
+
                           <p className="text-xs text-[#c3ceda]">{member.email}</p>
-                          <p className="text-xs text-[#c3ceda]">{member.country ?? "Unknown country"}{member.city ? `, ${member.city}` : ""}</p>
+                          <p className="text-xs text-[#c3ceda]">
+                            {member.country ?? "Unknown country"}
+                            {member.city ? `, ${member.city}` : ""}
+                          </p>
                         </div>
+
                       </label>
                     );
                   })}

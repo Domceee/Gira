@@ -59,42 +59,52 @@ export default function ProfilePage() {
   }
 
   async function handleSubmit(e: React.BaseSyntheticEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSaved(false);
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const payload = {
-      name: formData.get("name"),
-      email: formData.get("email"),
-      country: formData.get("country"),
-      city: formData.get("city"),
-      password: formData.get("password") || null,
-      picture: pictureBase64 || null,
-    };
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/me`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail ?? "Failed to update profile");
-      }
-      await fetchUser();
-      setPictureBase64(null);
-      setSaved(true);
-      const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
-    } finally {
-      setSaving(false);
+  e.preventDefault();
+  setSaving(true);
+  setError(null);
+  setSaved(false);
+
+  const form = e.currentTarget;
+  const formData = new FormData(form);
+
+  const payload = {
+    name: formData.get("name"),
+    email: formData.get("email"),
+    country: formData.get("country"),
+    city: formData.get("city"),
+    picture: pictureBase64 === null
+      ? null
+      : pictureBase64 === ""
+      ? ""
+      : pictureBase64,
+  };
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/me`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail ?? "Failed to update profile");
     }
+
+    await fetchUser();
+    setPictureBase64(null);
+    setSaved(true);
+
+    const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to update profile");
+  } finally {
+    setSaving(false);
   }
+}
+
 
   if (loading) return (
     <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
@@ -144,18 +154,20 @@ export default function ProfilePage() {
             <Field label="Email" name="email" type="email" defaultValue={user.email} required />
             <Field label="Country" name="country" defaultValue={user.country} />
             <Field label="City" name="city" defaultValue={user.city} />
-            <Field label="New Password" name="password" type="password" placeholder="Leave empty to keep current password" />
-
-            {error && <div className="rounded-lg border border-[#ff4040]/30 bg-[#ff4040]/08 px-4 py-3 text-sm text-[#ff8080]">{error}</div>}
-            {saved && <div className="rounded-lg border border-[rgba(57,231,172,0.25)] bg-[rgba(46,230,166,0.10)] px-4 py-3 text-sm text-[#39e7ac]">Changes saved.</div>}
-
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-6 py-2.5 text-sm font-bold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
+              className="w-full rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] py-2.5 font-bold text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)] disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Changes"}
+              {saving ? "Saving…" : "Save Changes"}
             </button>
+
+            <Link
+              href="/profile/reset-password"
+              className="text-sm text-[#39e7ac] hover:underline"
+            >
+              Forgot your password?
+            </Link>
           </form>
         </div>
       </main>
