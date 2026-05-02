@@ -853,32 +853,6 @@ async def get_available_project_members(
         for user, pm in rows
     ]
 
-@router.get("/{project_id}/members", response_model=list[ProjectMemberRead])
-async def get_project_members(
-    project_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    await require_project_owner(project_id, current_user.id_user, db)
-
-    result = await db.execute(
-        select(User, ProjectMember.is_owner)
-        .join(ProjectMember, ProjectMember.fk_userid_user == User.id_user)
-        .where(ProjectMember.fk_projectid_project == project_id)
-        .order_by(User.name.asc())
-    )
-
-    members = result.all()
-
-    return [
-        ProjectMemberRead(
-            id_user=user.id_user,
-            name=user.name,
-            email=user.email,
-            is_owner=is_owner,
-        )
-        for user, is_owner in members
-    ]
 
 
 @router.get("/{project_id}/teams/{team_id}/members")
