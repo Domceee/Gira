@@ -89,20 +89,6 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     setActiveDropTarget(null);
   };
 
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-
-   const toggleCollapse = (sectionKey: string) => {
-    setCollapsedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionKey)) {
-        newSet.delete(sectionKey);
-      } else {
-        newSet.add(sectionKey);
-      }
-      return newSet;
-    });
-  };
-
   const handleDrop = async (e: React.DragEvent, sprintId: number | null) => {
     e.preventDefault();
     const taskId = Number(e.dataTransfer.getData("text/plain"));
@@ -163,19 +149,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
 
   return (
     <div className="space-y-8">
-    
       {/* Backlog */}
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Team Backlog</h2>
-          <button
-            onClick={() => toggleCollapse("backlog")}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
-          >
-            {collapsedSections.has("backlog") ? '▼' : '▲'}
-          </button>
-        </div>
-        {!collapsedSections.has("backlog") && (
       <div
         className={`rounded-xl p-6 transition ${
           activeDropTarget === "backlog"
@@ -189,6 +163,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
         onDragLeave={() => setActiveDropTarget(null)}
         onDrop={(e) => handleDrop(e, null)}
       >
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Team Backlog</h2>
         <div className="overflow-x-auto">
           <table className={taskTableClass}>
             {backlogColumnGroup}
@@ -237,22 +212,10 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           </table>
         </div>
       </div>
-        )}
-      </div>
 
       {/* Active Sprints */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[#39e7ac]">Active Sprints</h2>
-          <button
-            onClick={() => toggleCollapse("active-sprints")}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
-          >
-            {collapsedSections.has("active-sprints") ? '▼' : '▲'}
-          </button>
-        </div>
-        {!collapsedSections.has("active-sprints") && (
-          <>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#39e7ac]">Active Sprints</h2>
         {activeSprints.length === 0 && (
           <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No active sprints yet.</div>
         )}
@@ -348,23 +311,11 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
             </div>
           </div>
         ))}
-        </>
-        )}
       </div>
 
       {/* Planned Sprints */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Planned Sprints</h2>
-          <button
-            onClick={() => toggleCollapse("planned-sprints")}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
-          >
-            {collapsedSections.has("planned-sprints") ? '▼' : '▲'}
-          </button>
-        </div>
-        {!collapsedSections.has("planned-sprints") && (
-          <>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Planned Sprints</h2>
         {plannedSprints.length === 0 && (
           <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No planned sprints yet.</div>
         )}
@@ -449,39 +400,17 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
             </div>
           </div>
         ))}
-        </>
-        )}
       </div>
 
       {/* Create Sprint */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Create New Sprint</h3>
-          <button
-            onClick={() => toggleCollapse("create-sprint")}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
-          >
-            {collapsedSections.has("create-sprint") ? '▼' : '▲'}
-          </button>
-        </div>
-        {!collapsedSections.has("create-sprint") && (
+        <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Create New Sprint</h3>
         <CreateSprintForm action={createSprint} teamId={String(teamId)} projectId={String(projectId)} existingSprints={[...activeSprints, ...plannedSprints, ...endedSprints]} />
-        )}
       </div>
 
       {/* Ended Sprints */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[#c3ceda]">Ended Sprints</h2>
-          <button
-            onClick={() => toggleCollapse("ended-sprints")}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
-          >
-            {collapsedSections.has("ended-sprints") ? '▼' : '▲'}
-          </button>
-        </div>
-        {!collapsedSections.has("ended-sprints") && (
-          <>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#c3ceda]">Ended Sprints</h2>
         {endedSprints.length === 0 && (
           <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-4 text-sm text-[#c3ceda]">No completed sprints yet.</div>
         )}
@@ -532,8 +461,6 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
             </div>
           </div>
         ))}
-        </>
-        )}
       </div>
     </div>
   );
