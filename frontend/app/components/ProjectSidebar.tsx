@@ -30,7 +30,7 @@ export default function ProjectSidebar({ projectId, projectName, isOwner, projec
   const router = useRouter();
   const [projectOpen, setProjectOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState<{ name: string | null; picture?: string | null } | null>(null);
   const projectDropRef = useRef<HTMLDivElement>(null);
 
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function ProjectSidebar({ projectId, projectName, isOwner, projec
   useEffect(() => {
     fetch("/api/proxy/auth/me", { credentials: "include", cache: "no-store" })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => d && setUserName(d.name))
+      .then((d) => d && setUser({ name: d.name, picture: d.picture }))
       .catch(() => {});
   }, []);
 
@@ -209,12 +209,21 @@ export default function ProjectSidebar({ projectId, projectName, isOwner, projec
       {/* User */}
       <div className="border-t border-[#667386] px-3 py-3">
         <div className="flex items-center justify-between gap-2">
-          <Link href="/profile" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7a8798] text-xs font-semibold text-[#39e7ac] border border-[#7b8798]">
-              {getInitials(userName)}
-            </div>
-            <span className="truncate text-sm text-[#edf3fb]">{userName ?? "Profile"}</span>
-          </Link>
+            <Link href="/profile" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
+                {user && user.picture ? (
+                    <img
+                        src={"data:image/jpeg;base64," + user.picture}
+                        alt="Profile"
+                        className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+                    />
+                ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-xs font-semibold text-[#39e7ac] border border-[#7b8798]">
+                        {getInitials(user ? user.name : null)}
+                    </div>
+                )}
+                <span className="truncate text-sm text-[#edf3fb]">{user ? user.name : "Profile"}</span>
+            </Link>
+
           <button
             onClick={handleLogout}
             disabled={loggingOut}

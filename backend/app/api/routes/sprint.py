@@ -6,7 +6,9 @@ from fastapi.responses import StreamingResponse, Response
 from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import update, delete
 
+from app.models.news import News
 from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.project_member import ProjectMember
@@ -160,6 +162,61 @@ async def create_sprint(
     await db.refresh(sprint)
 
     return {"status": "ok", "id_sprint": sprint.id_sprint}
+
+
+@router.patch("/{sprint_id}")
+async def update_sprint(
+    sprint_id: int,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sprint = await db.get(Sprint, sprint_id)
+    if not sprint:
+        raise HTTPException(404, "Sprint not found")
+
+    # Convert strings to datetime
+    start_date_str = payload.get("start_date")
+    end_date_str = payload.get("end_date")
+
+    start_date = datetime.fromisoformat(start_date_str) if start_date_str else None
+    end_date = datetime.fromisoformat(end_date_str) if end_date_str else None
+
+    # Validate date order
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(400, "Start date cannot be after end date")
+
+    #  Overlap validation
+    result = await db.execute(
+        select(Sprint)
+        .where(
+            Sprint.fk_teamid_team == sprint.fk_teamid_team,
+            Sprint.id_sprint != sprint.id_sprint,
+            Sprint.status != SprintStatus.COMPLETED.value,  # optional
+            (start_date <= Sprint.end_date),
+            (end_date >= Sprint.start_date),
+        )
+    )
+    overlapping = result.scalars().first()
+    if overlapping:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sprint dates overlap with Sprint {overlapping.id_sprint}",
+        )
+
+    # Apply updates
+    if start_date:
+        sprint.start_date = start_date
+    if end_date:
+        sprint.end_date = end_date
+
+    db.add(sprint)
+    await db.commit()
+    await db.refresh(sprint)
+
+    return {"message": "Sprint updated"}
+
+
 
 
 @router.get("/{sprint_id}/stats", response_model=SprintStatsRead)
@@ -591,3 +648,47 @@ async def get_project_membership_or_404(project_id: int, user_id: int, db: Async
         raise HTTPException(status_code=404, detail="Project not found")
 
     return membership
+
+
+@router.delete("/{sprint_id}")
+async def delete_sprint(
+    sprint_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sprint = await db.get(Sprint, sprint_id)
+    if not sprint:
+        raise HTTPException(404, "Sprint not found")
+
+    # Load team and check membership
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(
+        team.fk_projectid_project,
+        current_user.id_user,
+        db
+    )
+
+    #  Delete sprint events
+    await db.execute(
+        delete(SprintTaskEvent)
+        .where(SprintTaskEvent.fk_sprintid_sprint == sprint_id)
+    )
+
+    #  Delete news entries referencing this sprint
+    await db.execute(
+        delete(News)
+        .where(News.fk_sprintid_sprint == sprint_id)
+    )
+
+    #  Move tasks to backlog
+    await db.execute(
+        update(Task)
+        .where(Task.fk_sprintid_sprint == sprint_id)
+        .values(fk_sprintid_sprint=None)
+    )
+
+    #  Delete sprint
+    await db.delete(sprint)
+    await db.commit()
+
+    return {"message": "Sprint deleted"}

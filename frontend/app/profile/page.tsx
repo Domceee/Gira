@@ -12,6 +12,14 @@ interface User {
   city: string;
   picture?: string;
 }
+function getInitials(name?: string) {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -142,9 +150,12 @@ export default function ProfilePage() {
                   <img src={`data:image/jpeg;base64,${pictureBase64}`} alt="Preview" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
                 ) : user.picture ? (
                   <img src={`data:image/jpeg;base64,${user.picture}`} alt="Profile" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
-                ) : (
-                  <img src="/default.jpg" alt="Default" className="h-16 w-16 rounded-lg object-cover border border-[#7a8798]" />
-                )}
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#7a8798] text-2xl font-bold text-[#39e7ac] border border-[#7a8798]">
+                        {getInitials(user.name)}
+                      </div>
+                    )}
+
               </div>
               <input type="file" name="picture" accept="image/*" onChange={handlePictureChange}
                 className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] p-2.5 text-sm text-[#edf3fb] file:mr-3 file:rounded file:border-0 file:bg-[#7a8798] file:px-3 file:py-1 file:text-xs file:text-[#f7faff]" />

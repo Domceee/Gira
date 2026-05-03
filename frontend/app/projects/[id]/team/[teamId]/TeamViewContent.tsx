@@ -1,17 +1,27 @@
 "use client";
-
 import Link from "next/link";
 
 import { CalendarX } from "lucide-react";
-import { useState } from "react";
-import { createSprint, assignTaskToSprint, closeSprint } from "./actions";
+import { createSprint, assignTaskToSprint, closeSprint, updateSprint, deleteSprintAction} from "./actions";
 import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
 import TaskActions from "@/app/components/tasks/TaskActions";
-import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger"
+import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import MemberSelector from "./MemberSelector";
+
+
+
+
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+
+
 
 type Task = {
   id_task: number;
@@ -66,6 +76,7 @@ const thClass = "p-3 text-left text-xs font-semibold uppercase tracking-wider te
 const tdClass = "p-3 text-sm text-[#edf3fb]";
 const trClass = "cursor-pointer border-b border-[#667386] hover:bg-[#28313d] transition-colors";
 const taskTableClass = "w-full table-fixed border-collapse";
+
 
 export default function TeamViewContent({ team, projectId, teamId, activeSprints, plannedSprints, endedSprints }: {
   team: TeamBacklog;
@@ -130,6 +141,56 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   }));
   const taskNameClass = "max-w-[180px] max-h-[60px] overflow-hidden break-words text-[#ffffff]";
   const descriptionClass = "max-w-[260px] truncate text-[#c3ceda]";
+  const router = useRouter();
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+  const [sprintError, setSprintError] = useState<string | null>(null);
+  function closeSprintModal() {
+  setEditingSprint(null);
+  setSprintError(null);   // clear error when closing
+} async function handleSprintUpdate(formData: FormData) {
+    setSprintError(null); // clear previous errors
+
+    try {
+      await updateSprint(formData);   // server action
+      closeSprintModal();        // close modal
+      setSprintError(null);
+      router.refresh();               // refresh UI
+    } catch (err: any) {
+      try {
+        const parsed = JSON.parse(err.message);
+        setSprintError(parsed.detail || "Failed to update sprint");
+      } catch {
+        setSprintError("Failed to update sprint");
+      }
+    }
+  }
+async function handleDeleteSprint(formData: FormData): Promise<void> {
+  try {
+    await deleteSprintAction(formData); // ignore returned boolean
+    closeSprintModal();
+    router.refresh();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+const [openMember, setOpenMember] = useState<number | null>(null);
+const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+const avatarRef = useRef<HTMLButtonElement | null>(null);
+
+useEffect(() => {
+  function handleClick(e: MouseEvent) {
+    if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+      setOpenMember(null);
+    }
+  }
+  document.addEventListener("mousedown", handleClick);
+  return () => document.removeEventListener("mousedown", handleClick);
+}, []);
+
+
+
   const backlogColumnGroup = (
     <colgroup>
       <col className="w-[18%]" />
@@ -144,12 +205,12 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   const sprintColumnGroup = (
     <colgroup>
       <col className="w-[18%]" />
-      <col className="w-[23%]" />
       <col className="w-[7%]" />
       <col className="w-[10%]" />
       <col className="w-[10%]" />
-      <col className="w-[13%]" />
-      <col className="w-[19%]" />
+      <col className="w-[21%]" />
+      <col className="w-[24%]" />
+      <col className="w-[10%]" />
     </colgroup>
   );
   const endedSprintColumnGroup = (
@@ -163,9 +224,9 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     </colgroup>
   );
 
-  return (
+   return (
     <div className="space-y-8">
-  <h1 className="text-lg font-semibold text-[#edf3fb]">Team View</h1>
+<h1 className="text-lg font-semibold text-[#edf3fb]">Team View</h1>
 
   {/* Task Details Modal */}
   {selectedTask && (
@@ -173,7 +234,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
       task={selectedTask} 
       members={taskModalMembers}
       open={!!selectedTask} 
-      onOpenChange={(open) => !open && setSelectedTask(null)} // Logical AND instead of if
+      onOpenChange={(open) => !open && setSelectedTask(null)}
     >
       <span className="hidden" /> 
     </TaskDetailsTrigger>
@@ -402,6 +463,13 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                   </h3>
 
                   <div className="flex flex-wrap gap-2">
+		  <button
+    type="button"
+    onClick={() => setEditingSprint(sprint)}
+    className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+  >
+    Edit
+  </button>
                     <Link
                       href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
@@ -591,13 +659,22 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                         ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                       </span>
                     </h3>
-
+<div className="flex flex-wrap gap-2">
+			<button
+    type="button"
+    onClick={() => setEditingSprint(sprint)}
+    className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+  >
+    Edit
+  </button>
                     <Link
                       href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
                     >
+
                       <ChartIcon /> Sprint Stats
                     </Link>
+</div>
                   </div>
 
                   {/* Sprint Tasks Table */}
@@ -735,8 +812,7 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
                 {collapsedSections.has(sectionKey) ? "▼" : "▲"}
               </button>
             </div>
-
-            {!collapsedSections.has(sectionKey) && (
+{!collapsedSections.has(sectionKey) && (
               <CreateSprintForm
                 action={createSprint}
                 teamId={String(teamId)}
@@ -860,9 +936,53 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
           </div>
         </div>
       );
-    }
+}
   })}
+
+  {/*  EDIT SPRINT MODAL */}
+  {editingSprint && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
+        <h3 className="mb-4 text-lg font-bold text-white">
+          Edit Sprint {editingSprint.id_sprint}
+        </h3>
+        {sprintError && (
+          <div className="mb-3 rounded-lg border border-red-500 bg-red-900/40 text-red-300 px-3 py-2 text-sm">
+            {sprintError}
+          </div>
+        )}
+        <form action={handleSprintUpdate} className="space-y-4">
+          <input type="hidden" name="sprint_id" value={editingSprint.id_sprint} />
+          <input type="hidden" name="team_id" value={teamId} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <div>
+            <label className="block text-xs text-[#c3ceda] mb-1">End Date</label>
+            <input
+              type="date"
+              name="end_date"
+              defaultValue={editingSprint.end_date.split("T")[0]}
+              className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={closeSprintModal}
+              className="rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-sm text-white hover:bg-[#323d4b]">
+              Cancel
+            </button>
+            <button type="submit" formAction={handleDeleteSprint}
+              className="rounded-lg border border-red-500 bg-red-900/40 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-900/60">
+              Delete Sprint
+            </button>
+            <button type="submit"
+              className="rounded-lg border border-[#39e7ac]/40 bg-[#39e7ac]/20 px-4 py-2 text-sm font-semibold text-[#39e7ac] hover:bg-[#39e7ac]/30">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+
 </div>
   );
-} 
-
+}
