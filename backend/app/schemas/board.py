@@ -22,6 +22,8 @@ class BoardTaskRead(BaseModel):
     assignee_user_id: int | None = None
     assignee_name: str | None = None
 
+    multiplePeople: bool
+    assignees: list[int]
 
 class BoardMemberRead(BaseModel):
     team_member_id: int

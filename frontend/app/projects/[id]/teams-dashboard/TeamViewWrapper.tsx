@@ -18,6 +18,9 @@ type Task = {
   workflow_status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
   can_delete: boolean;
   delete_block_reason: string | null;
+  //nenaudojami bet error meta kitaip
+  multiplePeople: boolean;
+  assignees?: number[];
 };
 
 type TeamMember = {

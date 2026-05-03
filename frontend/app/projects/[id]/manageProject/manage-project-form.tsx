@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/app/lib/api";
 
@@ -12,6 +12,13 @@ type Project = {
   is_owner: boolean;
   can_delete: boolean;
   delete_block_reason: string | null;
+};
+
+type ProjectMember = {
+  id_user: number;
+  name: string | null;
+  email: string;
+  is_owner: boolean;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +34,25 @@ export default function ManageProjectForm({ project }: { project: Project }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await apiFetch(`/api/projects/${project.id}/members`);
+        if (response.ok) {
+          const data = await response.json();
+          setMembers(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch members:', err);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+    fetchMembers();
+  }, [project.id]);
 
   function handleAddEmail() {
     setError("");
@@ -47,6 +73,22 @@ export default function ManageProjectForm({ project }: { project: Project }) {
 
   function removeEmail(email: string) {
     setSelectedEmails((prev) => prev.filter((value) => value !== email));
+  }
+
+  async function handleRemoveMember(userId: number) {
+    if (!window.confirm("Are you sure you want to remove this member from the project?")) return;
+    try {
+      const response = await apiFetch(`/api/projects/${project.id}/members/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.detail || "Failed to remove member");
+      }
+      setMembers((prev) => prev.filter((m) => m.id_user !== userId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    }
   }
 
   async function handleSave() {
@@ -260,6 +302,44 @@ export default function ManageProjectForm({ project }: { project: Project }) {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#7a8798] bg-[#1f2630] p-6">
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#39e7ac]">Current Members</p>
+          <h2 className="mt-2 text-xl font-bold text-[#ffffff]">Manage project members</h2>
+        </div>
+
+        {loadingMembers ? (
+          <div className="text-sm text-[#c3ceda]">Loading members...</div>
+        ) : members.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#667386] px-4 py-10 text-center text-sm text-[#c3ceda]">
+            No members found.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {members.map((member) => (
+              <div
+                key={member.id_user}
+                className="flex items-center justify-between rounded-xl border border-[#7a8798] bg-[#28313d] px-4 py-4"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[#ffffff]">{member.name ?? "Unnamed"}</p>
+                  <p className="text-sm text-[#c3ceda]">{member.email}</p>
+                  {member.is_owner && <span className="text-xs text-[#39e7ac]">Owner</span>}
+                </div>
+                {!member.is_owner && (
+                  <button
+                    onClick={() => handleRemoveMember(member.id_user)}
+                    className="rounded-lg border border-[#ff4040]/30 px-4 py-2 text-sm text-[#ff8080] transition hover:bg-[#ff4040]/10"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {error && (

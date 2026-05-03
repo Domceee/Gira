@@ -7,7 +7,6 @@ export async function updateProfile(formData: FormData) {
   const email = formData.get("email");
   const country = formData.get("country");
   const city = formData.get("city");
-  const password = formData.get("password");
   const picture = formData.get("picture_base64");
 
   const cookieStore = await cookies();
@@ -24,7 +23,6 @@ export async function updateProfile(formData: FormData) {
       email,
       country,
       city,
-      password: password || undefined,
       picture,
     }),
     cache: "no-store",

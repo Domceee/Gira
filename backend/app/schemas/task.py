@@ -16,7 +16,7 @@ class TaskUpdate(BaseModel):
     risk: int | None = None
     priority: int | None = None
     fk_team_memberid_team_member: int | None = None
-
+    multiplePeople: bool | None = None   # NEW
 class TaskRead(BaseModel):
     id_task: int
     name: str
@@ -29,9 +29,12 @@ class TaskRead(BaseModel):
     fk_team_memberid_team_member: int | None
     workflow_status: TaskWorkflowStatus
     board_order: int
+    multiplePeople: bool | None = None   # ← ADD THIS
     can_delete: bool = True
     delete_block_reason: str | None = None
     model_config = {
         "from_attributes": True 
     }
+    assignees: list[int] = [] 
+
 

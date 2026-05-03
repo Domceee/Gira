@@ -50,6 +50,12 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <Field label="Email" placeholder="you@example.com" type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
             <Field label="Password" placeholder="Your password" type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
+            <Link
+              href="/login/forgot-password"
+              className="block text-right text-sm text-[#39e7ac] hover:underline"
+            >
+              Forgot your password?
+            </Link>
 
             <button
               type="submit"

@@ -131,6 +131,8 @@ async def get_team_backlog(project_id: int, team_id: int, db: AsyncSession = Dep
 
     # ⭐ FINAL RETURN
     return {
-        "members": members,
+        "team_id": team.id_team,
+        "team_name": team.name,
         "tasks": task_dicts,
+        "team_members": members,
     }

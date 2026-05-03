@@ -13,7 +13,11 @@ type TaskDetailsTask = {
   risk: number | null;
   priority: number | null;
   fk_team_memberid_team_member?: number | null;
+
+  multiplePeople: boolean;        // NEW
+  assignees?: number[];           // NEW
 };
+
 
 type AssignmentMember = {
   id_team_member: number;
@@ -62,6 +66,17 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
   const [error, setError] = useState<string | null>(null);
   const canAssignMember = members.length > 0 && task.fk_team_memberid_team_member !== undefined;
 
+  // NEW — local task state for multi-assignee features
+const [localTask, setLocalTask] = useState({
+  multiplePeople: task.multiplePeople ?? false,
+  assignees: task.assignees ?? [],
+});
+
+function updateTask(patch: Partial<typeof localTask>) {
+  setLocalTask(prev => ({ ...prev, ...patch }));
+}
+
+
   const hasTaskChanges =
     form.name !== initialForm.name ||
     form.description !== initialForm.description ||
@@ -69,7 +84,28 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
     form.risk !== initialForm.risk ||
     form.priority !== initialForm.priority;
   const hasAssignmentChanges = canAssignMember && form.teamMemberId !== initialForm.teamMemberId;
-  const canSave = (hasTaskChanges || hasAssignmentChanges) && form.name.trim().length > 0 && !isSaving;
+
+  const hasMultiPeopleToggleChange =
+  localTask.multiplePeople !== task.multiplePeople &&
+  (localTask.multiplePeople === false || localTask.assignees.length > 0);
+
+
+  const hasMultiAssigneeChanges =
+    JSON.stringify(localTask.assignees ?? []) !==
+    JSON.stringify(task.assignees ?? []);
+
+
+
+  const canSave =
+  (
+    hasTaskChanges ||
+    hasAssignmentChanges ||
+    hasMultiPeopleToggleChange ||
+    hasMultiAssigneeChanges
+  ) &&
+  form.name.trim().length > 0 &&
+  !isSaving;
+
 
   async function handleSave() {
     if (!canSave) return;
@@ -78,35 +114,53 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
     setIsSaving(true);
 
     try {
-      if (hasTaskChanges) {
-        const response = await apiFetch(`/api/tasks/${task.id_task}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            name: form.name,
-            description: form.description.trim() === "" ? null : form.description,
-            story_points: optionalNumber(form.storyPoints),
-            risk: optionalNumber(form.risk),
-            priority: optionalNumber(form.priority),
-          }),
-        });
+      // 1. Prepare the payload for the main task update
+      const taskBody = {
+        name: form.name,
+        description: form.description.trim() === "" ? null : form.description,
+        story_points: optionalNumber(form.storyPoints),
+        risk: optionalNumber(form.risk),
+        priority: optionalNumber(form.priority),
+        multiplePeople: localTask.multiplePeople,
+        // CRITICAL: If we just turned OFF multiplePeople, 
+        // we must send the current form.teamMemberId immediately.
+        fk_team_memberid_team_member: localTask.multiplePeople
+          ? null
+          : form.teamMemberId === "null"
+            ? null
+            : Number(form.teamMemberId),
+      };
 
-        if (!response.ok) {
-          setError("Task changes could not be saved.");
-          return;
-        }
+      const response = await apiFetch(`/api/tasks/${task.id_task}`, {
+        method: "PATCH",
+        body: JSON.stringify(taskBody),
+      });
+
+      if (!response.ok) {
+        setError("Task changes could not be saved.");
+        return;
       }
 
-      if (hasAssignmentChanges) {
-        const response = await apiFetch(`/api/tasks/${task.id_task}/assign_member`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            team_member_id: form.teamMemberId === "null" ? null : Number(form.teamMemberId),
-          }),
-        });
-
-        if (!response.ok) {
-          setError("Assignment changes could not be saved.");
-          return;
+      // 2. Handle Multi-Assignee List Logic
+      if (localTask.multiplePeople) {
+        // If Multi is ON, sync the list
+        if (hasMultiAssigneeChanges) {
+          await saveTaskAssignees(task.id_task, localTask.assignees);
+        }
+      } else {
+        // If Multi is OFF, but it WAS on, clear the multi-assignee list in DB
+        if (task.multiplePeople) {
+          await saveTaskAssignees(task.id_task, []);
+        }
+        
+        // Also sync the single assignment endpoint if that specifically changed
+        if (hasAssignmentChanges) {
+           await apiFetch(`/api/tasks/${task.id_task}/assign_member`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              team_member_id: form.teamMemberId === "null" ? null : Number(form.teamMemberId),
+            }),
+          });
         }
       }
 
@@ -119,13 +173,31 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
     }
   }
 
+
+  async function saveTaskAssignees(taskId: number, assignees: number[]) {
+    console.log("Saving assignees", localTask.assignees);
+
+
+  const response = await apiFetch(`/api/tasks/task/${taskId}/assignees`, {
+    method: "POST",
+    body: JSON.stringify(assignees),
+  });
+
+  if (!response.ok) {
+    setError("Could not save assignees.");
+  }
+}
+
+
+  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-xl rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-2xl"
+        className="w-full max-w-xl max-h-[90vh] rounded-xl border border-[#7a8798] bg-[#1f2630] shadow-2xl flex flex-col"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="p-6 border-b border-[#7a8798] flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Task Details</p>
             <h3 className="mt-1.5 text-xl font-bold text-[#ffffff]">{initialForm.name || "Untitled task"}</h3>
@@ -133,13 +205,13 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
+            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-1.5 text-xs text-[#edf3fb] transition hover:bg-[#323d4b] hover:text-[#ffffff] flex-shrink-0"
           >
             Close
           </button>
         </div>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-0 space-y-4 overflow-y-auto flex-1 px-6 py-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</span>
             <input
@@ -203,8 +275,63 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
               </select>
             </label>
           </div>
-
           {canAssignMember && (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={localTask.multiplePeople}
+              onChange={(e) => updateTask({ multiplePeople: e.target.checked })}
+            />
+            Allow multiple assignees
+          </label>
+          )}
+          {canAssignMember && localTask.multiplePeople && (
+            
+            <div className="mt-3">
+              <label className="block mb-1.5 text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
+                Assignees
+              </label>
+
+              <div className="space-y-2">
+                {members.map((m) => {
+                  const isChecked = localTask.assignees.includes(m.id_team_member);
+
+                  return (
+                    <label
+                      key={m.id_team_member}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          let updated: number[];
+
+                          if (e.target.checked) {
+                            updated = [...localTask.assignees, m.id_team_member];
+                          } else {
+                            updated = localTask.assignees.filter(
+                              (id) => id !== m.id_team_member
+                            );
+                          }
+
+                          updateTask({ assignees: updated });
+                        }}
+                      />
+
+                      <span className="text-sm text-[#ffffff]">{m.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+
+
+
+          {canAssignMember && !localTask.multiplePeople  && (
+            
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Assignee</span>
               <select
@@ -214,6 +341,8 @@ export default function TaskDetailsModal({ task, members = [], onClose }: TaskDe
               >
                 <option value="null">Unassigned</option>
                 {members.map((member) => (
+
+
                   <option key={member.id_team_member} value={member.id_team_member}>
                     {member.name}
                   </option>

@@ -21,6 +21,12 @@ type TaskCardProps = {
     risk: number | null;
     priority: number | null;
     fk_team_memberid_team_member?: number | null;
+
+    // ⭐ Add these
+    multiplePeople: boolean;
+    assignees?: number[];
+    assignee_user_id?: number | null;
+    assignee_name?: string | null;
   };
   members?: {
     id_team_member: number;

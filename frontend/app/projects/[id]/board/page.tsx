@@ -16,6 +16,10 @@ type BoardTask = {
   fk_team_memberid_team_member: number | null;
   assignee_user_id: number | null;
   assignee_name: string | null;
+
+  // ⭐ REQUIRED FOR MULTI‑ASSIGNEE SWIMLANE
+  multiplePeople: boolean;
+  assignees: number[];
 };
 
 type BoardMember = {
@@ -50,6 +54,13 @@ export default async function ProjectBoardPage({ params }: { params: Promise<{ i
   await requireAuth();
   const { id } = await params;
   const projectBoard = await getProjectBoard(id);
+console.log("SERVER BOARD TASKS:", projectBoard.boards.flatMap(b =>
+  b.tasks.map(t => ({
+    id: t.id_task,
+    multiplePeople: t.multiplePeople,
+    assignees: t.assignees
+  }))
+));
 
   return (
     <div className="p-6">
