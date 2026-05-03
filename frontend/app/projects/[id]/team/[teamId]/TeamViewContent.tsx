@@ -194,11 +194,12 @@ useEffect(() => {
   const backlogColumnGroup = (
     <colgroup>
       <col className="w-[18%]" />
-      <col className="w-[24%]" />
+      <col className="w-[7%]" />
       <col className="w-[7%]" />
       <col className="w-[11%]" />
       <col className="w-[11%]" />
-      <col className="w-[21%]" />
+      <col className="w-[15%]" />
+      <col className="w-[8%]" />
       <col className="w-[8%]" />
     </colgroup>
   );
@@ -206,11 +207,12 @@ useEffect(() => {
     <colgroup>
       <col className="w-[18%]" />
       <col className="w-[7%]" />
-      <col className="w-[10%]" />
-      <col className="w-[10%]" />
-      <col className="w-[21%]" />
-      <col className="w-[24%]" />
-      <col className="w-[10%]" />
+      <col className="w-[7%]" />
+      <col className="w-[11%]" />
+      <col className="w-[11%]" />
+      <col className="w-[15%]" />
+      <col className="w-[7%]" />
+      <col className="w-[8%]" />
     </colgroup>
   );
   const endedSprintColumnGroup = (
@@ -285,6 +287,7 @@ useEffect(() => {
                         <th className={thClass}>Risk</th>
                         <th className={thClass}>Priority</th>
                         <th className={thClass}>Sprint</th>
+                        <th className={thClass}>Member</th>
                         <th className={`${thClass} text-right`}></th>
                       </tr>
                     </thead>
@@ -344,6 +347,7 @@ useEffect(() => {
                               <form
                                 action={assignTaskToSprint}
                                 className="flex gap-2 items-center"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <input
                                   type="hidden"
@@ -395,6 +399,30 @@ useEffect(() => {
                                 </button>
                               </form>
                             </td>
+                            <td className={tdClass}>
+                            {(() => {
+                              const assigned = team.team_members.find(
+                                (m) => m.id_team_member === task.fk_team_memberid_team_member
+                              );
+                              if (!assigned) {
+                                return (
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                    ?
+                                  </div>
+                                );
+                              }
+                              return assigned.user.picture ? (
+                                <img
+                                  src={`data:image/jpeg;base64,${assigned.user.picture}`}
+                                  className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+                                />
+                              ) : (
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                  {assigned.user.name[0].toUpperCase()}
+                                </div>
+                              );
+                            })()}
+                          </td>
 
                             <td className={`${tdClass} text-right`}>
                               <TaskActions
@@ -506,6 +534,7 @@ useEffect(() => {
                         <th className={thClass}>Priority</th>
                         <th className={thClass}>Status</th>
                         <th className={thClass}>Sprint</th>
+                        <th className={thClass}>Member</th>
                       </tr>
                     </thead>
 
@@ -556,8 +585,8 @@ useEffect(() => {
                               {getRiskOrPriorityName(task.priority)}
                             </td>
 
-                            <td className={tdClass}>
-                              <TaskStatusForm
+                            <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                              <TaskStatusForm 
                                 key={task.id_task + "-" + task.workflow_status}
                                 taskId={task.id_task}
                                 teamId={String(teamId)}
@@ -567,10 +596,11 @@ useEffect(() => {
                             </td>
 
                             <td className={tdClass}>
-                              <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                              <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                                 <input type="hidden" name="task_id" value={task.id_task} />
                                 <input type="hidden" name="team_id" value={teamId} />
                                 <input type="hidden" name="project_id" value={projectId} />
+                                
 
                                 <select
                                   name="sprint_id"
@@ -597,6 +627,30 @@ useEffect(() => {
                                   Save
                                 </button>
                               </form>
+                            </td>
+                            <td className={tdClass}>
+                              {(() => {
+                                const assigned = team.team_members.find(
+                                  (m) => m.id_team_member === task.fk_team_memberid_team_member
+                                );
+                                if (!assigned) {
+                                  return (
+                                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                      ?
+                                    </div>
+                                  );
+                                }
+                                return assigned.user.picture ? (
+                                  <img
+                                    src={`data:image/jpeg;base64,${assigned.user.picture}`}
+                                    className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+                                  />
+                                ) : (
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                    {assigned.user.name[0].toUpperCase()}
+                                  </div>
+                                );
+                              })()}
                             </td>
                           </tr>
                         ))
@@ -691,6 +745,7 @@ useEffect(() => {
                           <th className={thClass}>Priority</th>
                           <th className={thClass}>Status</th>
                           <th className={thClass}>Sprint</th>
+                          <th className={thClass}>Member</th>
                         </tr>
                       </thead>
 
@@ -741,7 +796,7 @@ useEffect(() => {
                                   {getRiskOrPriorityName(task.priority)}
                                 </td>
 
-                                <td className={tdClass}>
+                                <td className={tdClass} onClick={(e) => e.stopPropagation()}>
                                   <TaskStatusForm
                                     key={task.id_task + "-" + task.workflow_status}
                                     taskId={task.id_task}
@@ -752,7 +807,7 @@ useEffect(() => {
                                 </td>
 
                                 <td className={tdClass}>
-                                  <form action={assignTaskToSprint} className="flex gap-2 items-center">
+                                  <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                                     <input type="hidden" name="task_id" value={task.id_task} />
                                     <input type="hidden" name="team_id" value={teamId} />
                                     <input type="hidden" name="project_id" value={projectId} />
@@ -783,6 +838,30 @@ useEffect(() => {
                                     </button>
                                   </form>
                                 </td>
+                                <td className={tdClass}>
+                                {(() => {
+                                  const assigned = team.team_members.find(
+                                    (m) => m.id_team_member === task.fk_team_memberid_team_member
+                                  );
+                                  if (!assigned) {
+                                    return (
+                                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                        ?
+                                      </div>
+                                    );
+                                  }
+                                  return assigned.user.picture ? (
+                                    <img
+                                      src={`data:image/jpeg;base64,${assigned.user.picture}`}
+                                      className="h-7 w-7 rounded-full object-cover border border-[#7b8798]"
+                                    />
+                                  ) : (
+                                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#7a8798] text-[11px] font-semibold text-[#39e7ac]">
+                                      {assigned.user.name[0].toUpperCase()}
+                                    </div>
+                                  );
+                                })()}
+                              </td>
                               </tr>
                             ))
                         )}
