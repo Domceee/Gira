@@ -17,7 +17,7 @@ function MemberRow({ member }: { member: any }) {
     parsed = {};
   }
 
-  const columns = ["good", "bad", "ideas", "actions"];
+  const columns = ["good", "bad", "continue"];
 
   return (
     <div className="border border-[#7a8798] rounded-lg p-4 mb-4">
@@ -33,11 +33,11 @@ function MemberRow({ member }: { member: any }) {
       </button>
 
       {open && (
-        <div className="grid grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-3 gap-4 mt-4">
           {columns.map((col) => (
             <div key={col}>
               <div className="p-2 text-xs font-semibold uppercase tracking-wider text-[#c3ceda] bg-[#28313d]">
-                {col.toUpperCase()}
+                {col === "continue" ? "CONTINUE" : col.toUpperCase()}
               </div>
 
               {(parsed[col] || []).map((item: string, idx: number) => (

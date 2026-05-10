@@ -3,29 +3,22 @@ import MemberRetrospective from "./MemberRetrospective";
 import TeamMemberRetrosList from "./TeamMemberRetrosList";
 
 import { checkTeamMembership, loadRetrospective } from "./actions";
+import { apiFetch } from "@/app/lib/api";
 
-type PageProps = {
-  params: Promise<{
-    id: string;
-    teamId: string;
-    sprintId: string;
-  }>
-};
 export default async function RetrospectivePage(raw: { params: any }) {
-  const params = Promise.resolve(raw.params); // force Promise
+  const params = Promise.resolve(raw.params);
 
   const { id, teamId, sprintId } = await params;
 
+  const [{ is_member }, sprint, projectData] = await Promise.all([
+    checkTeamMembership({ teamId }),
+    loadRetrospective({ projectId: id, teamId, sprintId }),
+    apiFetch(`/api/projects/${id}`, { cache: "no-store" }).then((r) =>
+      r.ok ? r.json() : { is_owner: false }
+    ),
+  ]);
 
-  // 🔥 membership check now works 100% reliably
-  const { is_member } = await checkTeamMembership({ teamId });
-
-  // ❗ FIXED: correct argument name
-  const sprint = await loadRetrospective({
-    projectId: id,
-    teamId,
-    sprintId,
-  });
+  const isOwner: boolean = projectData.is_owner ?? false;
 
   return (
     <div className="space-y-8 p-6">
@@ -42,6 +35,7 @@ export default async function RetrospectivePage(raw: { params: any }) {
         projectId={id}
         teamId={teamId}
         sprintId={sprintId}
+        isOwner={isOwner}
       />
 
         <TeamMemberRetrosList

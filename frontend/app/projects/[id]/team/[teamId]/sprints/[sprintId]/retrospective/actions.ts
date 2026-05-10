@@ -220,6 +220,36 @@ export async function submitMemberRetrospective({
 /* -------------------------------------------------------
    CHECK TEAM MEMBERSHIP
 ------------------------------------------------------- */
+export async function summarizeRetrospective({
+  projectId,
+  teamId,
+  sprintId,
+}: {
+  projectId: string;
+  teamId: string;
+  sprintId: string;
+}) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const res = await fetch(`${API_URL}/api/retrospective/summarize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+    },
+    body: JSON.stringify({ projectId, teamId, sprintId }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to generate actions");
+  }
+
+  return await res.json(); // { actions: ["...", "..."] }
+}
+
 export async function checkTeamMembership({
   teamId,
 }: {

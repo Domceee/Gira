@@ -117,12 +117,7 @@ async def get_retro(
     # AUTO‑CREATE RETROSPECTIVE IF MISSING
     if retro is None:
         retro = Retrospective(
-            text=json.dumps({
-                "good": [],
-                "bad": [],
-                "ideas": [],
-                "actions": [],
-            }),
+            text=json.dumps({"actions": []}),
             is_finished=False
         )
         db.add(retro)
@@ -176,25 +171,32 @@ async def summarize_retro(
     print("LOADED RETROSPECTIVE TEXTS:", texts)
 
     prompt = f"""
-You are a experienced scrum master with 20 years of experience, 
-you want to summarize the retrospectivess. add in your insights, and make the final summary concise. Return ONLY valid JSON.
+You are an experienced scrum master. Based on the team's retrospective inputs below, generate a concise list of concrete actions the team should take in their next sprint.
 
-Format:
+Each team member filled out three sections:
+- "good": what went well this sprint
+- "bad": what could be improved
+- "continue": what should be continued
+
+Focus primarily on the "bad" items to drive improvement actions. Use "continue" to reinforce working practices. Use "good" to understand the team's strengths.
+
+Return ONLY valid JSON in this exact format:
 {{
-  "good": [],
-  "bad": [],
-  "ideas": [],
-  "actions": []
+  "actions": [
+    "Specific action 1",
+    "Specific action 2",
+    "Specific action 3"
+  ]
 }}
 
 Rules:
-- No explanation
-- No markdown
-- No code fences
-- No text before or after the JSON
+- Generate 3 to 7 specific, actionable items
+- Each action must start with a verb (e.g. "Hold", "Reduce", "Introduce")
+- No explanation outside the JSON
+- No markdown, no code fences
 - Output must start with '{{' and end with '}}'
 
-Retrospectives:
+Team retrospective inputs:
 {json.dumps(texts, indent=2)}
 """
 
