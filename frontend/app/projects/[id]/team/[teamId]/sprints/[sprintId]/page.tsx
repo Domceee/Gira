@@ -135,8 +135,8 @@ export default async function SprintStatsPage({ params }: { params: Promise<{ id
             <line x1="60" y1="28" x2="60" y2="252" stroke="#7b8798" strokeWidth="2" />
             <path d={idealPath} fill="none" stroke="#93a0b1" strokeWidth="2" strokeDasharray="10 8" strokeLinecap="round" />
             <path d={actualPath} fill="none" stroke="#39e7ac" strokeWidth="2.5" strokeLinecap="round" />
-            {midPoints.map((val) => (
-              <text key={val} x="56" y={toY(val, maxPoints) + 4} textAnchor="end" className="fill-[#c3ceda] text-[11px]">{val}</text>
+            {midPoints.map((val, i) => (
+              <text key={i} x="56" y={toY(val, maxPoints) + 4} textAnchor="end" className="fill-[#c3ceda] text-[11px]">{val}</text>
             ))}
             {actualDots.map((point) => (
               <g key={point.label}>

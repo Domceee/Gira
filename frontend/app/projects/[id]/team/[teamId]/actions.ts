@@ -108,6 +108,29 @@ export async function assignTaskToMember(formData: FormData) {
 
 }
 
+export async function startSprint(formData: FormData) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+
+  const sprint_id = formData.get("sprint_id");
+  const project_id = formData.get("project_id");
+
+  const res = await fetch(`${API_URL}/api/sprints/${sprint_id}/start`, {
+    method: "POST",
+    headers: {
+      Cookie: cookieHeader,
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to start sprint");
+  }
+
+  revalidatePath(`/projects/${project_id}/teams-dashboard`, "page");
+}
+
 export async function closeSprint(formData: FormData) {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
