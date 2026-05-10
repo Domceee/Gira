@@ -125,39 +125,14 @@ async def create_sprint(
             detail="Sprint end date cannot be in the past",
         )
 
-    if payload.start_date.date() <= today <= payload.end_date.date():
-        sprint_status = SprintStatus.ACTIVE.value
-    else:
-        sprint_status = SprintStatus.PLANNED.value
-
     sprint = Sprint(
         fk_teamid_team=payload.team_id,
         start_date=payload.start_date,
         end_date=payload.end_date,
-        status=sprint_status,
+        status=SprintStatus.PLANNED.value,
     )
 
     db.add(sprint)
-    await db.flush()
-
-    if sprint_status == SprintStatus.ACTIVE.value:
-        member_result = await db.execute(
-            select(TeamMember.fk_userid_user)
-            .where(TeamMember.fk_teamid_team == team.id_team)
-        )
-        member_ids = member_result.scalars().all()
-        if member_ids:
-            await create_news_for_users(
-                db=db,
-                user_ids=member_ids,
-                title="Sprint started",
-                message=f"Sprint {sprint.id_sprint} has started for team {team.name}.",
-                news_type="sprint_started",
-                project_id=team.fk_projectid_project,
-                team_id=team.id_team,
-                sprint_id=sprint.id_sprint,
-            )
-
     await db.commit()
     await db.refresh(sprint)
 
@@ -525,6 +500,50 @@ async def export_sprint(
     )
 
 
+@router.post("/{sprint_id}/start")
+async def start_sprint(
+    sprint_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Sprint).where(Sprint.id_sprint == sprint_id))
+    sprint = result.scalar_one_or_none()
+
+    if sprint is None:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    team = await get_team_or_404(sprint.fk_teamid_team, db)
+    await get_project_membership_or_404(team.fk_projectid_project, current_user.id_user, db)
+
+    if sprint.status != SprintStatus.PLANNED.value:
+        raise HTTPException(status_code=400, detail="Only a PLANNED sprint can be started")
+
+    sprint.status = SprintStatus.ACTIVE.value
+    db.add(sprint)
+
+    member_result = await db.execute(
+        select(TeamMember.fk_userid_user)
+        .where(TeamMember.fk_teamid_team == team.id_team)
+    )
+    member_ids = member_result.scalars().all()
+    if member_ids:
+        await create_news_for_users(
+            db=db,
+            user_ids=member_ids,
+            title="Sprint started",
+            message=f"Sprint {sprint.id_sprint} has started for team {team.name}.",
+            news_type="sprint_started",
+            project_id=team.fk_projectid_project,
+            team_id=team.id_team,
+            sprint_id=sprint.id_sprint,
+        )
+
+    await db.commit()
+    await db.refresh(sprint)
+
+    return {"status": "ok", "id_sprint": sprint.id_sprint}
+
+
 @router.post("/{sprint_id}/close")
 async def close_sprint(
     sprint_id: int,
@@ -564,6 +583,19 @@ async def close_sprint(
         .order_by(Sprint.start_date.asc(), Sprint.id_sprint.asc())
     )
     next_sprint = next_sprint_result.scalars().first()
+
+    if next_sprint is None:
+        duration = sprint.end_date - sprint.start_date
+        new_start = sprint.end_date + timedelta(days=1)
+        new_end = new_start + duration
+        next_sprint = Sprint(
+            fk_teamid_team=sprint.fk_teamid_team,
+            start_date=new_start,
+            end_date=new_end,
+            status=SprintStatus.PLANNED.value,
+        )
+        db.add(next_sprint)
+        await db.flush()
 
     next_board_order = 0
     if next_sprint is not None:

@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import { CalendarX } from "lucide-react";
-import { createSprint, assignTaskToSprint, closeSprint, updateSprint, deleteSprintAction} from "./actions";
+import { createSprint, assignTaskToSprint, closeSprint, startSprint, updateSprint, deleteSprintAction} from "./actions";
 import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
 import { getRiskOrPriorityName } from "@/app/lib/riskPriority";
@@ -144,6 +144,30 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
   const router = useRouter();
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [sprintError, setSprintError] = useState<string | null>(null);
+  const [startingEarlySprint, setStartingEarlySprint] = useState<Sprint | null>(null);
+
+  async function handleStartSprint(sprint: Sprint) {
+    const today = new Date().toISOString().split("T")[0];
+    const sprintStart = sprint.start_date.split("T")[0];
+    if (sprintStart > today) {
+      setStartingEarlySprint(sprint);
+    } else {
+      await submitStartSprint(sprint);
+    }
+  }
+
+  async function submitStartSprint(sprint: Sprint) {
+    const fd = new FormData();
+    fd.append("sprint_id", String(sprint.id_sprint));
+    fd.append("project_id", String(projectId));
+    try {
+      await startSprint(fd);
+      setStartingEarlySprint(null);
+      router.refresh();
+    } catch (err: any) {
+      console.error(err);
+    }
+  }
   function closeSprintModal() {
   setEditingSprint(null);
   setSprintError(null);   // clear error when closing
@@ -714,21 +738,27 @@ useEffect(() => {
                       </span>
                     </h3>
 <div className="flex flex-wrap gap-2">
-			<button
-    type="button"
-    onClick={() => setEditingSprint(sprint)}
-    className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
-  >
-    Edit
-  </button>
-                    <Link
-                      href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
-                    >
-
-                      <ChartIcon /> Sprint Stats
-                    </Link>
-</div>
+              <button
+                type="button"
+                onClick={() => setEditingSprint(sprint)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStartSprint(sprint)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-3 py-2 text-xs font-semibold text-[#39e7ac] transition hover:bg-[rgba(57,231,172,0.20)]"
+              >
+                ▶ Start Sprint
+              </button>
+              <Link
+                href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+              >
+                <ChartIcon /> Sprint Stats
+              </Link>
+            </div>
                   </div>
 
                   {/* Sprint Tasks Table */}
@@ -1017,6 +1047,36 @@ useEffect(() => {
       );
 }
   })}
+
+  {/* EARLY-START CONFIRMATION MODAL */}
+  {startingEarlySprint && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
+        <h3 className="mb-3 text-lg font-bold text-white">Start Sprint Early?</h3>
+        <p className="mb-5 text-sm text-[#c3ceda]">
+          Sprint {startingEarlySprint.id_sprint} is planned to start on{" "}
+          <span className="font-semibold text-white">{formatDate(startingEarlySprint.start_date)}</span>.
+          Are you sure you want to start it now?
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setStartingEarlySprint(null)}
+            className="rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-sm text-white hover:bg-[#323d4b]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => submitStartSprint(startingEarlySprint)}
+            className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-4 py-2 text-sm font-semibold text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
+          >
+            Yes, Start Now
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 
   {/*  EDIT SPRINT MODAL */}
   {editingSprint && (

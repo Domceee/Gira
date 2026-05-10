@@ -1,4 +1,3 @@
-from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,16 +7,10 @@ from app.models.sprint_status import SprintStatus
 from app.models.team import Team
 
 
-def get_runtime_sprint_status(sprint: Sprint, now: date | None = None) -> str:
-    today = now if now is not None else date.today()
-
+def get_runtime_sprint_status(sprint: Sprint) -> str:
     if sprint.status == SprintStatus.COMPLETED.value:
         return SprintStatus.COMPLETED.value
-
-    if sprint.start_date.date() <= today:
-        return SprintStatus.ACTIVE.value
-
-    return SprintStatus.PLANNED.value
+    return sprint.status
 
 
 async def sync_team_sprint_statuses(team_id: int, db: AsyncSession) -> None:
