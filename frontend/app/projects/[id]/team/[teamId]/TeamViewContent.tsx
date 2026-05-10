@@ -983,7 +983,7 @@ useEffect(() => {
                         <Link
                           href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}/retrospective`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]">
-                          📝 Retrospective
+                          Retrospective
                         </Link>
                       </div>
                     </div>
