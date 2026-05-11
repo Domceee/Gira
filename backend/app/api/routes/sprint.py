@@ -90,6 +90,7 @@ async def get_sprints(
                 "end_date": sprint.end_date,
                 "status": sprint.status,
                 "tasks": task_reads,
+                "name": sprint.name,
             }
         )
 
@@ -125,11 +126,19 @@ async def create_sprint(
             detail="Sprint end date cannot be in the past",
         )
 
+    # Count all sprints for this team to generate the name
+    count_result = await db.execute(
+        select(Sprint).where(Sprint.fk_teamid_team == payload.team_id)
+    )
+    sprint_count = len(count_result.scalars().all())
+    sprint_name = f"Sprint {sprint_count + 1}"
+
     sprint = Sprint(
         fk_teamid_team=payload.team_id,
         start_date=payload.start_date,
         end_date=payload.end_date,
         status=SprintStatus.PLANNED.value,
+        name=sprint_name,
     )
 
     db.add(sprint)
@@ -150,40 +159,44 @@ async def update_sprint(
     if not sprint:
         raise HTTPException(404, "Sprint not found")
 
-    # Convert strings to datetime
     start_date_str = payload.get("start_date")
     end_date_str = payload.get("end_date")
 
     start_date = datetime.fromisoformat(start_date_str) if start_date_str else None
     end_date = datetime.fromisoformat(end_date_str) if end_date_str else None
 
-    # Validate date order
     if start_date and end_date and start_date > end_date:
         raise HTTPException(400, "Start date cannot be after end date")
-
-    #  Overlap validation
-    result = await db.execute(
-        select(Sprint)
-        .where(
-            Sprint.fk_teamid_team == sprint.fk_teamid_team,
-            Sprint.id_sprint != sprint.id_sprint,
-            Sprint.status != SprintStatus.COMPLETED.value,  # optional
-            (start_date <= Sprint.end_date),
-            (end_date >= Sprint.start_date),
-        )
-    )
-    overlapping = result.scalars().first()
-    if overlapping:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Sprint dates overlap with Sprint {overlapping.id_sprint}",
-        )
 
     # Apply updates
     if start_date:
         sprint.start_date = start_date
     if end_date:
         sprint.end_date = end_date
+    if "name" in payload:
+        sprint.name = payload["name"]
+
+    # Only validate overlap if dates were changed
+    effective_start = start_date or sprint.start_date
+    effective_end = end_date or sprint.end_date
+
+    if start_date or end_date:
+        result = await db.execute(
+            select(Sprint)
+            .where(
+                Sprint.fk_teamid_team == sprint.fk_teamid_team,
+                Sprint.id_sprint != sprint.id_sprint,
+                Sprint.status != SprintStatus.COMPLETED.value,
+                effective_start <= Sprint.end_date,
+                effective_end >= Sprint.start_date,
+            )
+        )
+        overlapping = result.scalars().first()
+        if overlapping:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Sprint dates overlap with Sprint {overlapping.id_sprint}",
+            )
 
     db.add(sprint)
     await db.commit()
@@ -582,9 +595,19 @@ async def close_sprint(
         )
         .order_by(Sprint.start_date.asc(), Sprint.id_sprint.asc())
     )
+
+
+
+
     next_sprint = next_sprint_result.scalars().first()
 
     if next_sprint is None:
+        count_result = await db.execute(
+            select(Sprint).where(Sprint.fk_teamid_team == sprint.fk_teamid_team)
+        )
+        sprint_count = len(count_result.scalars().all())
+        sprint_name = f"Sprint {sprint_count + 1}"
+
         duration = sprint.end_date - sprint.start_date
         new_start = sprint.end_date + timedelta(days=1)
         new_end = new_start + duration
@@ -593,6 +616,7 @@ async def close_sprint(
             start_date=new_start,
             end_date=new_end,
             status=SprintStatus.PLANNED.value,
+            name=sprint_name,
         )
         db.add(next_sprint)
         await db.flush()

@@ -53,6 +53,7 @@ type Sprint = {
   end_date: string;
   status: "PLANNED" | "ACTIVE" | "COMPLETED";
   tasks: Task[];
+  name: string | null;
 };
 
 type TeamBacklog = {
@@ -382,14 +383,14 @@ useEffect(() => {
                               >
                                 <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
                                 {plannedSprints.map((s) => (
-                                  <option key={s.id_sprint} value={s.id_sprint}>
-                                    Planned Sprint {s.id_sprint}
-                                  </option>
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
+                                    </option>
                                 ))}
                                 {activeSprints.map((s) => (
-                                  <option key={s.id_sprint} value={s.id_sprint}>
-                                    Active Sprint {s.id_sprint}
-                                  </option>
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
+                                    </option>
                                 ))}
                               </select>
                             </td>
@@ -478,7 +479,7 @@ useEffect(() => {
                 {/* Sprint Header */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-base font-semibold text-[#ffffff]">
-                    Sprint {sprint.id_sprint}{" "}
+                    {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                     <span className="text-[#c3ceda] text-sm">
                       ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                     </span>
@@ -604,14 +605,14 @@ useEffect(() => {
                               >
                                 <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
                                 {plannedSprints.map((s) => (
-                                  <option key={s.id_sprint} value={s.id_sprint}>
-                                    Planned Sprint {s.id_sprint}
-                                  </option>
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
+                                    </option>
                                 ))}
                                 {activeSprints.map((s) => (
-                                  <option key={s.id_sprint} value={s.id_sprint}>
-                                    Active Sprint {s.id_sprint}
-                                  </option>
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
+                                    </option>
                                 ))}
                               </select>
                             </td>
@@ -695,7 +696,7 @@ useEffect(() => {
                   {/* Sprint Header */}
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-base font-semibold text-[#edf3fb]">
-                      Sprint {sprint.id_sprint}{" "}
+                      {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                       <span className="text-[#c3ceda] text-sm">
                         ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                       </span>
@@ -815,12 +816,12 @@ useEffect(() => {
                                     <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
                                     {plannedSprints.map((s) => (
                                       <option key={s.id_sprint} value={s.id_sprint}>
-                                        Planned Sprint {s.id_sprint}
+                                        {s.name ?? `Sprint ${s.id_sprint}`}
                                       </option>
                                     ))}
                                     {activeSprints.map((s) => (
                                       <option key={s.id_sprint} value={s.id_sprint}>
-                                        Active Sprint {s.id_sprint}
+                                        {s.name ?? `Sprint ${s.id_sprint}`}
                                       </option>
                                     ))}
                                   </select>
@@ -926,7 +927,7 @@ useEffect(() => {
                   >
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-base font-semibold text-[#c3ceda]">
-                        Sprint {sprint.id_sprint}{" "}
+                        {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                         <span className="text-sm font-normal">
                           ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                         </span>
@@ -1052,6 +1053,32 @@ useEffect(() => {
           <input type="hidden" name="sprint_id" value={editingSprint.id_sprint} />
           <input type="hidden" name="team_id" value={teamId} />
           <input type="hidden" name="project_id" value={projectId} />
+
+          {/* Name — shown for both active and planned */}
+          <div>
+            <label className="block text-xs text-[#c3ceda] mb-1">Sprint Name</label>
+            <input
+              type="text"
+              name="name"
+              defaultValue={editingSprint.name ?? ""}
+              className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
+            />
+          </div>
+
+          {/* Start Date — only for planned sprints */}
+          {editingSprint.status === "PLANNED" && (
+            <div>
+              <label className="block text-xs text-[#c3ceda] mb-1">Start Date</label>
+              <input
+                type="date"
+                name="start_date"
+                defaultValue={editingSprint.start_date.split("T")[0]}
+                className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          {/* End Date — shown for both */}
           <div>
             <label className="block text-xs text-[#c3ceda] mb-1">End Date</label>
             <input
@@ -1061,6 +1088,7 @@ useEffect(() => {
               className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
             />
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={closeSprintModal}
               className="rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-sm text-white hover:bg-[#323d4b]">
