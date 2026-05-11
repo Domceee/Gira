@@ -234,8 +234,8 @@ useEffect(() => {
       <col className="w-[7%]" />
       <col className="w-[11%]" />
       <col className="w-[11%]" />
-      <col className="w-[15%]" />
-      <col className="w-[7%]" />
+      <col className="w-[11%]" />
+      <col className="w-[11%]" />
       <col className="w-[8%]" />
     </colgroup>
   );
@@ -367,61 +367,31 @@ useEffect(() => {
                               {getRiskOrPriorityName(task.priority)}
                             </td>
 
-                            <td className={tdClass}>
-                              <form
-                                action={assignTaskToSprint}
-                                className="flex gap-2 items-center"
-                                onClick={(e) => e.stopPropagation()}
+                            <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                              <select
+                                defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                onChange={async (e) => {
+                                  const fd = new FormData();
+                                  fd.append("task_id", String(task.id_task));
+                                  fd.append("sprint_id", e.target.value);
+                                  fd.append("team_id", String(teamId));
+                                  fd.append("project_id", String(projectId));
+                                  await assignTaskToSprint(fd);
+                                }}
                               >
-                                <input
-                                  type="hidden"
-                                  name="task_id"
-                                  value={task.id_task}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="team_id"
-                                  value={teamId}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="project_id"
-                                  value={projectId}
-                                />
-
-                                <select
-                                  name="sprint_id"
-                                  defaultValue={
-                                    task.fk_sprintid_sprint ?? "null"
-                                  }
-                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                >
-                                  <option value="null">Backlog</option>
-                                  {plannedSprints.map((s) => (
-                                    <option
-                                      key={s.id_sprint}
-                                      value={s.id_sprint}
-                                    >
-                                      Planned Sprint {s.id_sprint}
-                                    </option>
-                                  ))}
-                                  {activeSprints.map((s) => (
-                                    <option
-                                      key={s.id_sprint}
-                                      value={s.id_sprint}
-                                    >
-                                      Active Sprint {s.id_sprint}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                >
-                                  Save
-                                </button>
-                              </form>
+                                <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                {plannedSprints.map((s) => (
+                                  <option key={s.id_sprint} value={s.id_sprint}>
+                                    Planned Sprint {s.id_sprint}
+                                  </option>
+                                ))}
+                                {activeSprints.map((s) => (
+                                  <option key={s.id_sprint} value={s.id_sprint}>
+                                    Active Sprint {s.id_sprint}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className={tdClass}>
                             {(() => {
@@ -515,13 +485,13 @@ useEffect(() => {
                   </h3>
 
                   <div className="flex flex-wrap gap-2">
-		  <button
-    type="button"
-    onClick={() => setEditingSprint(sprint)}
-    className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
-  >
-    Edit
-  </button>
+                    <button
+                  type="button"
+                  onClick={() => setEditingSprint(sprint)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+                >
+                  Edit
+                </button>
                     <Link
                       href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
@@ -619,38 +589,31 @@ useEffect(() => {
                               />
                             </td>
 
-                            <td className={tdClass}>
-                              <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                                <input type="hidden" name="task_id" value={task.id_task} />
-                                <input type="hidden" name="team_id" value={teamId} />
-                                <input type="hidden" name="project_id" value={projectId} />
-                                
-
-                                <select
-                                  name="sprint_id"
-                                  defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                >
-                                  <option value="null">Move to Backlog</option>
-                                  {plannedSprints.map((s) => (
-                                    <option key={s.id_sprint} value={s.id_sprint}>
-                                      Planned Sprint {s.id_sprint}
-                                    </option>
-                                  ))}
-                                  {activeSprints.map((s) => (
-                                    <option key={s.id_sprint} value={s.id_sprint}>
-                                      Active Sprint {s.id_sprint}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                >
-                                  Save
-                                </button>
-                              </form>
+                            <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                              <select
+                                defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                onChange={async (e) => {
+                                  const fd = new FormData();
+                                  fd.append("task_id", String(task.id_task));
+                                  fd.append("sprint_id", e.target.value);
+                                  fd.append("team_id", String(teamId));
+                                  fd.append("project_id", String(projectId));
+                                  await assignTaskToSprint(fd);
+                                }}
+                              >
+                                <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                {plannedSprints.map((s) => (
+                                  <option key={s.id_sprint} value={s.id_sprint}>
+                                    Planned Sprint {s.id_sprint}
+                                  </option>
+                                ))}
+                                {activeSprints.map((s) => (
+                                  <option key={s.id_sprint} value={s.id_sprint}>
+                                    Active Sprint {s.id_sprint}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className={tdClass}>
                               {(() => {
@@ -836,38 +799,33 @@ useEffect(() => {
                                   />
                                 </td>
 
-                                <td className={tdClass}>
-                                  <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                                    <input type="hidden" name="task_id" value={task.id_task} />
-                                    <input type="hidden" name="team_id" value={teamId} />
-                                    <input type="hidden" name="project_id" value={projectId} />
-
-                                    <select
-                                      name="sprint_id"
-                                      defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                      className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                    >
-                                      <option value="null">Move to Backlog</option>
-                                      {plannedSprints.map((s) => (
-                                        <option key={s.id_sprint} value={s.id_sprint}>
-                                          Planned Sprint {s.id_sprint}
-                                        </option>
-                                      ))}
-                                      {activeSprints.map((s) => (
-                                        <option key={s.id_sprint} value={s.id_sprint}>
-                                          Active Sprint {s.id_sprint}
-                                        </option>
-                                      ))}
-                                    </select>
-
-                                    <button
-                                      type="submit"
-                                      className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                    >
-                                      Save
-                                    </button>
-                                  </form>
+                                <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                    className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                    onChange={async (e) => {
+                                      const fd = new FormData();
+                                      fd.append("task_id", String(task.id_task));
+                                      fd.append("sprint_id", e.target.value);
+                                      fd.append("team_id", String(teamId));
+                                      fd.append("project_id", String(projectId));
+                                      await assignTaskToSprint(fd);
+                                    }}
+                                  >
+                                    <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                    {plannedSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        Planned Sprint {s.id_sprint}
+                                      </option>
+                                    ))}
+                                    {activeSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        Active Sprint {s.id_sprint}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
+
                                 <td className={tdClass}>
                                 {(() => {
                                   const assigned = team.team_members.find(

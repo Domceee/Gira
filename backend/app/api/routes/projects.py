@@ -285,7 +285,7 @@ async def get_project_board(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await get_project_membership_or_404(project_id, current_user.id_user, db)
+    membership = await get_project_membership_or_404(project_id, current_user.id_user, db)
     await sync_project_sprint_statuses(project_id, db)
 
     project_result = await db.execute(
@@ -295,15 +295,42 @@ async def get_project_board(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    sprint_result = await db.execute(
-        select(Sprint, Team)
-        .join(Team, Team.id_team == Sprint.fk_teamid_team)
-        .where(
-            Team.fk_projectid_project == project_id,
-            Sprint.status == SprintStatus.ACTIVE.value,
+
+# Check if user is project owner
+    
+
+    if membership.is_owner:
+        sprint_result = await db.execute(
+            select(Sprint, Team)
+            .join(Team, Team.id_team == Sprint.fk_teamid_team)
+            .where(
+                Team.fk_projectid_project == project_id,
+                Sprint.status == SprintStatus.ACTIVE.value,
+            )
+            .order_by(Team.name.asc(), Sprint.start_date.asc(), Sprint.id_sprint.asc())
         )
-        .order_by(Team.name.asc(), Sprint.start_date.asc(), Sprint.id_sprint.asc())
-    )
+    else:
+        sprint_result = await db.execute(
+            select(Sprint, Team)
+            .join(Team, Team.id_team == Sprint.fk_teamid_team)
+            .join(TeamMember, TeamMember.fk_teamid_team == Team.id_team)
+            .where(
+                Team.fk_projectid_project == project_id,
+                Sprint.status == SprintStatus.ACTIVE.value,
+                TeamMember.fk_userid_user == current_user.id_user,
+            )
+            .order_by(Team.name.asc(), Sprint.start_date.asc(), Sprint.id_sprint.asc())
+        )
+    #sprint_result = await db.execute(
+    #    select(Sprint, Team)
+    #    .join(Team, Team.id_team == Sprint.fk_teamid_team)
+     #   .where(
+     #       Team.fk_projectid_project == project_id,
+    #        Sprint.status == SprintStatus.ACTIVE.value,
+    #    )
+   #     .order_by(Team.name.asc(), Sprint.start_date.asc(), Sprint.id_sprint.asc())
+   # )
+    
     sprint_rows = sprint_result.all()
 
     boards: list[SprintBoardRead] = []
