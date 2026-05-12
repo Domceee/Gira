@@ -37,6 +37,7 @@ type TeamMember = {
 
 type Sprint = {
   id_sprint: number;
+  name: string;
   start_date: string;
   end_date: string;
   status: "PLANNED" | "ACTIVE" | "COMPLETED";
