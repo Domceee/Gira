@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import InvitationsBlock from "../components/InvitationsBlock";
 import { apiFetch } from "../lib/api";
+
 import { requireAuth } from "../lib/auth";
 
 type ProjectListItem = {
