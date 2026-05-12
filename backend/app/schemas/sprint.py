@@ -50,3 +50,4 @@ class SprintStatsRead(BaseModel):
     planned_points_per_day: float
     completion_rate: float
     burndown_points: List[BurndownPoint]
+    name: str | None = None

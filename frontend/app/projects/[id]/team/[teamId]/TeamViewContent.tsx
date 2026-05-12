@@ -1013,7 +1013,7 @@ useEffect(() => {
       <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
         <h3 className="mb-3 text-lg font-bold text-white">Start Sprint Early?</h3>
         <p className="mb-5 text-sm text-[#c3ceda]">
-          Sprint {startingEarlySprint.id_sprint} is planned to start on{" "}
+          {startingEarlySprint.name ?? `Sprint ${startingEarlySprint.id_sprint}`} is planned to start on{" "}
           <span className="font-semibold text-white">{formatDate(startingEarlySprint.start_date)}</span>.
           Are you sure you want to start it now?
         </p>
@@ -1042,7 +1042,7 @@ useEffect(() => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-bold text-white">
-          Edit Sprint {editingSprint.id_sprint}
+          Edit {editingSprint.name ?? `Sprint ${editingSprint.id_sprint}`}
         </h3>
         {sprintError && (
           <div className="mb-3 rounded-lg border border-red-500 bg-red-900/40 text-red-300 px-3 py-2 text-sm">

@@ -187,8 +187,8 @@ async def update_sprint(
                 Sprint.fk_teamid_team == sprint.fk_teamid_team,
                 Sprint.id_sprint != sprint.id_sprint,
                 Sprint.status != SprintStatus.COMPLETED.value,
-                effective_start <= Sprint.end_date,
-                effective_end >= Sprint.start_date,
+                effective_start < Sprint.end_date,
+                effective_end > Sprint.start_date,
             )
         )
         overlapping = result.scalars().first()
@@ -283,6 +283,7 @@ async def get_sprint_stats(
         planned_points_per_day=round(planned_points_per_day, 2),
         completion_rate=completion_rate,
         burndown_points=burndown_points,
+        name=sprint.name,
     )
 
 

@@ -30,6 +30,7 @@ type SprintStats = {
   planned_points_per_day: number;
   completion_rate: number;
   burndown_points: BurndownPoint[];
+  name: string | null;
 };
 
 function formatDate(d: string) { return new Date(d).toISOString().split("T")[0]; }
@@ -77,7 +78,7 @@ export default async function SprintStatsPage({ params }: { params: Promise<{ id
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Sprint Stats</p>
-            <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Sprint {stats.id_sprint}</h1>
+            <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">{stats.name ?? `Sprint ${stats.id_sprint}`}</h1>
             <p className="mt-1 text-sm text-[#c3ceda]">
               {formatDate(stats.start_date)} → {formatDate(stats.end_date)} · <span className="capitalize">{stats.status.toLowerCase()}</span>
             </p>
