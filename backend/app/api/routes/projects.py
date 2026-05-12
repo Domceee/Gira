@@ -401,6 +401,7 @@ async def get_project_board(
         boards.append(
             SprintBoardRead(
                 sprint_id=sprint.id_sprint,
+                sprint_name=sprint.name,
                 team_id=team.id_team,
                 team_name=team.name,
                 start_date=sprint.start_date,
