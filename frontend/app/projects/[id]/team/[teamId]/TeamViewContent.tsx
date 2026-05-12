@@ -53,6 +53,7 @@ type Sprint = {
   end_date: string;
   status: "PLANNED" | "ACTIVE" | "COMPLETED";
   tasks: Task[];
+  name: string | null;
 };
 
 type TeamBacklog = {
@@ -234,8 +235,8 @@ useEffect(() => {
       <col className="w-[7%]" />
       <col className="w-[11%]" />
       <col className="w-[11%]" />
-      <col className="w-[15%]" />
-      <col className="w-[7%]" />
+      <col className="w-[11%]" />
+      <col className="w-[11%]" />
       <col className="w-[8%]" />
     </colgroup>
   );
@@ -367,61 +368,31 @@ useEffect(() => {
                               {getRiskOrPriorityName(task.priority)}
                             </td>
 
-                            <td className={tdClass}>
-                              <form
-                                action={assignTaskToSprint}
-                                className="flex gap-2 items-center"
-                                onClick={(e) => e.stopPropagation()}
+                            <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                              <select
+                                defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                onChange={async (e) => {
+                                  const fd = new FormData();
+                                  fd.append("task_id", String(task.id_task));
+                                  fd.append("sprint_id", e.target.value);
+                                  fd.append("team_id", String(teamId));
+                                  fd.append("project_id", String(projectId));
+                                  await assignTaskToSprint(fd);
+                                }}
                               >
-                                <input
-                                  type="hidden"
-                                  name="task_id"
-                                  value={task.id_task}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="team_id"
-                                  value={teamId}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="project_id"
-                                  value={projectId}
-                                />
-
-                                <select
-                                  name="sprint_id"
-                                  defaultValue={
-                                    task.fk_sprintid_sprint ?? "null"
-                                  }
-                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                >
-                                  <option value="null">Backlog</option>
-                                  {plannedSprints.map((s) => (
-                                    <option
-                                      key={s.id_sprint}
-                                      value={s.id_sprint}
-                                    >
-                                      Planned Sprint {s.id_sprint}
+                                <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                {plannedSprints.map((s) => (
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
                                     </option>
-                                  ))}
-                                  {activeSprints.map((s) => (
-                                    <option
-                                      key={s.id_sprint}
-                                      value={s.id_sprint}
-                                    >
-                                      Active Sprint {s.id_sprint}
+                                ))}
+                                {activeSprints.map((s) => (
+                                    <option key={s.id_sprint} value={s.id_sprint}>
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
                                     </option>
-                                  ))}
-                                </select>
-
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                >
-                                  Save
-                                </button>
-                              </form>
+                                ))}
+                              </select>
                             </td>
                             <td className={tdClass}>
                             {(() => {
@@ -508,20 +479,20 @@ useEffect(() => {
                 {/* Sprint Header */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-base font-semibold text-[#ffffff]">
-                    Sprint {sprint.id_sprint}{" "}
+                    {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                     <span className="text-[#c3ceda] text-sm">
                       ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                     </span>
                   </h3>
 
                   <div className="flex flex-wrap gap-2">
-		  <button
-    type="button"
-    onClick={() => setEditingSprint(sprint)}
-    className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
-  >
-    Edit
-  </button>
+                    <button
+                  type="button"
+                  onClick={() => setEditingSprint(sprint)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b]"
+                >
+                  Edit
+                </button>
                     <Link
                       href={`/projects/${projectId}/team/${teamId}/sprints/${sprint.id_sprint}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-xs font-semibold text-[#f7faff] transition hover:bg-[#323d4b] hover:text-[#ffffff]"
@@ -619,38 +590,31 @@ useEffect(() => {
                               />
                             </td>
 
-                            <td className={tdClass}>
-                              <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                                <input type="hidden" name="task_id" value={task.id_task} />
-                                <input type="hidden" name="team_id" value={teamId} />
-                                <input type="hidden" name="project_id" value={projectId} />
-                                
-
-                                <select
-                                  name="sprint_id"
-                                  defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                  className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                >
-                                  <option value="null">Move to Backlog</option>
-                                  {plannedSprints.map((s) => (
+                            <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                              <select
+                                defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                onChange={async (e) => {
+                                  const fd = new FormData();
+                                  fd.append("task_id", String(task.id_task));
+                                  fd.append("sprint_id", e.target.value);
+                                  fd.append("team_id", String(teamId));
+                                  fd.append("project_id", String(projectId));
+                                  await assignTaskToSprint(fd);
+                                }}
+                              >
+                                <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                {plannedSprints.map((s) => (
                                     <option key={s.id_sprint} value={s.id_sprint}>
-                                      Planned Sprint {s.id_sprint}
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
                                     </option>
-                                  ))}
-                                  {activeSprints.map((s) => (
+                                ))}
+                                {activeSprints.map((s) => (
                                     <option key={s.id_sprint} value={s.id_sprint}>
-                                      Active Sprint {s.id_sprint}
+                                      {s.name ?? `Sprint ${s.id_sprint}`}
                                     </option>
-                                  ))}
-                                </select>
-
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                >
-                                  Save
-                                </button>
-                              </form>
+                                ))}
+                              </select>
                             </td>
                             <td className={tdClass}>
                               {(() => {
@@ -732,7 +696,7 @@ useEffect(() => {
                   {/* Sprint Header */}
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-base font-semibold text-[#edf3fb]">
-                      Sprint {sprint.id_sprint}{" "}
+                      {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                       <span className="text-[#c3ceda] text-sm">
                         ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                       </span>
@@ -836,38 +800,33 @@ useEffect(() => {
                                   />
                                 </td>
 
-                                <td className={tdClass}>
-                                  <form action={assignTaskToSprint} className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                                    <input type="hidden" name="task_id" value={task.id_task} />
-                                    <input type="hidden" name="team_id" value={teamId} />
-                                    <input type="hidden" name="project_id" value={projectId} />
-
-                                    <select
-                                      name="sprint_id"
-                                      defaultValue={task.fk_sprintid_sprint ?? sprint.id_sprint}
-                                      className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
-                                    >
-                                      <option value="null">Move to Backlog</option>
-                                      {plannedSprints.map((s) => (
-                                        <option key={s.id_sprint} value={s.id_sprint}>
-                                          Planned Sprint {s.id_sprint}
-                                        </option>
-                                      ))}
-                                      {activeSprints.map((s) => (
-                                        <option key={s.id_sprint} value={s.id_sprint}>
-                                          Active Sprint {s.id_sprint}
-                                        </option>
-                                      ))}
-                                    </select>
-
-                                    <button
-                                      type="submit"
-                                      className="rounded-lg border border-[rgba(57,231,172,0.40)] bg-[rgba(57,231,172,0.13)] px-2.5 py-1.5 text-xs text-[#39e7ac] hover:bg-[rgba(57,231,172,0.20)]"
-                                    >
-                                      Save
-                                    </button>
-                                  </form>
+                                <td className={tdClass} onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    defaultValue={task.fk_sprintid_sprint ?? "null"}
+                                    className="rounded-lg border border-[#7a8798] bg-[#28313d] px-2 py-1.5 text-xs text-[#ffffff] outline-none"
+                                    onChange={async (e) => {
+                                      const fd = new FormData();
+                                      fd.append("task_id", String(task.id_task));
+                                      fd.append("sprint_id", e.target.value);
+                                      fd.append("team_id", String(teamId));
+                                      fd.append("project_id", String(projectId));
+                                      await assignTaskToSprint(fd);
+                                    }}
+                                  >
+                                    <option value="null">{task.fk_sprintid_sprint ? "Move to Backlog" : "Backlog"}</option>
+                                    {plannedSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        {s.name ?? `Sprint ${s.id_sprint}`}
+                                      </option>
+                                    ))}
+                                    {activeSprints.map((s) => (
+                                      <option key={s.id_sprint} value={s.id_sprint}>
+                                        {s.name ?? `Sprint ${s.id_sprint}`}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
+
                                 <td className={tdClass}>
                                 {(() => {
                                   const assigned = team.team_members.find(
@@ -968,7 +927,7 @@ useEffect(() => {
                   >
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-base font-semibold text-[#c3ceda]">
-                        Sprint {sprint.id_sprint}{" "}
+                        {sprint.name ?? `Sprint ${sprint.id_sprint}`}{" "}
                         <span className="text-sm font-normal">
                           ({formatDate(sprint.start_date)} → {formatDate(sprint.end_date)})
                         </span>
@@ -1054,7 +1013,7 @@ useEffect(() => {
       <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
         <h3 className="mb-3 text-lg font-bold text-white">Start Sprint Early?</h3>
         <p className="mb-5 text-sm text-[#c3ceda]">
-          Sprint {startingEarlySprint.id_sprint} is planned to start on{" "}
+          {startingEarlySprint.name ?? `Sprint ${startingEarlySprint.id_sprint}`} is planned to start on{" "}
           <span className="font-semibold text-white">{formatDate(startingEarlySprint.start_date)}</span>.
           Are you sure you want to start it now?
         </p>
@@ -1083,7 +1042,7 @@ useEffect(() => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-[420px] rounded-xl border border-[#7a8798] bg-[#1f2630] p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-bold text-white">
-          Edit Sprint {editingSprint.id_sprint}
+          Edit {editingSprint.name ?? `Sprint ${editingSprint.id_sprint}`}
         </h3>
         {sprintError && (
           <div className="mb-3 rounded-lg border border-red-500 bg-red-900/40 text-red-300 px-3 py-2 text-sm">
@@ -1094,6 +1053,32 @@ useEffect(() => {
           <input type="hidden" name="sprint_id" value={editingSprint.id_sprint} />
           <input type="hidden" name="team_id" value={teamId} />
           <input type="hidden" name="project_id" value={projectId} />
+
+          {/* Name — shown for both active and planned */}
+          <div>
+            <label className="block text-xs text-[#c3ceda] mb-1">Sprint Name</label>
+            <input
+              type="text"
+              name="name"
+              defaultValue={editingSprint.name ?? ""}
+              className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
+            />
+          </div>
+
+          {/* Start Date — only for planned sprints */}
+          {editingSprint.status === "PLANNED" && (
+            <div>
+              <label className="block text-xs text-[#c3ceda] mb-1">Start Date</label>
+              <input
+                type="date"
+                name="start_date"
+                defaultValue={editingSprint.start_date.split("T")[0]}
+                className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          {/* End Date — shown for both */}
           <div>
             <label className="block text-xs text-[#c3ceda] mb-1">End Date</label>
             <input
@@ -1103,6 +1088,7 @@ useEffect(() => {
               className="w-full rounded-lg border border-[#7a8798] bg-[#28313d] px-3 py-2 text-sm text-white"
             />
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={closeSprintModal}
               className="rounded-lg border border-[#7a8798] bg-[#28313d] px-4 py-2 text-sm text-white hover:bg-[#323d4b]">

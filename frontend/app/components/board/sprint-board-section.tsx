@@ -34,6 +34,7 @@ type SprintBoardSectionProps = {
     end_date: string;
     members: BoardMember[];
     tasks: BoardTask[];
+    sprint_name: string | null;
   };
 };
 
@@ -75,7 +76,7 @@ export default function SprintBoardSection({ board, useSwimlaneBoard }: SprintBo
           <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">
             {board.team_name ?? `Team ${board.team_id}`}
           </p>
-          <h2 className="mt-1 text-lg font-bold text-[#ffffff]">Sprint {board.sprint_id}</h2>
+          <h2 className="mt-1 text-lg font-bold text-[#ffffff]">{board.sprint_name ?? `Sprint ${board.sprint_id}`}</h2>
           
         </div>
         <div className="rounded-lg border border-[#667386] bg-[#28313d] px-3 py-2 text-xs text-[#c3ceda]">

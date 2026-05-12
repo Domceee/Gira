@@ -33,6 +33,7 @@ class BoardMemberRead(BaseModel):
 
 class SprintBoardRead(BaseModel):
     sprint_id: int
+    sprint_name: str
     team_id: int
     team_name: str | None = None
     start_date: datetime

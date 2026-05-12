@@ -36,6 +36,7 @@ type SprintBoard = {
   end_date: string;
   members: BoardMember[];
   tasks: BoardTask[];
+  sprint_name: string | null;
 };
 
 type ProjectBoard = {

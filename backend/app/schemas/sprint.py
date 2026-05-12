@@ -8,6 +8,7 @@ class SprintCreate(BaseModel):
     team_id: int
     start_date: datetime
     end_date: datetime
+    name: str | None = "New Sprint"
 
 class SprintRead(BaseModel):
     id_sprint: int
@@ -15,7 +16,7 @@ class SprintRead(BaseModel):
     end_date: datetime
     status: SprintStatus
     tasks: List[TaskRead]
-
+    name: str | None = "New Sprint"
     class Config:
         orm_mode = True
 
@@ -49,3 +50,4 @@ class SprintStatsRead(BaseModel):
     planned_points_per_day: float
     completion_rate: float
     burndown_points: List[BurndownPoint]
+    name: str | None = None

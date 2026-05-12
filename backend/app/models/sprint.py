@@ -8,6 +8,7 @@ class Sprint(Base):
     id_sprint = Column(Integer, primary_key=True, index=True)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
+    name = Column(String, nullable=True, default="New Sprint", server_default="New Sprint")
     status = Column(
         String,
         nullable=False,
@@ -26,3 +27,4 @@ class Sprint(Base):
         ForeignKey("retrospective.id_retrospective"),
         nullable=True
     )
+    
