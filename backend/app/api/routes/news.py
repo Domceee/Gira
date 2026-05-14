@@ -21,7 +21,10 @@ async def get_news(
         "task_assigned",
         "sprint_started",
         "team_assignment",
-        "project",  
+        "project",
+        "project_member_left",
+        "project_member_removed",
+        "team_member_removed",
     ]
     result = await db.execute(
         select(News)
@@ -30,7 +33,7 @@ async def get_news(
             News.news_type.in_(relevant_news_types),
         )
         .order_by(News.created_at.desc())
-        .limit(15)
+        .limit(25)
     )
     return result.scalars().all()
 

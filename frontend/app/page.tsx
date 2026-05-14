@@ -8,7 +8,7 @@ export default function Home() {
 
         <div className="flex justify-center mb-6">
           <Image
-            src="/favicon.ico"
+            src="/gira-logo.svg"
             alt="Gira Logo"
             width={72}
             height={72}

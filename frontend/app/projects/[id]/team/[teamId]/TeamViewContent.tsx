@@ -1,7 +1,8 @@
 "use client";
+
+import { CalendarX, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { CalendarX } from "lucide-react";
 import { createSprint, assignTaskToSprint, closeSprint, startSprint, updateSprint, deleteSprintAction} from "./actions";
 import TaskStatusForm from "./TaskStatusForm";
 import CreateSprintForm from "./create-sprint-form";
@@ -273,16 +274,16 @@ useEffect(() => {
       return (
         <div key={sectionKey} className="space-y-8">
           <div>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-start gap-2">
               <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
                 Team Backlog
               </h2>
 
               <button
                 onClick={() => toggleCollapse(sectionKey)}
-                className="text-[#c3ceda] hover:text-[#edf3fb]"
+                className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
               >
-                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+                {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
               </button>
             </div>
 
@@ -440,16 +441,16 @@ useEffect(() => {
   return (
     <div key={sectionKey} className="space-y-8">
       <div>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-start gap-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-[#39e7ac]">
             Active Sprints
           </h2>
 
           <button
             onClick={() => toggleCollapse(sectionKey)}
-            className="text-[#c3ceda] hover:text-[#edf3fb]"
+            className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
           >
-            {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+            {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
           </button>
         </div>
 
@@ -657,16 +658,16 @@ useEffect(() => {
     return (
       <div key={sectionKey} className="space-y-8">
         <div>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-start gap-2">
             <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
               Planned Sprints
             </h2>
 
             <button
               onClick={() => toggleCollapse(sectionKey)}
-              className="text-[#c3ceda] hover:text-[#edf3fb]"
+              className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
             >
-              {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+              {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
             </button>
           </div>
 
@@ -868,16 +869,16 @@ useEffect(() => {
       return (
         <div key={sectionKey} className="space-y-8">
           <div>
-            <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-start gap-2">
               <h3 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">
                 Create New Sprint
               </h3>
 
               <button
                 onClick={() => toggleCollapse(sectionKey)}
-                className="text-[#c3ceda] hover:text-[#edf3fb]"
+                className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
               >
-                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+                {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
               </button>
             </div>
 {!collapsedSections.has(sectionKey) && (
@@ -899,15 +900,15 @@ useEffect(() => {
       return (
         <div key={sectionKey} className="space-y-8">
           <div>
-            <div className="mb-4 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-start gap-2">
               <h2 className="text-sm font-bold uppercase tracking-widest text-[#c3ceda]">
                 Ended Sprints
               </h2>
               <button
                 onClick={() => toggleCollapse(sectionKey)}
-                className="text-[#c3ceda] hover:text-[#edf3fb]"
+                className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
               >
-                {collapsedSections.has(sectionKey) ? "▼" : "▲"}
+                {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
               </button>
             </div>
 

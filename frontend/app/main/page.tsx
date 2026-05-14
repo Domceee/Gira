@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "../components/navbar";
 import InvitationsBlock from "../components/InvitationsBlock";
 import { apiFetch } from "../lib/api";
+import NotificationsPager from "./NotificationsPager";
 
 import { requireAuth } from "../lib/auth";
 
@@ -78,23 +79,7 @@ export default async function HomePage() {
 
             <aside className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
               <h2 className="mb-5 text-2xl font-bold text-[#ffffff]">News</h2>
-              <div className="space-y-3">
-                {news.length === 0 ? (
-                  <p className="text-sm text-[#c3ceda]">No notifications yet.</p>
-                ) : (
-                  news.map((item) => (
-                    <article key={item.id_news} className="rounded-lg border border-[#7a8798] bg-[#28313d] p-4">
-                      <div className="mb-1.5 flex items-center justify-between gap-4">
-                        <h3 className="text-sm font-semibold text-[#ffffff]">{item.title}</h3>
-                        <span className="shrink-0 text-xs text-[#c3ceda]">
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-6 text-[#d3dae3]">{item.message}</p>
-                    </article>
-                  ))
-                )}
-              </div>
+              <NotificationsPager news={news} />
             </aside>
           </div>
 
