@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import TaskActions from "@/app/components/tasks/TaskActions";
 import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
@@ -131,13 +132,13 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
         if (sectionKey === "unassigned") {
           return (
             <div key={sectionKey} className="mb-6">
-              <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-start gap-2">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Unassigned Tasks</h2>
                 <button
                   onClick={() => toggleCollapse(sectionKey)}
-                  className="text-[#c3ceda] hover:text-[#edf3fb]"
+                  className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
                 >
-                  {collapsedSections.has(sectionKey) ? '▼' : '▲'}
+                  {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
                 </button>
               </div>
               {!collapsedSections.has(sectionKey) && (
@@ -165,13 +166,13 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
           return (
             <div key={sectionKey} className="mb-6">
               <div>
-                <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-start gap-2">
                   <h2 className="text-sm font-bold uppercase tracking-widest text-[#edf3fb]">Create New Task</h2>
                   <button
                     onClick={() => toggleCollapse(sectionKey)}
-                    className="text-[#c3ceda] hover:text-[#edf3fb]"
+                    className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
                   >
-                    {collapsedSections.has(sectionKey) ? '▼' : '▲'}
+                    {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
                   </button>
                 </div>
                 {!collapsedSections.has(sectionKey) && (
@@ -218,13 +219,13 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
           const targetKey = getDropTargetKey(team.team_id);
           return (
             <div key={sectionKey} className="mb-6">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-start gap-2">
                 <h3 className="text-sm font-semibold text-[#ffffff]">{team.team_name ?? "Unnamed team"}</h3>
                 <button
                   onClick={() => toggleCollapse(sectionKey)}
-                  className="text-[#c3ceda] hover:text-[#edf3fb]"
+                  className="order-first text-[#c3ceda] hover:text-[#edf3fb]"
                 >
-                  {collapsedSections.has(sectionKey) ? '▼' : '▲'}
+                  {collapsedSections.has(sectionKey) ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
                 </button>
               </div>
               {!collapsedSections.has(sectionKey) && (

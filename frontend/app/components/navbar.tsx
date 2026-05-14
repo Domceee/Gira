@@ -71,7 +71,7 @@ export default function Navbar() {
     <nav className="w-full border-b border-[#667386] bg-[#1f2630] text-[#ffffff]">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link href="/main" className="flex items-center gap-3">
-          <Image src="/favicon.ico" alt="Gira" width={22} height={22} className="rounded" />
+          <Image src="/gira-logo.svg" alt="Gira" width={40} height={40} className="rounded" />
           <span className="text-[#39e7ac] font-bold tracking-widest text-sm uppercase">Gira</span>
           <span className="text-xs text-[#c3ceda]">Project Management</span>
         </Link>

@@ -1348,9 +1348,9 @@ async def leave_project(
         owner_news = News(
             fk_userid_user=owner_id,
             fk_projectid_project=project_id,
-            news_type="project",
-            title="Member Left",
-            message=f"{current_user.name} left your project '{project_name}'",
+            news_type="project_member_left",
+            title="Important: member left",
+            message=f"{current_user.name} left your project '{project_name}'.",
         )
 
 
