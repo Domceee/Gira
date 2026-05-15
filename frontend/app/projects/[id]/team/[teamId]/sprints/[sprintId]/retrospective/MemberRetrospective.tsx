@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { toast } from "react-hot-toast";
 import {
   loadMemberRetrospective,
   saveMemberRetrospective,
@@ -100,6 +101,9 @@ export default function MemberRetrospective({
         continue: retro.continue.filter((x) => x.trim() !== ""),
       };
       await saveMemberRetrospective({ projectId, teamId, sprintId, retro: cleaned });
+      toast.success("Draft saved");
+    } catch (err) {
+      toast.error("Failed to save draft");
     } finally {
       setIsSaving(false);
     }
@@ -112,9 +116,14 @@ export default function MemberRetrospective({
 
   async function handleSubmit() {
     if (!window.confirm("Submit your retrospective? You won't be able to edit it afterwards.")) return;
-    await saveDraft();
-    await submitMemberRetrospective({ projectId, teamId, sprintId });
-    setIsSubmitted(true);
+    try {
+      await saveDraft();
+      await submitMemberRetrospective({ projectId, teamId, sprintId });
+      setIsSubmitted(true);
+      toast.success("Retrospective submitted successfully");
+    } catch (err) {
+      toast.error("Failed to submit retrospective");
+    }
   }
 
   const currentStep = STEPS[step];

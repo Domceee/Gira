@@ -4,6 +4,7 @@ import TeamMemberRetrosList from "./TeamMemberRetrosList";
 
 import { checkTeamMembership, loadRetrospective } from "./actions";
 import { apiFetch } from "@/app/lib/api";
+import { Toaster } from "react-hot-toast";
 
 export default async function RetrospectivePage(raw: { params: any }) {
   const params = Promise.resolve(raw.params);
@@ -22,6 +23,7 @@ export default async function RetrospectivePage(raw: { params: any }) {
 
   return (
     <div className="space-y-8 p-6">
+      <Toaster />
       {is_member && (
         <MemberRetrospective
           projectId={id}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
+import { Toaster } from "react-hot-toast";
 
 type Project = {
   id: number;
@@ -148,6 +149,7 @@ export default async function ProjectView({
 
   return (
     <div className="p-6 space-y-6">
+      <Toaster />
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 import ManageTeamsPageContent from "./manage-teams-page-content";
+import { Toaster } from "react-hot-toast";
 
 type Project = { id: number; name: string | null; description: string | null; is_owner: boolean };
 
@@ -20,6 +21,9 @@ export default async function ManageTeamPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="p-6">
+      <Toaster 
+        
+        />  
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Teams</p>
         <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Manage Teams</h1>

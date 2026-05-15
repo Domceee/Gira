@@ -1,6 +1,7 @@
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 import ManageProjectForm from "./manage-project-form";
+import { Toaster } from "react-hot-toast";
 
 type Project = {
   id: number;
@@ -27,6 +28,9 @@ export default async function ManageProjectPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-7xl p-6">
+      <Toaster 
+        
+        />  
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Settings</p>
         <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">Manage Project</h1>
@@ -35,6 +39,7 @@ export default async function ManageProjectPage({ params }: { params: Promise<{ 
         </p>
       </div>
       <div className="rounded-2xl border border-[#7a8798] bg-[#171c24] p-4 sm:p-5">
+        
         <ManageProjectForm project={project} />
       </div>
     </div>

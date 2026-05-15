@@ -449,8 +449,7 @@ async def update_board_position(
     previous_status = task.workflow_status
     task.workflow_status = payload.workflow_status.value
     task.board_order = payload.board_order
-    if payload.team_member_id is not None:
-        task.fk_team_memberid_team_member = payload.team_member_id
+    task.fk_team_memberid_team_member = payload.team_member_id
 
     if previous_status != TaskWorkflowStatus.DONE.value and task.workflow_status == TaskWorkflowStatus.DONE.value:
         task.completed_at = utc_now()

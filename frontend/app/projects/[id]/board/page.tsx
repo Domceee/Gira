@@ -1,6 +1,7 @@
 import SprintBoardSection from "@/app/components/board/sprint-board-section";
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
+import { Toaster } from "react-hot-toast";
 
 type BoardTask = {
   id_task: number;
@@ -88,6 +89,7 @@ console.log("SERVER BOARD TASKS:", projectBoard.boards.flatMap(b =>
           ))}
         </div>
       )}
+      <Toaster />
     </div>
   );
 }

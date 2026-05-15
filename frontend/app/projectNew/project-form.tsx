@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../lib/api";
+import { toast } from "react-hot-toast";
 
 export default function NewProjectForm() {
   const router = useRouter();
@@ -38,10 +39,13 @@ export default function NewProjectForm() {
         throw new Error(message);
       }
 
+      toast.success("Project created successfully");
       router.push("/main");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(message);
+      setError(message);
     } finally {
       setSubmitting(false);
     }

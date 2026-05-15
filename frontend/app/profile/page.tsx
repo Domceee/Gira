@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/app/components/navbar";
+import { toast, Toaster } from "react-hot-toast";
 import { updateProfile } from "./actions";
 
 interface User {
@@ -84,11 +85,14 @@ export default function ProfilePage() {
       await fetchUser();
       setPictureBase64(null);
       setSaved(true);
+      toast.success("Profile updated successfully");
 
       const fileInput = form.querySelector('input[name="picture"]') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      const message = err instanceof Error ? err.message : "Failed to update profile";
+      toast.error(message);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -114,6 +118,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
       <Navbar />
+      <Toaster />
       <main className="mx-auto max-w-2xl px-6 py-8">
         <div className="mb-6 flex items-center gap-3">
           <Link href="/main" className="text-sm text-[#c3ceda] hover:text-[#ffffff] transition-colors">← Dashboard</Link>

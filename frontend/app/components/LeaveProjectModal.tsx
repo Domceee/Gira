@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiFetch } from "@/app/lib/api";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast/headless";
 
 type Props = {
   projectId: number;
@@ -35,11 +36,13 @@ export default function LeaveProjectModal({ projectId, isOpen, onClose }: Props)
       }
 
       onClose();
-      router.push("/projects");
+      router.push("/main");
       router.refresh();
+      
     } catch {
       setError("Something went wrong");
       setLoading(false);
+      
     }
   }
 
@@ -83,6 +86,7 @@ export default function LeaveProjectModal({ projectId, isOpen, onClose }: Props)
             }`}
           >
             {loading ? "Leaving..." : "Leave Project"}
+            redirect
           </button>
         </div>
       </div>

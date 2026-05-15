@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RiskAndPriority } from "@/app/lib/riskPriority";
 import { apiFetch } from "@/app/lib/api";
+import { toast } from "react-hot-toast";
 
 type TaskDetailsTask = {
   id_task: number;
@@ -137,7 +138,7 @@ function updateTask(patch: Partial<typeof localTask>) {
       });
 
       if (!response.ok) {
-        setError("Task changes could not be saved.");
+        toast.error("Task changes could not be saved");
         return;
       }
 
@@ -164,10 +165,11 @@ function updateTask(patch: Partial<typeof localTask>) {
         }
       }
 
+      toast.success("Task updated successfully");
       onClose();
       router.refresh();
     } catch {
-      setError("Task could not be saved. Please try again.");
+      toast.error("Task could not be saved. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -184,7 +186,7 @@ function updateTask(patch: Partial<typeof localTask>) {
   });
 
   if (!response.ok) {
-    setError("Could not save assignees.");
+    toast.error("Could not save assignees");
   }
 }
 

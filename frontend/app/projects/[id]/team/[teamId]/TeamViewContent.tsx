@@ -2,6 +2,7 @@
 
 import { CalendarX, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 import { createSprint, assignTaskToSprint, closeSprint, startSprint, updateSprint, deleteSprintAction} from "./actions";
 import TaskStatusForm from "./TaskStatusForm";
@@ -114,8 +115,12 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     fd.append("team_id", String(teamId));
     fd.append("project_id", String(projectId));
 
-    await assignTaskToSprint(fd);
-
+    try {
+      await assignTaskToSprint(fd);
+      toast.success("Task moved successfully");
+    } catch (err) {
+      toast.error("Failed to move task");
+    }
 
     setDraggedTaskId(null);
     setActiveDropTarget(null);
@@ -164,9 +169,11 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
     fd.append("project_id", String(projectId));
     try {
       await startSprint(fd);
+      toast.success("Sprint started");
       setStartingEarlySprint(null);
       router.refresh();
     } catch (err: any) {
+      toast.error("Failed to start sprint");
       console.error(err);
     }
   }
@@ -178,24 +185,30 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
 
     try {
       await updateSprint(formData);   // server action
+      toast.success("Sprint updated successfully");
       closeSprintModal();        // close modal
       setSprintError(null);
       router.refresh();               // refresh UI
     } catch (err: any) {
       try {
         const parsed = JSON.parse(err.message);
-        setSprintError(parsed.detail || "Failed to update sprint");
+        const errorMsg = parsed.detail || "Failed to update sprint";
+        setSprintError(errorMsg);
+        toast.error(errorMsg);
       } catch {
         setSprintError("Failed to update sprint");
+        toast.error("Failed to update sprint");
       }
     }
   }
 async function handleDeleteSprint(formData: FormData): Promise<void> {
   try {
     await deleteSprintAction(formData); // ignore returned boolean
+    toast.success("Sprint deleted successfully");
     closeSprintModal();
     router.refresh();
   } catch (err) {
+    toast.error("Failed to delete sprint");
     console.error(err);
   }
 }

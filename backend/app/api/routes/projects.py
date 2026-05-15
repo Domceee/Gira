@@ -1299,13 +1299,12 @@ async def leave_project(
         .where(TeamMember.fk_userid_user == current_user.id_user)
     )
     team_members = result.scalars().all()
-    if not team_members:
-        raise HTTPException(status_code=404, detail="No team membership found")
+    #if not team_members:
+    #    raise HTTPException(status_code=404, detail="No team membership found")
 
     team_member_ids = [tm.id_team_member for tm in team_members]
 
     try:
-        # no db.begin()
 
         await db.execute(
             update(Task)
@@ -1328,6 +1327,19 @@ async def leave_project(
             delete(TeamMemberRetrospective)
             .where(TeamMemberRetrospective.fk_teamMember.in_(team_member_ids))
         )
+
+        await db.execute(
+            delete(TeamMember)
+            .where(TeamMember.fk_userid_user == current_user.id_user)
+            .where(ProjectMember.fk_projectid_project == project_id)
+        )
+        
+        await db.execute(
+            delete(ProjectMember)
+            .where(ProjectMember.fk_projectid_project == project_id)
+            .where(ProjectMember.fk_userid_user == current_user.id_user)
+        )
+
 
 
         owner_id = (
@@ -1356,10 +1368,7 @@ async def leave_project(
 
         db.add(owner_news)
 
-        
-
-
-        await db.commit()   # <-- THIS IS THE IMPORTANT PART
+        await db.commit() 
 
         return {"status": "success", "message": "You have left the project"}
 
