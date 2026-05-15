@@ -1,9 +1,11 @@
+import { Toaster } from "react-hot-toast";
 import Navbar from "../components/navbar";
 import NewProjectForm from "./project-form";
 
 export default function CreateProjectPage() {
   return (
     <div className="min-h-screen bg-[#171c24] text-[#ffffff]">
+      <Toaster />
       <Navbar />
 
       <main className="mx-auto max-w-3xl px-6 py-10">
