@@ -117,9 +117,9 @@ export default function TeamViewContent({ team, projectId, teamId, activeSprints
 
     try {
       await assignTaskToSprint(fd);
-      toast.success("Task assigned to sprint");
+      toast.success("Task moved successfully");
     } catch (err) {
-      toast.error("Failed to assign task to sprint");
+      toast.error("Failed to move task");
     }
 
     setDraggedTaskId(null);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../lib/api";
-import { Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 export default function NewProjectForm() {
   const router = useRouter();
@@ -39,10 +39,13 @@ export default function NewProjectForm() {
         throw new Error(message);
       }
 
+      toast.success("Project created successfully");
       router.push("/main");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(message);
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +53,6 @@ export default function NewProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Toaster />
       <div>
         <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">
           Project name
