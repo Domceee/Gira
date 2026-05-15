@@ -22,7 +22,6 @@ export default async function ManageTeamPage({ params }: { params: Promise<{ id:
   return (
     <div className="p-6">
       <Toaster 
-          possition="top-right"
         
         />  
       <div className="mb-6">
