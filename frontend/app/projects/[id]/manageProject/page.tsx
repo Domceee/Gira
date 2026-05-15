@@ -29,7 +29,6 @@ export default async function ManageProjectPage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto max-w-7xl p-6">
       <Toaster 
-          possition="top-right"
         
         />  
       <div className="mb-6">
