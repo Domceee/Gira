@@ -1,5 +1,5 @@
 "use client";
-
+import { toast, Toaster } from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/app/lib/api";
@@ -83,9 +83,11 @@ export default function ManageProjectForm({ project }: { project: Project }) {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
+        toast.error("Failed to remove member");
         throw new Error(data?.detail || "Failed to remove member");
       }
       setMembers((prev) => prev.filter((m) => m.id_user !== userId));
+      toast.success("Member(s) removed successfully");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     }
@@ -157,6 +159,7 @@ export default function ManageProjectForm({ project }: { project: Project }) {
 
   return (
     <div className="space-y-6">
+      <Toaster />
       <section className="rounded-2xl border border-[#7a8798] bg-[#1f2630] p-6">
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>

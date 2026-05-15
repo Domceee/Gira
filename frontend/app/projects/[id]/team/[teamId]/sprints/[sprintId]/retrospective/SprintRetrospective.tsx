@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { toast } from "react-hot-toast";
 import {
   loadRetrospective,
   saveRetrospective,
@@ -78,6 +79,9 @@ export default function SprintRetrospective({
         JSON.stringify({ actions: actions.map((a) => a.text).filter((t) => t.trim() !== "") })
       );
       await saveRetrospective(fd);
+      toast.success("Actions saved successfully");
+    } catch (err) {
+      toast.error("Failed to save actions");
     } finally {
       setIsSaving(false);
     }
@@ -92,6 +96,7 @@ export default function SprintRetrospective({
         text: t,
       }));
       setActions(generated);
+      toast.success("Actions generated successfully");
 
       // Auto-save after generation
       const fd = new FormData();
@@ -100,6 +105,8 @@ export default function SprintRetrospective({
       fd.append("project_id", projectId);
       fd.append("retro", JSON.stringify({ actions: generated.map((a) => a.text) }));
       await saveRetrospective(fd);
+    } catch (err) {
+      toast.error("Failed to generate actions");
     } finally {
       setIsGenerating(false);
     }
@@ -110,9 +117,14 @@ export default function SprintRetrospective({
       ? "Reopen this retrospective for editing?"
       : "Finish this retrospective and lock editing?";
     if (!window.confirm(message)) return;
-    await handleSave();
-    const result = await toggleRetrospective({ sprintId, teamId, projectId });
-    setIsFinished(result.is_finished);
+    try {
+      await handleSave();
+      const result = await toggleRetrospective({ sprintId, teamId, projectId });
+      setIsFinished(result.is_finished);
+      toast.success(isFinished ? "Retrospective reopened" : "Retrospective finished");
+    } catch (err) {
+      toast.error("Failed to toggle retrospective");
+    }
   }
 
   return (

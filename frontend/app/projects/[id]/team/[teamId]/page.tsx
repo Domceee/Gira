@@ -3,6 +3,7 @@
 import { apiFetch } from "@/app/lib/api";
 import { requireAuth } from "@/app/lib/auth";
 import TeamViewContent from "./TeamViewContent";
+import { Toaster } from "react-hot-toast";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -74,6 +75,7 @@ export default async function TeamView({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="p-6">
+      <Toaster />
       <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#39e7ac]">Team</p>
         <h1 className="mt-1 text-2xl font-bold text-[#ffffff]">{team.team_name ?? `Team ${teamId}`}</h1>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/app/lib/api";
+import { toast, Toaster } from "react-hot-toast";
 
 type Team = {
   id_team: number;
@@ -100,12 +101,14 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
         body: JSON.stringify({ name: teamName.trim() }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail || "Failed to create team");
+      toast.success("Team created successfully");
       const createdTeam = await res.json();
       setTeamName("");
       await loadTeams();
       setSelectedTeamId(createdTeam.id_team);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create team");
+      toast.error("Failed to create team");
     } finally {
       setCreatingTeam(false);
     }
@@ -126,10 +129,12 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
         body: JSON.stringify({ user_ids: selectedUserIds }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail || "Failed to add members");
+      toast.success("Member(s) added successfully");
       await loadSelectedTeamData(selectedTeamId);
       setSelectedUserIds([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add members");
+      toast.error("Failed to add member(s)");
     } finally {
       setSavingMembers(false);
     }
@@ -142,9 +147,11 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
       setRemovingMemberId(userId);
       const res = await apiFetch(`/api/projects/${projectId}/teams/${selectedTeamId}/members/${userId}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail || "Failed to remove member");
+      toast.success("Member removed successfully");
       await loadSelectedTeamData(selectedTeamId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to remove member");
+      toast.error("Failed to remove member");
     } finally {
       setRemovingMemberId(null);
     }
@@ -161,6 +168,7 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
       setDeletingTeam(true);
       const res = await apiFetch(`/api/projects/${projectId}/teams/${selectedTeamId}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail || "Failed to delete team");
+      toast.success("Team deleted successfully");
       await loadTeams();
       setSelectedTeamId(null);
       setSelectedTeamMembers([]);
@@ -169,6 +177,7 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete team");
+      toast.error(err instanceof Error ? err.message :"Failed to delete team");
     } finally {
       setDeletingTeam(false);
     }
@@ -178,6 +187,10 @@ export default function ManageTeamsPageContent({ projectId, projectName }: Props
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+      <Toaster 
+          possition="top-right"
+        
+        />  
       <aside className="space-y-4">
         <div className="rounded-xl border border-[#7a8798] bg-[#1f2630] p-5">
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Create Team</h2>

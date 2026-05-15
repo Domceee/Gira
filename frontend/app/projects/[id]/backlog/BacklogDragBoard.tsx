@@ -7,6 +7,9 @@ import TaskActions from "@/app/components/tasks/TaskActions";
 import TaskDetailsTrigger from "@/app/components/tasks/TaskDetailsTrigger";
 import { apiFetch } from "@/app/lib/api";
 
+import {toast, Toaster} from "react-hot-toast";
+
+
 type Task = {
   id_task: number;
   name: string;
@@ -52,6 +55,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const suppressNextRowClickRef = useRef(false);
+  const createTaskFormRef = useRef<HTMLFormElement>(null);
 
   // Collapse state
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -75,10 +79,14 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
       const targetParam = teamId === null ? "" : String(teamId);
       const response = await apiFetch(`/api/tasks/${taskId}/assign_team?team_id=${targetParam}`, { method: "PATCH" });
       if (!response.ok) throw new Error(await response.text() || "Failed to assign task");
+      toast.success("Task assigned successfully");
       setDraggedTaskId(null);
       setActiveDropTarget(null);
       router.refresh();
-    } catch { setError("Unable to move task. Please try again."); }
+    } catch (err) { 
+      toast.error("Unable to move task. Please try again.");
+      setError("Unable to move task. Please try again."); 
+    }
     finally { setIsSaving(false); }
   };
 
@@ -116,11 +124,21 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
     await assignTask(taskId, teamId);
   };
 
+  const handleCreateTask = async (formData: FormData) => {
+    try {
+      await createTaskAction(formData);
+      toast.success("Task created successfully");
+    } catch (error) {
+      toast.error("Failed to create task");
+    }
+  };
+
   const sectionClass = (targetKey: string) =>
     `rounded-xl border p-4 transition ${activeDropTarget === targetKey ? "border-[rgba(57,231,172,0.40)] bg-[rgba(46,230,166,0.08)]" : "border-[#7a8798] bg-[#1f2630]"}`;
 
   return (
     <>
+      <Toaster />
       {error && <div className="mb-4 rounded-lg border border-[#ff4040]/20 bg-[#ff4040]/05 px-4 py-3 text-sm text-[#ff8080]">{error}</div>}
 
       <div className="mb-4">
@@ -176,7 +194,7 @@ export default function BacklogDragBoard({ tasks, teams, projectId, createTaskAc
                   </button>
                 </div>
                 {!collapsedSections.has(sectionKey) && (
-                  <form action={createTaskAction} className="space-y-4 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
+                  <form ref={createTaskFormRef} onSubmit={async (e) => { e.preventDefault(); const formData = new FormData(e.currentTarget); await handleCreateTask(formData); createTaskFormRef.current?.reset(); }} className="space-y-4 rounded-xl border border-[#7a8798] bg-[#1f2630] p-6">
                     <input type="hidden" name="fk_projectid_project" value={projectId} />
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c3ceda]">Name</label>

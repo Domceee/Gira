@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { apiFetch } from "@/app/lib/api";
 import TaskCard from "./task-card";
+import { toast } from "react-hot-toast";
 
 type Task = {
   id_task: number;
@@ -214,6 +215,7 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
       } catch (err) {
         console.error("Failed to enable multi‑assign:", err);
         setMoveError("Could not enable multi‑assignee mode.");
+        toast.error("Could not enable multi‑assignee mode.");
         return;
       }
     }
@@ -236,6 +238,7 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
       } catch (err) {
         console.error("Failed to collapse multi‑assignees:", err);
         setMoveError("Could not update multi‑assignee state.");
+        toast.error("Could not update multi‑assignee state.");
         return;
       }
     }
@@ -301,15 +304,18 @@ export default function SwimlaneBoard({ members, tasks }: SwimlaneBoardProps) {
       if (!response.ok) {
         setBoardTasks(tasks);
         setMoveError("Task move could not be saved. The board has been refreshed.");
+        toast.error("Task move could not be saved. The board has been refreshed.");
         return;
       }
 
+      toast.success("Task moved successfully");
       startTransition(() => {
         router.refresh();
       });
     } catch {
       setBoardTasks(tasks);
       setMoveError("Task move could not be saved. Please try again.");
+      toast.error("Task move could not be saved. Please try again.");
     } finally {
       setIsSaving(false);
     }

@@ -41,7 +41,6 @@ export async function createTask(formData: FormData) {
     const text = await res.text();
     throw new Error(text || "Failed to create task");
   }
-
   revalidatePath(`/projects/${payload.fk_projectid_project}/backlog`);
 }
 
@@ -69,7 +68,7 @@ export async function assignTaskToTeam(formData: FormData) {
     const text = await res.text();
     throw new Error(text || "Failed to assign task to team");
   }
-
+  
   revalidatePath(`/projects/${projectId}/backlog`);
 }
 
@@ -102,7 +101,6 @@ export async function editTask(formData: FormData) {
     const text = await res.text();
     throw new Error(text || "Failed to edit task");
   }
-
   revalidatePath(`/projects/${projectId}/backlog`);
 }
 
@@ -128,6 +126,5 @@ export async function deleteTask(formData: FormData) {
     const text = await res.text();
     throw new Error(text || "Failed to delete task");
   }
-
   revalidatePath(`/projects/${projectId}/backlog`);
 }

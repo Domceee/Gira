@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { apiFetch } from "@/app/lib/api";
+import { toast } from "react-hot-toast";
 
 type TaskActionsProps = {
   taskId: number;
@@ -27,14 +28,15 @@ export default function TaskActions({ taskId, canDelete = true }: TaskActionsPro
     try {
       const response = await apiFetch(`/api/tasks/${taskId}`, { method: "DELETE" });
       if (!response.ok) {
-        setDeleteError("Failed to delete task.");
+        toast.error("Failed to delete task");
         return;
       }
 
+      toast.success("Task deleted successfully");
       setConfirmingDelete(false);
       router.refresh();
     } catch {
-      setDeleteError("Failed to delete task. Please try again.");
+      toast.error("Failed to delete task. Please try again.");
     } finally {
       setIsDeleting(false);
     }

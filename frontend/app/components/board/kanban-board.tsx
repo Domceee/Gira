@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import KanbanColumn from "./kanban-column";
 import { apiFetch } from "@/app/lib/api";
+import { toast } from "react-hot-toast";
 
 type Task = {
   id_task: number;
@@ -95,15 +96,18 @@ export default function KanbanBoard({ members, tasks }: KanbanBoardProps) {
       if (!response.ok) {
         setBoardTasks(tasks);
         setMoveError("Task move could not be saved. The board has been refreshed.");
+        toast.error("Task move could not be saved. The board has been refreshed.");
         return;
       }
 
+      toast.success("Task moved successfully");
       startTransition(() => {
         router.refresh();
       });
     } catch {
       setBoardTasks(tasks);
       setMoveError("Task move could not be saved. Please try again.");
+      toast.error("Task move could not be saved. Please try again.");
     } finally {
       setIsSaving(false);
     }
