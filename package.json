@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "add": "^2.0.6",
+    "react-hot-toast": "^2.6.0"
+  }
+}
